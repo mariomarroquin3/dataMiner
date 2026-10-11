@@ -211,7 +211,7 @@ con su SQL; nunca inventes montos. Si no se puede expresar en dólares, pon impa
         model: modelo( "perfilador" ), tools: t_perfilador ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora, recorte ], options: limites, name: "AnalistaCSV",
         description : "Responde preguntas con SQL sobre las tablas descargadas (permite JOIN entre tablas)",
-        instructions: "Si la tabla es de ventas o de inventario, llama primero insights_negocio: sus hechos ya vienen limpios y verificables; cítalos tal cual (con su SQL) y usa sus cifras para las acciones en vez de recalcular sobre la tabla cruda. Eres analista SQL. Solo SELECT. Toda cifra debe salir de ejecutar_sql; nunca inventes números. Devuelve las cifras junto con la consulta usada.",
+        instructions: "Sé eficiente: como máximo 6 consultas por encargo y respuestas cortas (cifras + SQL, sin repetir tablas completas). Si la tabla es de ventas o de inventario, llama primero insights_negocio: sus hechos ya vienen limpios y verificables; cítalos tal cual (con su SQL) y usa sus cifras para las acciones en vez de recalcular sobre la tabla cruda. Eres analista SQL. Solo SELECT. Toda cifra debe salir de ejecutar_sql; nunca inventes números. Devuelve las cifras junto con la consulta usada.",
         model: modelo( "analista_csv" ), tools: t_analistaCsv ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora, recorte ], options: limites, name: "Estadistico",
         description : "Estadística descriptiva, correlaciones (Pearson/Spearman), covarianza, métricas financieras (rendimiento, volatilidad, CAGR, Sharpe, drawdown, VaR) y pronóstico de quiebre de stock",
@@ -259,7 +259,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
         model: modelo( "datos" ), tools: unir( [ t_adquisicion, t_perfilador, t_ingeniero ] ) ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora, recorte ], options: limites, name: "Analista",
         description : "Responde preguntas con SQL (tablas cargadas y, si hay, la base remota vía MCP), estadística descriptiva, correlaciones, covarianza, métricas financieras, pronóstico de quiebre de stock y gráficas",
-        instructions: "Si la tabla es de ventas o de inventario, llama primero insights_negocio: sus hechos ya vienen limpios y verificables; cítalos tal cual (con su SQL) y usa sus cifras para las acciones en vez de recalcular sobre la tabla cruda. Eres analista de datos y estadístico. Solo SELECT; toda cifra debe salir de una tool, nunca calcules a mano ni inventes números. Para la base remota usa las tools db_*. Si hay tools mysql_*: para preguntas de la base de la empresa usa mysql_esquema una vez y luego mysql_importar solo las tablas necesarias. Si preguntan qué comprar o cuándo se acaba el stock en la base, usa alerta_stock (enviar=true solo si piden avisar por Slack) y cita la tabla pronostico_stock. Si preguntan cuándo se acaba el stock, qué reabastecer o cuánto pedir, usa pronostico_stock y cita su tabla pronostico_stock en el SQL de los hechos. Si preguntan por quiebre de stock, prefiere pronostico_stock_cuantiles (cita pronostico_stock_cuantiles en el SQL de los hechos) y menciona la calibración que devuelve. Para relaciones entre variables usa correlacion (explica fuerza y signo; correlación no implica causalidad); para series de precios o caja usa metricas_financieras. Crea al menos una gráfica. Devuelve las cifras junto con la consulta usada.",
+        instructions: "Sé eficiente: como máximo 6 consultas por encargo y respuestas cortas (cifras + SQL, sin repetir tablas completas). Si la tabla es de ventas o de inventario, llama primero insights_negocio: sus hechos ya vienen limpios y verificables; cítalos tal cual (con su SQL) y usa sus cifras para las acciones en vez de recalcular sobre la tabla cruda. Eres analista de datos y estadístico. Solo SELECT; toda cifra debe salir de una tool, nunca calcules a mano ni inventes números. Para la base remota usa las tools db_*. Si hay tools mysql_*: para preguntas de la base de la empresa usa mysql_esquema una vez y luego mysql_importar solo las tablas necesarias. Si preguntan qué comprar o cuándo se acaba el stock en la base, usa alerta_stock (enviar=true solo si piden avisar por Slack) y cita la tabla pronostico_stock. Si preguntan cuándo se acaba el stock, qué reabastecer o cuánto pedir, usa pronostico_stock y cita su tabla pronostico_stock en el SQL de los hechos. Si preguntan por quiebre de stock, prefiere pronostico_stock_cuantiles (cita pronostico_stock_cuantiles en el SQL de los hechos) y menciona la calibración que devuelve. Para relaciones entre variables usa correlacion (explica fuerza y signo; correlación no implica causalidad); para series de precios o caja usa metricas_financieras. Crea al menos una gráfica. Devuelve las cifras junto con la consulta usada.",
         model: modelo( "analista" ), tools: unir( [ t_analistaCsv, t_estadistico, t_db, [ guia ] ] ) ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora, recorte ], options: limites, name: "CientificoML",
         description : "Entrena y compara modelos de ML tabular (regresión lineal, ridge, lasso, polinomial, logística, árbol, Random Forest), predice con ellos y prioriza oportunidades de venta por ganancia esperada",
@@ -276,6 +276,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
       instructions: "Coordinas un equipo de análisis de datos desconocidos. Plan: " & plan & " Separa hechos (con su SQL) de interpretaciones. Privacidad: los datos personales ya llegan anonimizados (pseudónimos como DUI_1a2b3c4d o Persona_…, direcciones reducidas al departamento, edades en rangos). Úsalos como identificadores, nunca intentes reidentificar a nadie y no pidas los valores reales." &
         " Datos: usa primero las tablas que el usuario subió o descargó (en listar_tablas tienen ejemplo=false); las de ejemplo (ejemplo=true: creditos, precios, clientes_sv_*, operaciones_sv_*) úsalas solo si el pedido las nombra." &
         " Honestidad: nunca digas que se ejecutó un análisis, modelo o cálculo que ninguna tool hizo en esta misión. Si piden una técnica que el equipo no tiene (por ejemplo una regresión por cuantiles fuera del pronóstico de stock), dilo claro y ofrece la más cercana que sí existe." &
+        " Delega solo lo necesario: normalmente 1 encargo a Datos y 1 al Analista; no repitas encargos ni pidas revisar todas las tablas si el pedido no lo exige." &
         " Para tablas de ventas o inventario pide al analista que use insights_negocio: los hechos importantes salen de ahí, ya verificados." &
         " Hablas con el gerente de una empresa: antes de proponer las acciones, consulta una vez guia_negocio del área que corresponda (ventas, inventario, cartera o finanzas) y estima el impacto como dice la guía, pidiendo al equipo las cifras que falten." & static.FORMATO,
       model       : modelo( "coordinador" ),
@@ -288,6 +289,9 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
     variables.esquema = { respuesta: "", hechos: [ { afirmacion: "", sql: "", origen: "" } ], interpretaciones: [ "" ],
       acciones: [ { accion: "", impacto_usd: 0, calculo: "", sql: "", origen: "", plazo: "" } ], siguientes_preguntas: [ "" ] }
     variables.formateador = modelo( "formateador" ).structuredOutput( variables.esquema )
+    // Plan B sin structured output: algunos modelos (p. ej. de Claude) no aceptan el tool_choice forzado que usa bx-ai
+    variables.formateadorTexto = modelo( "formateador" )
+    variables.sinStructured = false
 
     // Pipeline de BoxLang AI: coordinador (con sus subagentes) → structured output → verificar cada hecho
     variables.flujo = variables.coordinador
@@ -403,7 +407,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
     variables.resultadosSql.each( ( sql, r ) => evidencia.append( { sql: sql, resultado: ( r.resultado ?: [] ).len() > 25 ? r.resultado.slice( 1, 25 ) : ( r.resultado ?: [] ) } ) )
     var original = reporte.filter( ( k, v ) => [ "respuesta", "hechos", "interpretaciones", "acciones", "siguientes_preguntas" ].findNoCase( k ) )
     try {
-      var nuevo = variables.formateador.run(
+      var nuevo = formatear(
         "Eres el editor final de un reporte de datos. Estas cifras del reporte NO coinciden con lo que devuelven sus SQL:" & char( 10 ) &
         problemas.toList( char( 10 ) ) & char( 10 ) & char( 10 ) &
         "Resultados SQL reales (la única fuente válida de cifras):" & char( 10 ) & jsonSerialize( evidencia ) & char( 10 ) & char( 10 ) &
@@ -432,13 +436,29 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
    */
   private struct function estructurar( required any texto ) {
     try {
-      var r = variables.formateador.run( "Convierte este reporte al esquema pedido. Copia cada SQL exactamente como está, " &
+      var r = formatear( "Convierte este reporte al esquema pedido. Copia cada SQL exactamente como está, " &
         "no inventes hechos ni acciones nuevas, copia los montos de impacto tal cual y deja en interpretaciones lo que no tenga SQL. Reporte:" & char( 10 ) & toString( texto ) )
-      if ( isStruct( r ) && r.keyExists( "hechos" ) && isArray( r.hechos ) ) return r.append( { formato: "structured output" } )
+      if ( isStruct( r ) && r.keyExists( "hechos" ) && isArray( r.hechos ) ) return r.append( { formato: variables.sinStructured ? "JSON por texto" : "structured output" } )
     } catch ( any e ) {
       return parsear( texto ).append( { formato: "parseo de texto (structured output falló: #e.message#)" } )
     }
     return parsear( texto ).append( { formato: "parseo de texto" } )
+  }
+
+  /**
+   * Llama al formateador con structured output; si el modelo no lo soporta (Claude responde
+   * "tool_choice ... not supported for this model"), pasa a pedir el JSON por texto y lo parsea.
+   */
+  private any function formatear( required string prompt ) {
+    if ( !variables.sinStructured ) {
+      try {
+        return variables.formateador.run( prompt )
+      } catch ( any e ) {
+        if ( !e.message.reFindNoCase( "tool_choice|structured|response_format" ) ) rethrow;
+        variables.sinStructured = true
+      }
+    }
+    return parsear( variables.formateadorTexto.run( prompt & char( 10 ) & static.FORMATO ) )
   }
 
   private struct function parsear( required any texto ) {

@@ -39,7 +39,14 @@ class extends="bxModules.bxai.models.middleware.BaseAiMiddleware" {
         total = len( jsonSerialize( mensajes ) )
       }
     }
-    writeLog( text: "Contexto: #mensajes.len()# mensajes, #numberFormat( total, ',' )# caracteres (~#numberFormat( total / 4, ',' )# tokens)", type: "information", log: "ai" )
+    // Para diagnosticar qué infla el contexto: los 3 mensajes más pesados (rol y tipo)
+    var pesos = mensajes.map( ( m, i ) => {
+      var tipo = isStruct( m ) && isArray( m.content ?: "" ) ? m.content.map( b => isStruct( b ) ? ( b.type ?: "?" ) : "txt" ).toList( "+" ) : "texto"
+      return { i: i, rol: isStruct( m ) ? ( m.role ?: "?" ) : "?", tipo: tipo, largo: len( jsonSerialize( m ) ) }
+    } ).sort( ( a, b ) => b.largo - a.largo )
+    var top = pesos.len() > 3 ? pesos.slice( 1, 3 ) : pesos
+    writeLog( text: "Contexto: #mensajes.len()# mensajes, #numberFormat( total, ',' )# caracteres (~#numberFormat( total / 4, ',' )# tokens). Más pesados: " &
+      top.map( p => "##" & p.i & " " & p.rol & "/" & p.tipo & " " & numberFormat( p.largo, "," ) ).toList( "; " ), type: "information", log: "ai" )
     return AiMiddlewareResult.continue()
   }
 

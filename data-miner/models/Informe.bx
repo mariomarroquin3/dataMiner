@@ -37,7 +37,11 @@ class {
   /** Informe HTML completo */
   string function html( required struct reporte, string titulo = "Informe de datos" ) {
     var esc = ( s ) => encodeForHTML( toString( s ?: "" ) )
-    var hechos = ( reporte.hechos ?: [] ).map( h => '<li class="#( h.verificado ?: false ) ? "ok" : "bad"#"><span class="tag">#( h.verificado ?: false ) ? "✓ Verificado" : "✗ No verificado"#</span>#esc( h.afirmacion )#<code>#esc( h.sql )#</code>#len( h.nota ?: "" ) ? "<small class=""nota"">#esc( h.nota )#</small>" : ""#</li>' ).toList( "" )
+    var malos = ( reporte.hechos ?: [] ).filter( h => !( h.verificado ?: false ) )
+    var fichaHecho = ( h ) => '<li class="#( h.verificado ?: false ) ? "ok" : "bad"#"><span class="tag">#( h.verificado ?: false ) ? "✓ Verificado" : "✗ No verificado"#</span>#esc( h.afirmacion )#<code>#esc( h.sql )#</code>#len( h.nota ?: "" ) ? "<small class=""nota"">#esc( h.nota )#</small>" : ""#</li>'
+    // Los verificados en la lista principal; los que no pasaron, aparte, para no confundirlos
+    var hechos = ( reporte.hechos ?: [] ).filter( h => h.verificado ?: false ).map( h => fichaHecho( h ) ).toList( "" )
+    var hechosMalos = malos.map( h => fichaHecho( h ) ).toList( "" )
     var cadena = len( reporte.cadena.resumen ?: "" ) ? '<p class="cadena">🔗 #esc( reporte.cadena.resumen )#</p>' : ""
     var nVer = ( reporte.hechos ?: [] ).filter( h => h.verificado ?: false ).len()
     var interp = ( reporte.interpretaciones ?: [] ).map( i => "<li>#esc( i )#</li>" ).toList( "" )
@@ -119,6 +123,7 @@ footer{text-align:center;color:##6b7390;font-size:.78rem;margin-top:24px}
 #len( reporte.advertencia ?: "" ) ? "<div class=""sec"" style=""border-color:##d93a3a;background:##fdeceb;color:##a32020""><b>⚠ #esc( reporte.advertencia )#</b></div>" : ""#
 <div class="sec"><h2>Resumen</h2><p class="resumen">#esc( reporte.respuesta ?: "" )#</p></div>
 <div class="sec"><h2>Hechos verificados</h2>#cadena#<ul class="h">#hechos#</ul></div>
+#len( hechosMalos ) ? "<div class=""sec""><h2>Afirmaciones que no pasaron la verificación (no usar)</h2><ul class=""h"">#hechosMalos#</ul></div>" : ""#
 #len( interp ) ? "<div class=""sec""><h2>Interpretaciones</h2><ul class=""i"">#interp#</ul></div>" : ""#
 #len( canvases ) ? "<h2 style=""margin:24px 0 12px"">Visualizaciones</h2><div class=""gs"">#canvases#</div>" : ""#
 <div class="sec" style="margin-top:16px"><h2>Datos usados</h2><table class="t">#tablas#</table></div>

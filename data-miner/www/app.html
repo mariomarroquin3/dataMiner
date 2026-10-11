@@ -144,6 +144,7 @@
 
   .hecho{border:1px solid var(--line);border-left:4px solid var(--ok);border-radius:10px;padding:10px 12px;margin:0 0 10px;background:var(--panel2)}
   .hecho.bad{border-left-color:var(--bad)}
+  .descartados{margin-top:12px}.descartados summary{cursor:pointer;color:var(--bad);font-size:.85rem;margin-bottom:8px}.descartados .hecho{opacity:.8}
   .hecho code{display:block;color:var(--mut);font-size:.76rem;margin-top:8px;white-space:pre-wrap;word-break:break-word;background:var(--bg2);border-radius:8px;padding:8px 10px}
   .interp{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:10px 12px;margin:0 0 10px;background:var(--panel2)}
   .tag{display:inline-block;font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:6px;margin-right:8px;letter-spacing:.04em;vertical-align:1px}
@@ -309,9 +310,13 @@ function render(d) {
   tablas(d);
   const H = d.hechos || [], I = d.interpretaciones || [], E = d.evidencia || [];
   const ver = H.filter(h => h.verificado).length;
-  const hechos = H.map(h => `<div class="hecho ${h.verificado ? '' : 'bad'}">
+  const tarjeta = h => `<div class="hecho ${h.verificado ? '' : 'bad'}">
       <span class="tag ${h.verificado ? 'ok' : 'no'}">${h.verificado ? '✓ VERIFICADO' : '✗ NO VERIFICADO'}</span>${esc(h.afirmacion)}
-      <code>[${esc(h.origen || 'csv')}] ${esc(h.sql)}${h.verificado ? '' : '\n→ ' + esc(h.nota)}</code></div>`).join('');
+      <code>[${esc(h.origen || 'csv')}] ${esc(h.sql)}${h.verificado ? '' : '\n→ ' + esc(h.nota)}</code></div>`;
+  // Los verificados arriba; los que no pasaron la verificación van aparte y plegados, para no confundirlos con los buenos
+  const malos = H.filter(h => !h.verificado);
+  const hechos = H.filter(h => h.verificado).map(tarjeta).join('')
+    + (malos.length ? `<details class="descartados"><summary>✗ ${malos.length} afirmación(es) que NO pasaron la verificación (no las uses)</summary>${malos.map(tarjeta).join('')}</details>` : '');
   const interp = I.map(i => `<div class="interp"><span class="tag it">INTERPRETACIÓN</span>${esc(i)}</div>`).join('');
   const pasos = E.map(e => `<div class="step"><div class="ico">${icono(e)}</div><div><code>${esc(e.sql)}</code>
       <div class="mut">${e.error ? '⚠️ ' + esc(e.error) : (e.filas !== '' ? e.filas + ' filas' : '')}</div></div></div>`).join('');
