@@ -8,7 +8,7 @@ if /i "%AI_PROVIDER%"=="mock" (
 ) else (
   echo  Proveedor : %AI_PROVIDER%
   echo  Modelos   : %AI_MODEL% ^(principal^) / %AI_MODEL_LIGERO% ^(agente Datos^)
-  echo  Key       : de %KEY_ORIGEN% ^(termina en ...%GEMINI_API_KEY:~-4%^)
+  echo  Key       : de %KEY_ORIGEN% ^(termina en ...%KEY_ACTIVA:~-4%^)
 )
 echo  Modo      : %EQUIPO_MODO%   Anonimizar: %ANONIMIZAR%
 echo ============================================================

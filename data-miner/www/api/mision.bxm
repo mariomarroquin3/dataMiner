@@ -96,6 +96,14 @@
             } )
             return new AiModel( svc ).withParams( { model: m } )
           }
+          if ( application.provider == "claude" || application.provider == "anthropic" ) {
+            // Anthropic: Sonnet para coordinar y analizar, Haiku para el agente Datos (más rápido y barato).
+            // max_tokens alto: el reporte final en JSON no cabe en los 1024 que bx-ai pone por defecto
+            if ( !len( m ) ) {
+              m = listFindNoCase( "adquisicion,perfilador,analista_csv,analista_db,datos", nombre ) ? "claude-haiku-5-5" : "claude-sonnet-5-5"
+            }
+            return aiModel( provider: "claude", apiKey: getSystemSetting( "ANTHROPIC_API_KEY", getSystemSetting( "CLAUDE_API_KEY", "" ) ), params: { model: m, max_tokens: 8192 } )
+          }
           return aiModel( provider: application.provider, params: len( m ) ? { model: m } : {} )
         }
       }
@@ -104,7 +112,7 @@
     }
 
     if ( !len( trim( pedido ) ) ) {
-      writeOutput( jsonSerialize( { tablas: session.catalogo.listar(), mcp: application.mcpUrl, provider: application.provider, modelo: application.provider == "mock" ? "" : ( len( application.model ) ? application.model : "gemini-3.7-flash" ) } ) )
+      writeOutput( jsonSerialize( { tablas: session.catalogo.listar(), mcp: application.mcpUrl, provider: application.provider, modelo: application.provider == "mock" ? "" : ( len( application.model ) ? application.model : ( application.provider == "gemini" ? "gemini-3.7-flash" : "claude-sonnet-5-5" ) ) } ) )
       return
     }
     r = session.equipo.mision( pedido )

@@ -1,5 +1,7 @@
 @echo off
 rem Copia este archivo como config.local.bat (git lo ignora) y pon tus secretos.
+rem Key del proveedor que uses (AI_PROVIDER en config.bat: claude o gemini)
+set "ANTHROPIC_API_KEY=PEGA_AQUI_TU_KEY_DE_ANTHROPIC"
 set "GEMINI_API_KEY=PEGA_AQUI_TU_KEY_DE_GEMINI"
 set "ANON_SALT=cambia-esta-frase-secreta"
 rem set "KAGGLE_USERNAME=tu_usuario"
