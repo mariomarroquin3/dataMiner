@@ -54,6 +54,14 @@
           guiones.cientifico_ml = [ { toolCalls: [ { name: "priorizar_ventas", arguments: { tabla: "operaciones_sv_oportunidades", top: 10 } } ] },
             "Prioridades listas en la tabla prioridad_ventas." ]
         }
+        // Preguntas desde el tablero (traen "base MySQL" en el contexto): el Analista usa la tool alerta_stock
+        if ( pedidoL.find( "base mysql" ) && len( getSystemSetting( "MYSQL_DB", "" ) ) ) {
+          enviarSlack = pedidoL.reFind( "slack|avísame|avisame" ) > 0
+          guiones.coordinador = [ { toolCalls: [ { name: "delegate_to_analista", arguments: { task: "Revisa en la base MySQL qué productos hay que comprar y cuánto" & ( enviarSlack ? ", y avisa por Slack" : "" ) } } ] },
+            '{"respuesta":"(Modo demo sin IA) Revisé las ventas y el inventario de la base MySQL. Hay productos agotados o que se acaban antes de que llegue el proveedor: hay que pedirlos hoy. Otros se acaban la semana siguiente y todavía hay unos días para pedirlos.' & ( enviarSlack ? ' Mandé el aviso a Slack.' : '' ) & '","hechos":[{"afirmacion":"Productos agotados o que se acaban antes de que llegue el pedido, con cuánto pedir","sql":"SELECT sku, producto, stock, dias_restantes, dias_entrega, pedir_unidades FROM pronostico_stock WHERE estado IN (''agotado'',''crítico'') ORDER BY dias_restantes","origen":"csv"},{"afirmacion":"Productos que se acaban la semana después de la entrega","sql":"SELECT sku, producto, dias_restantes, dias_entrega FROM pronostico_stock WHERE estado = ''pronto'' ORDER BY dias_restantes","origen":"csv"}],"interpretaciones":["Los productos con ventas en aumento se acaban antes de lo que dice el promedio: conviene negociar entregas más cortas con esos proveedores","Configura AI_PROVIDER para que los agentes razonen de verdad"],"siguientes_preguntas":["¿Cuánto me cuesta el pedido sugerido?","¿Qué categoría vende más y cómo va la tendencia?"]}' ]
+          guiones.analista = [ { toolCalls: [ { name: "alerta_stock", arguments: { enviar: enviarSlack } } ] },
+            "Listo: pronostico_stock actualizado en MySQL." ]
+        }
         guiones.formateador = [ guiones.coordinador.last() ]
         // El modo completo usa otros nombres de agente: en demo usamos siempre el compacto
         modelo = ( nombre ) => new AiModel( aiService( "mock" ).setResponses( duplicate( guiones[ nombre ] ) ) )

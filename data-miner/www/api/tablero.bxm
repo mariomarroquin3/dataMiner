@@ -1,0 +1,40 @@
+<bx:script>
+// Datos del tablero de inventario, directo de MySQL (sin IA): KPIs, qué comprar, ventas por semana y por categoría.
+// GET api/tablero.bxm            usa la tabla pronostico_stock (la crea si no existe)
+// GET api/tablero.bxm?recalcular=1  vuelve a calcular el pronóstico antes de responder
+bx:header name="Content-Type" value="application/json; charset=utf-8";
+try {
+  db = new models.ConectorSQL()
+  p = db.probar()
+  if ( !p.ok ) {
+    writeOutput( jsonSerialize( { ok: false, error: p.error } ) )
+    return
+  }
+  hay = db.consultar( "SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'pronostico_stock'" )
+  if ( ( url.recalcular ?: "0" ) == "1" || val( hay.filas[ 1 ].n ) == 0 ) {
+    r = new models.AlertaStock( new models.Catalogo( false ), new models.Informe() ).revisar( false )
+    if ( !r.ok ) {
+      writeOutput( jsonSerialize( { ok: false, error: r.error } ) )
+      return
+    }
+  }
+  vt = getSystemSetting( "ALERTA_VENTAS", "ventas_diarias" )
+  inv = getSystemSetting( "ALERTA_INVENTARIO", "productos" )
+  pron = db.consultar( "SELECT * FROM pronostico_stock ORDER BY FIELD(estado,'agotado','crítico','pronto','ok','sin ventas'), dias_restantes", 500 )
+  kpi = db.consultar( "SELECT COUNT(*) AS productos, SUM(estado='agotado') AS agotados, SUM(estado='crítico') AS criticos, SUM(estado='pronto') AS pronto, SUM(estado='ok') AS ok, SUM(pedir_unidades) AS unidades_pedir, MAX(fecha_corte) AS fecha_corte, MAX(actualizado) AS actualizado FROM pronostico_stock" )
+  // Lo que sigue usa las tablas de la base de ejemplo; si ALERTA_* apunta a otras, esas partes vienen vacías
+  ok = vt.reFind( "^[A-Za-z0-9_]+$" ) && inv.reFind( "^[A-Za-z0-9_]+$" )
+  dinero = ok ? db.consultar( "SELECT ROUND(SUM(p.stock_actual * p.costo_unitario), 2) AS valor_inventario, ROUND(SUM(s.pedir_unidades * p.costo_unitario), 2) AS costo_pedido FROM #inv# p LEFT JOIN pronostico_stock s ON s.sku = p.sku" ) : {}
+  semanas = ok ? db.consultar( "SELECT DATE_FORMAT(DATE_SUB(v.fecha, INTERVAL WEEKDAY(v.fecha) DAY), '%Y-%m-%d') AS semana, SUM(v.unidades) AS unidades, ROUND(SUM(v.unidades * p.precio_venta), 2) AS ventas FROM #vt# v JOIN #inv# p ON p.sku = v.sku WHERE v.fecha >= (SELECT DATE_SUB(DATE_SUB(MAX(fecha), INTERVAL WEEKDAY(MAX(fecha)) DAY), INTERVAL 11 WEEK) FROM #vt#) GROUP BY semana ORDER BY semana", 100 ) : {}
+  categorias = ok ? db.consultar( "SELECT p.categoria, ROUND(SUM(v.unidades * p.precio_venta), 2) AS ventas FROM #vt# v JOIN #inv# p ON p.sku = v.sku WHERE v.fecha > (SELECT DATE_SUB(MAX(fecha), INTERVAL 30 DAY) FROM #vt#) GROUP BY p.categoria ORDER BY ventas DESC", 50 ) : {}
+  writeOutput( jsonSerialize( {
+    ok: true, base: db.descripcion(),
+    kpi: ( kpi.filas ?: [ {} ] )[ 1 ], dinero: ( dinero.filas ?: [ {} ] )[ 1 ],
+    productos: pron.filas ?: [], semanas: semanas.filas ?: [], categorias: categorias.filas ?: [],
+    slack: len( getSystemSetting( "SLACK_WEBHOOK_URL", "" ) ) > 0
+  } ) )
+} catch ( any e ) {
+  bx:header statusCode=500;
+  writeOutput( jsonSerialize( { ok: false, error: e.message } ) )
+}
+</bx:script>
