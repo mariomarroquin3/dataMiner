@@ -44,7 +44,7 @@ class extends="bxModules.bxai.models.providers.OpenAICompatibleService" {
       if ( !isStruct( r ) || !r.keyExists( "error" ) ) return r
 
       var e = r.error
-      var mensaje = isStruct( e ) ? ( e.message ?: serializeJSON( e ) ) : toString( e )
+      var mensaje = isStruct( e ) ? ( e.message ?: jsonSerialize( e ) ) : toString( e )
       var codigo  = isStruct( e ) ? ( e.code ?: "" ) : ""
       // Cuota diaria agotada ("retry in 20h..."): marcamos el modelo y probamos con el siguiente
       if ( codigo == 429 && reFindNoCase( "retry in [0-9]+h", mensaje ) ) {
