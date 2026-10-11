@@ -19,7 +19,7 @@
     }
     // En modo mock se recrea el equipo en cada misión para reiniciar los guiones
     if ( !session.keyExists( "equipo" ) || application.provider == "mock" ) {
-      fuentes = new models.Fuentes( session.catalogo, getTempDirectory() & "dataminer/" & session.sessionid & "/" )
+      fuentes = new models.Fuentes( session.catalogo, getTempDirectory() & "dataminer/" & reReplace( session.sessionid, "[^A-Za-z0-9_-]", "_", "all" ) & "/" )
 
       if ( application.provider == "mock" ) {
         // Modo demo sin IA: guiones fijos, tools reales sobre el dataset local
@@ -62,6 +62,20 @@
         // así el plan gratuito rinde más (el límite por día y por minuto es por modelo)
         modelo = ( nombre ) => {
           var m = ( listFindNoCase( "adquisicion,perfilador,analista_csv,analista_db,datos", nombre ) && len( application.modelLigero ) ) ? application.modelLigero : application.model
+          if ( application.provider == "gemini" ) {
+            // Endpoint de Gemini compatible con OpenAI (ver models/GeminiCompat.bx).
+            // gemini-2.5-flash ya no está disponible para cuentas nuevas. El plan gratuito da pocas
+            // llamadas por día y por modelo, así que por defecto repartimos: los agentes simples usan
+            // un modelo lite y el resto un flash.
+            if ( !len( m ) ) {
+              m = listFindNoCase( "adquisicion,perfilador,analista_csv,analista_db,datos", nombre ) ? "gemini-3.5-flash-lite" : "gemini-3.7-flash"
+            }
+            var svc = new models.GeminiCompat().configure( {
+              apiKey : getSystemSetting( "GEMINI_API_KEY", "" ),
+              baseURL: "https://generativelanguage.googleapis.com/v1beta/openai"
+            } )
+            return new AiModel( svc ).withParams( { model: m } )
+          }
           return aiModel( provider: application.provider, params: len( m ) ? { model: m } : {} )
         }
       }

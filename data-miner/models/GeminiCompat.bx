@@ -1,0 +1,70 @@
+/**
+ * Gemini por su endpoint compatible con OpenAI.
+ *
+ * - bx-ai 3.5 manda las tools a la API nativa de Gemini en formato OpenAI y Gemini responde 400,
+ *   así que usamos https://generativelanguage.googleapis.com/v1beta/openai, que sí acepta ese formato.
+ * - Ese endpoint devuelve los errores dentro de un arreglo ( [ { error: ... } ] ). bx-ai espera un struct
+ *   y fallaba con "Error getting method [keyExists] for class [Array]". Aquí lo desenvolvemos y lanzamos
+ *   el error dentro de la llamada, para que RetryMiddleware reintente los 429 por minuto y los 503.
+ * - El plan gratuito da unas 20 llamadas por día y por modelo. Cuando un modelo agota su cuota del día,
+ *   pasamos al siguiente de la lista (cada uno tiene su propia cuota) y lo recordamos hasta mañana.
+ */
+class extends="bxModules.bxai.models.providers.OpenAICompatibleService" {
+
+  static {
+    // Orden de preferencia cuando un modelo se queda sin cuota diaria
+    RESPALDOS = [
+      "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest",
+      "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest"
+    ]
+    // modelo -> fecha (aaaa-mm-dd) en que agotó su cuota
+    AGOTADOS = {}
+  }
+
+  function init() {
+    super.init()
+    variables.name = "GeminiCompat"
+    return this
+  }
+
+  private function sendChatRequest( required chatRequest, required struct dataPacket, chatUrl = getChatURL() ) {
+    var hoy = dateFormat( now(), "yyyy-mm-dd" )
+    while ( true ) {
+      if ( agotado( arguments.dataPacket.model ?: "", hoy ) ) {
+        var otro = siguiente( hoy )
+        if ( !len( otro ) ) {
+          throw( type: "InvalidInput", message: "Se acabó la cuota diaria de Gemini en todos los modelos gratuitos. Espera a mañana o usa una key con facturación." )
+        }
+        writeLog( text: "GeminiCompat: #arguments.dataPacket.model# sin cuota hoy, uso #otro#", type: "warning", log: "ai" )
+        arguments.dataPacket.model = otro
+      }
+
+      var r = super.sendChatRequest( argumentCollection: arguments )
+      if ( isArray( r ) && r.len() && isStruct( r[ 1 ] ) ) r = r[ 1 ];
+      if ( !isStruct( r ) || !r.keyExists( "error" ) ) return r
+
+      var e = r.error
+      var mensaje = isStruct( e ) ? ( e.message ?: serializeJSON( e ) ) : toString( e )
+      var codigo  = isStruct( e ) ? ( e.code ?: "" ) : ""
+      // Cuota diaria agotada ("retry in 20h..."): marcamos el modelo y probamos con el siguiente
+      if ( codigo == 429 && reFindNoCase( "retry in [0-9]+h", mensaje ) ) {
+        static.AGOTADOS[ arguments.dataPacket.model ?: "" ] = hoy
+        continue
+      }
+      // 429 por minuto, 503 por demanda, etc.: RetryMiddleware espera y reintenta
+      throw( type: "ProviderError", message: "Gemini #codigo#: #mensaje#" )
+    }
+  }
+
+  private boolean function agotado( required string modelo, required string hoy ) {
+    return ( static.AGOTADOS[ arguments.modelo ] ?: "" ) == arguments.hoy
+  }
+
+  private string function siguiente( required string hoy ) {
+    for ( var m in static.RESPALDOS ) {
+      if ( !agotado( m, arguments.hoy ) ) return m
+    }
+    return ""
+  }
+
+}
