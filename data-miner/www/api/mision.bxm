@@ -103,7 +103,9 @@
             m = listFindNoCase( "coordinador,formateador", nombre )
               ? ( len( application.model ) ? application.model : "claude-sonnet-5-5" )
               : ( len( application.modelLigero ) ? application.modelLigero : "claude-haiku-4-5" )
-            var params = { model: m, max_tokens: 8192 }
+            // Caché de prompts automático: cada llamada reenvía la conversación; la parte repetida se cobra
+            // a ~10% del precio y responde más rápido (solo cachea prefijos de 4,096+ tokens en Haiku 4.5)
+            var params = { model: m, max_tokens: 8192, cache_control: { type: "ephemeral" } }
             // Haiku 4.5 y anteriores no razonan si no se pide y no aceptan "effort": van sin esos parámetros.
             // Los modelos 5.x razonan por defecto: con thinking adaptativo cada turno traía bloques de 50k-125k
             // caracteres que se reenvían en cada llamada. Sonnet 5.5 lo apaga con "between_tools"; Haiku 5.5 con "disabled".

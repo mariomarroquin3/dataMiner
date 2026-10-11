@@ -50,6 +50,15 @@ class extends="bxModules.bxai.models.middleware.BaseAiMiddleware" {
     return AiMiddlewareResult.continue()
   }
 
+  /** Deja en logs/ai.log los tokens de entrada, salida y de caché de cada llamada (para ver cuánto ahorra el caché) */
+  AiMiddlewareResult function afterLLMCall( required struct context ) {
+    var u = isStruct( context.result ?: "" ) ? ( context.result.usage ?: {} ) : {}
+    if ( isStruct( u ) && u.count() ) {
+      writeLog( text: "Uso: entrada #u.input_tokens ?: ( u.prompt_tokens ?: 0 )# · leído de caché #u.cache_read_input_tokens ?: 0# · escrito en caché #u.cache_creation_input_tokens ?: 0# · salida #u.output_tokens ?: ( u.completion_tokens ?: 0 )#", type: "information", log: "ai" )
+    }
+    return AiMiddlewareResult.continue()
+  }
+
   /** Copia del mensaje solo con los campos válidos (role, content y los de tool calling de OpenAI) */
   private struct function limpio( required struct m ) {
     var c = {}
