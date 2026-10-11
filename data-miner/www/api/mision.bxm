@@ -8,14 +8,18 @@
 
     // Un equipo por sesión: conserva tablas descargadas y memoria de la conversación
     // El catálogo de la sesión lo crea Application.bx (onSessionStart); ?reset=1 lo reinicia
+    // ?reset=1 empieza de cero: tablas y memoria del equipo (las de ejemplo vuelven solo en modo demo)
     if ( url.keyExists( "reset" ) ) {
       structDelete( session, "catalogo" )
       structDelete( session, "equipo" )
       session.catalogo = new models.Catalogo( application.anonimizar )
-      session.catalogo.registrarCSV( application.raiz & "data/creditos.csv", "creditos", "local" )
-      session.catalogo.registrarCSV( application.raiz & "data/precios.csv", "precios", "local" )
-      session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/clientes_sv.xlsx", "clientes_sv", "local" )
-      session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/operaciones_sv.xlsx", "operaciones_sv", "local" )
+      ej = new models.Ejemplos()
+      if ( ej.activos( application.provider ) && ( url.ejemplos ?: "1" ) != "0" ) ej.cargar( session.catalogo, application.raiz )
+    }
+    // ?quitarEjemplos=1 deja solo las tablas que subió el usuario y olvida la conversación anterior
+    if ( url.keyExists( "quitarEjemplos" ) ) {
+      session.catalogo.quitarEjemplos()
+      structDelete( session, "equipo" )
     }
     // En modo mock se recrea el equipo en cada misión para reiniciar los guiones
     if ( !session.keyExists( "equipo" ) || application.provider == "mock" ) {

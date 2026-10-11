@@ -214,7 +214,7 @@
       <div id="calidad"></div>
     </div>
     <div class="card"><h3>🗂️ Tablas disponibles <span class="n" id="ntablas">0</span></h3>
-      <div id="tablas" class="mut">Cargando…</div><div id="mcp"></div></div>
+      <div id="tablas" class="mut">Cargando…</div><div id="mcp"></div><div id="limpiar" class="alerta-btns" style="margin-top:10px"></div></div>
   </aside>
 
   <main>
@@ -291,6 +291,15 @@ function tablas(d) {
       <div class="tn"><b title="${esc(t.tabla)}">${esc(t.tabla)}</b><small title="${esc(t.fuente)}">${esc(t.fuente)}</small></div>
       <div class="tf">${num(t.filas)} filas</div></div>`).join('') || '<span class="mut">Ninguna todavía</span>';
   $('#mcp').innerHTML = lastMcp ? `🗄️ Base remota vía MCP: <b>${esc(lastMcp)}</b>` : 'Sin base MCP (define MCP_DB_URL)';
+  // Limpiar contexto: quitar las tablas de ejemplo o empezar de cero (tablas + memoria del equipo)
+  const hayEjemplos = ts.some(t => t.ejemplo);
+  $('#limpiar').innerHTML = (hayEjemplos ? '<button type="button" class="abtn" data-l="quitarEjemplos=1">Quitar tablas de ejemplo</button>' : '')
+    + (ts.length ? '<button type="button" class="abtn" data-l="reset=1&ejemplos=0">🧹 Empezar de cero</button>' : '');
+  document.querySelectorAll('#limpiar button').forEach(b => b.onclick = async () => {
+    if (b.dataset.l.startsWith('reset') && !confirm('Se borran todas las tablas cargadas y la memoria del equipo. ¿Seguir?')) return;
+    tablas(await (await fetch('api/mision.bxm?' + b.dataset.l)).json());
+    $('#out').innerHTML = ''; $('#vacio').style.display = '';
+  });
 }
 fetch('api/mision.bxm').then(r => r.json()).then(d => { tablas(d); if (d.provider) { proveedor = 'IA: ' + d.provider; estado(proveedor); } }).catch(() => tablas({}));
 

@@ -34,6 +34,8 @@
     resultado.partidas = nor.tablasPartidas().pares
     resultado.catalogo = session.catalogo.listar()
     resultado.anonimiza = session.catalogo.anonimiza()
+    // Datos nuevos: el equipo empieza sin la memoria de misiones anteriores, para no mezclar contextos
+    if ( resultado.tablas.len() ) structDelete( session, "equipo" )
     writeOutput( jsonSerialize( resultado ) )
   } catch ( any e ) {
     bx:header statusCode=500;

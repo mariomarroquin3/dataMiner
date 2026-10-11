@@ -1,0 +1,22 @@
+/**
+ * Tablas de ejemplo (créditos, precios, clientes y operaciones sintéticos).
+ * DATOS_EJEMPLO = auto (por defecto: solo en modo demo/mock, donde los guiones las necesitan) | si | no.
+ * Con un LLM real no se cargan, para que el agente no las confunda con los datos del usuario.
+ */
+class {
+
+  boolean function activos( string provider = "mock" ) {
+    var modo = getSystemSetting( "DATOS_EJEMPLO", "auto" ).lCase()
+    return modo == "si" || ( modo == "auto" && arguments.provider == "mock" )
+  }
+
+  void function cargar( required any catalogo, required string raiz ) {
+    catalogo.registrarCSV( raiz & "data/creditos.csv", "creditos", "local" )
+    catalogo.registrarCSV( raiz & "data/precios.csv", "precios", "local" )
+    // Clientes salvadoreños sintéticos con DUI, NIT, teléfonos...: entran anonimizados
+    catalogo.registrarArchivo( raiz & "pruebas/fuentes/clientes_sv.xlsx", "clientes_sv", "local" )
+    // Inventario, ventas diarias y oportunidades de una distribuidora (sintéticos): para stock y priorización
+    catalogo.registrarArchivo( raiz & "pruebas/fuentes/operaciones_sv.xlsx", "operaciones_sv", "local" )
+  }
+
+}

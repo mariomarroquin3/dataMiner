@@ -19,15 +19,11 @@ class {
     return true
   }
 
-  // Cada sesión arranca con su catálogo y los datasets de ejemplo (puedes quitarlos)
+  // Cada sesión arranca con su catálogo. Las tablas de ejemplo solo se cargan en modo demo (ver models/Ejemplos.bx)
   function onSessionStart() {
     session.catalogo = new models.Catalogo( application.anonimizar )
-    session.catalogo.registrarCSV( application.raiz & "data/creditos.csv", "creditos", "local" )
-    session.catalogo.registrarCSV( application.raiz & "data/precios.csv", "precios", "local" )
-    // Clientes salvadoreños sintéticos con DUI, NIT, teléfonos...: entran anonimizados
-    session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/clientes_sv.xlsx", "clientes_sv", "local" )
-    // Inventario, ventas diarias y oportunidades de una distribuidora (sintéticos): para stock y priorización
-    session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/operaciones_sv.xlsx", "operaciones_sv", "local" )
+    var ej = new models.Ejemplos()
+    if ( ej.activos( application.provider ) ) ej.cargar( session.catalogo, application.raiz )
   }
 
   function onRequestStart( string page ) {

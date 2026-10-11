@@ -14,6 +14,8 @@ rem Opcional: un modelo mas barato para el agente Datos (cada modelo tiene su cu
 set "AI_MODEL_LIGERO="
 rem compacto = coordinador + 3 agentes (recomendado) / completo = 7 agentes
 set "EQUIPO_MODO=compacto"
+rem Tablas de ejemplo (creditos, precios, clientes_sv, operaciones_sv): auto = solo en modo demo / si / no
+set "DATOS_EJEMPLO=auto"
 
 rem --- Privacidad --------------------------------------------
 rem si = anonimiza DUI, NIT, nombres, telefonos... al entrar (no lo apagues con datos reales)

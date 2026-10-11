@@ -95,6 +95,13 @@ class {
     return lista.filter( t => !t.ejemplo ).append( lista.filter( t => t.ejemplo ), true )
   }
 
+  /** Quita las tablas de ejemplo (fuente "local"); devuelve cuántas quitó */
+  numeric function quitarEjemplos() {
+    var nombres = variables.tablas.keyArray().filter( n => ( variables.origenes[ n ].fuente ?: "" ) == "local" )
+    nombres.each( n => { variables.tablas.delete( n ); variables.origenes.delete( n ) } )
+    return nombres.len()
+  }
+
   /** Perfil de una tabla desconocida: tipo, nulos, distintos, ejemplos y estadísticas */
   struct function perfilar( required string tabla ) {
     if ( !variables.tablas.keyExists( tabla ) ) return { error: "No existe la tabla #tabla#. Tablas: #variables.tablas.keyList()#" }
