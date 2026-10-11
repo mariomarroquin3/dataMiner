@@ -109,8 +109,21 @@ class {
     }
     if ( silencioso ) return res
     if ( !isNull( variables.informe ) ) {
-      variables.informe.agregarGrafico( { tipo: "bar", titulo: "Calidad · % de vacíos por columna · #tabla# (puntaje #puntaje#/100)",
-        labels: columnas.map( x => x.columna ), series: [ { nombre: "% vacíos", datos: columnas.map( x => x.nulos_pct ) } ] } )
+      var conVacios = columnas.filter( x => x.nulos_pct > 0 ).sort( ( a, b ) => b.nulos_pct - a.nulos_pct )
+      if ( conVacios.len() ) {
+        // Solo las columnas con vacíos: con todas en 0 la gráfica salía en blanco
+        conVacios = conVacios.len() > 20 ? conVacios.slice( 1, 20 ) : conVacios
+        variables.informe.agregarGrafico( { tipo: "bar", titulo: "Vacíos por columna (%) · #tabla# · calidad #puntaje#/100",
+          labels: conVacios.map( x => x.columna ), series: [ { nombre: "% vacíos", datos: conVacios.map( x => x.nulos_pct ) } ] } )
+      } else if ( problemas.len() ) {
+        // Sin vacíos: mostramos de dónde salen los puntos que bajaron la calidad
+        var perdidos = {}
+        problemas.each( x => perdidos[ x.columna ] = ( perdidos[ x.columna ] ?: 0 ) + peso[ x.severidad ] )
+        var cols = perdidos.keyArray().sort( ( a, b ) => perdidos[ b ] - perdidos[ a ] )
+        var etiqueta = ( c ) => c == "(tabla)" ? "toda la tabla" : c
+        variables.informe.agregarGrafico( { tipo: "bar", titulo: "Sin vacíos · puntos de calidad perdidos por columna · #tabla# · calidad #puntaje#/100",
+          labels: cols.map( c => etiqueta( c ) ), series: [ { nombre: "puntos perdidos", datos: cols.map( c => perdidos[ c ] ) } ] } )
+      }
     }
     return registrar( "calidad(#tabla#)", res, n )
   }
