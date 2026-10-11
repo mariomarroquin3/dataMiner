@@ -301,7 +301,7 @@ function tablas(d) {
     $('#out').innerHTML = ''; $('#vacio').style.display = '';
   });
 }
-fetch('api/mision.bxm').then(r => r.json()).then(d => { tablas(d); if (d.provider) { proveedor = 'IA: ' + d.provider; estado(proveedor); } }).catch(() => tablas({}));
+fetch('api/mision.bxm').then(r => r.json()).then(d => { tablas(d); if (d.provider) { proveedor = 'IA: ' + d.provider + (d.modelo ? ' · ' + d.modelo : ''); estado(proveedor); } }).catch(() => tablas({}));
 
 function render(d) {
   $('#vacio').style.display = 'none';

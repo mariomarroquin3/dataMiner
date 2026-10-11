@@ -104,7 +104,7 @@
     }
 
     if ( !len( trim( pedido ) ) ) {
-      writeOutput( jsonSerialize( { tablas: session.catalogo.listar(), mcp: application.mcpUrl, provider: application.provider } ) )
+      writeOutput( jsonSerialize( { tablas: session.catalogo.listar(), mcp: application.mcpUrl, provider: application.provider, modelo: application.provider == "mock" ? "" : ( len( application.model ) ? application.model : "gemini-3.7-flash" ) } ) )
       return
     }
     r = session.equipo.mision( pedido )
