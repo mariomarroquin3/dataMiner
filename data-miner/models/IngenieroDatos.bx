@@ -113,8 +113,18 @@ class {
       if ( conVacios.len() ) {
         // Solo las columnas con vacíos: con todas en 0 la gráfica salía en blanco
         conVacios = conVacios.len() > 20 ? conVacios.slice( 1, 20 ) : conVacios
-        variables.informe.agregarGrafico( { tipo: "bar", titulo: "Vacíos por columna (%) · #tabla# · calidad #puntaje#/100",
-          labels: conVacios.map( x => x.columna ), series: [ { nombre: "% vacíos", datos: conVacios.map( x => x.nulos_pct ) } ] } )
+        // Columnas repetidas (Producto_1..Producto_5): el número es la posición dentro de la fila, no un producto.
+        // Se rotulan "Producto (5.º)" para que la gráfica no parezca tener productos anonimizados
+        var todas = columnas.map( x => x.columna )
+        var repetidas = todas.filter( c => c.reFind( "^(.+)_([0-9]+)$" ) ).map( c => c.reReplace( "_[0-9]+$", "" ) )
+        var rotulo = ( c ) => {
+          if ( !c.reFind( "^(.+)_([0-9]+)$" ) ) return c
+          var base = c.reReplace( "_[0-9]+$", "" )
+          return repetidas.filter( b => b == base ).len() >= 2 ? base & " (" & c.listLast( "_" ) & ".º)" : c
+        }
+        var hayRepetidas = conVacios.some( x => rotulo( x.columna ) != x.columna )
+        variables.informe.agregarGrafico( { tipo: "bar", titulo: "Vacíos por columna (%) · #tabla# · calidad #puntaje#/100" & ( hayRepetidas ? " · (N.º) = posición en cada fila, no un producto" : "" ),
+          labels: conVacios.map( x => rotulo( x.columna ) ), series: [ { nombre: "% vacíos", datos: conVacios.map( x => x.nulos_pct ) } ] } )
       } else if ( problemas.len() ) {
         // Sin vacíos: mostramos de dónde salen los puntos que bajaron la calidad
         var perdidos = {}
