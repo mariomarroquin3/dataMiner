@@ -121,7 +121,12 @@ class {
     if ( isNull( v ) ) return ""
     var s = toString( v )
     if ( !isNumeric( s ) ) return s
-    return createObject( "java", "java.math.BigDecimal" ).init( s ).setScale( 6, createObject( "java", "java.math.RoundingMode" ).HALF_UP ).stripTrailingZeros().toPlainString()
+    // isNumeric acepta "1,234" o " 12 " pero BigDecimal no: se limpian y, si aun así falla, se usa el texto tal cual
+    try {
+      return createObject( "java", "java.math.BigDecimal" ).init( s.reReplace( "[,\s$]", "", "all" ) ).setScale( 6, createObject( "java", "java.math.RoundingMode" ).HALF_UP ).stripTrailingZeros().toPlainString()
+    } catch ( any e ) {
+      return s
+    }
   }
 
   /** SHA-256 del contenido de cada tabla del catálogo que aparece en el SQL */

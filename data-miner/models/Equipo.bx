@@ -423,6 +423,8 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
         correccion_detalle: problemas
       } )
     } catch ( any e ) {
+      // si falló a mitad de camino la cadena quedó a medias: se vuelve a sellar el reporte original
+      try { variables.verificador.reiniciar(); verificarReporte( reporte ) } catch ( any e2 ) {}
       return reporte.append( { correccion: "No se pudo corregir (#e.message#): revisa las cifras marcadas" } )
     }
   }
