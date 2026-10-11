@@ -63,10 +63,6 @@
   <div class="vm-aurora" data-aurora='{"color1":"#19e6ff","color2":"#b14bff","brightness":0.9,"speed":0.35,"bandHeight":0.55}'></div>
   <div class="in">
     <div><div class="base" id="pill"><i></i><span id="base">Conectando…</span></div><h1>¿Qué tengo que comprar?</h1><p id="sub">Conectado a tu base MySQL · cargando…</p></div>
-    <div class="acciones">
-      <button class="vm-btn vidrio" id="recalc" type="button">Recalcular</button>
-      <button class="vm-btn pri" id="slackBtn" type="button">Avisar por Slack</button>
-    </div>
   </div>
 </header>
 
@@ -121,7 +117,6 @@ const claseEstado = e => ({ 'agotado': 'agotado', 'crítico': 'critico', 'pronto
 let datos = null, filtro = 'comprar', graficos = {};
 
 async function cargar(recalcular) {
-  $('#recalc').disabled = true;
   try {
     const d = await (await fetch('api/tablero.bxm' + (recalcular ? '?recalcular=1' : ''))).json();
     if (!d.ok) throw new Error(d.error || 'Sin datos');
@@ -132,7 +127,6 @@ async function cargar(recalcular) {
     $('#msg').innerHTML = `<div class="vm-aviso err">No se pudo leer MySQL: ${esc(e.message)}<br><span class="vm-mut">Revisa MYSQL_* en config.local.bat y que el servicio MySQL esté encendido.</span></div>`;
     $('#sub').textContent = '';
   }
-  $('#recalc').disabled = false;
 }
 
 function dibujar() {
@@ -205,19 +199,6 @@ document.querySelectorAll('#filtro button').forEach(b => b.onclick = () => {
   document.querySelectorAll('#filtro button').forEach(x => x.classList.toggle('on', x === b));
   if (datos) tabla();
 });
-$('#recalc').onclick = () => cargar(true);
-
-$('#slackBtn').onclick = async () => {
-  const b = $('#slackBtn'); b.disabled = true;
-  $('#msg').innerHTML = '<div class="vm-aviso"><span class="spin-i"></span>Calculando y avisando…</div>';
-  try {
-    const r = await (await fetch('api/alerta-stock.bxm?enviar=1')).json();
-    if (!r.ok) throw new Error(r.error);
-    $('#msg').innerHTML = `<div class="vm-aviso ok"><b>${esc(r.slack.motivo)}</b><div class="slack">${esc(r.texto.replace(/\*/g, '').replace(/_/g, ''))}</div></div>`;
-    await cargar(false);
-  } catch (e) { $('#msg').innerHTML = `<div class="vm-aviso err">No se pudo avisar: ${esc(e.message)}</div>`; }
-  b.disabled = false;
-};
 
 // El agente recibe el contexto de la base para que use las tools de MySQL y no los archivos de ejemplo
 const CONTEXTO = 'Contexto: trabaja con la base MySQL de la empresa (tools mysql_esquema, mysql_importar y alerta_stock; el pronóstico de inventario está en la tabla pronostico_stock de MySQL). Pregunta: ';
