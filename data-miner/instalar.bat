@@ -45,7 +45,16 @@ if errorlevel 1 (
 )
 
 rem --- Modulo bx-ai ---
-if exist "%USERPROFILE%\.boxlang\modules\bxai\ModuleConfig.bx" (
+rem El instalador de BoxLang puede fijar BOXLANG_HOME (p. ej. C:\boxlang\home); si no, es %USERPROFILE%\.boxlang
+set "BXH=%USERPROFILE%\.boxlang"
+if defined BOXLANG_HOME set "BXH=%BOXLANG_HOME%"
+set "BXAI="
+if exist "%USERPROFILE%\.boxlang\modules\bxai\ModuleConfig.bx" set BXAI=1
+if exist "%BXH%\modules\bxai\ModuleConfig.bx" set BXAI=1
+rem install-bx-module deja la carpeta como bx-ai
+if exist "%BXH%\modules\bx-ai\ModuleConfig.bx" set BXAI=1
+if exist "%USERPROFILE%\.boxlang\modules\bx-ai\ModuleConfig.bx" set BXAI=1
+if defined BXAI (
   echo [OK] Modulo bx-ai ya instalado
 ) else (
   echo Instalando el modulo bx-ai...
@@ -53,8 +62,8 @@ if exist "%USERPROFILE%\.boxlang\modules\bxai\ModuleConfig.bx" (
 )
 
 rem --- Jars para la demo por consola ---
-if not exist "%USERPROFILE%\.boxlang\lib" mkdir "%USERPROFILE%\.boxlang\lib"
-copy /y lib\*.jar "%USERPROFILE%\.boxlang\lib\" >nul && echo [OK] Jars copiados a %USERPROFILE%\.boxlang\lib
+if not exist "%BXH%\lib" mkdir "%BXH%\lib"
+copy /y lib\*.jar "%BXH%\lib\" >nul && echo [OK] Jars copiados a %BXH%\lib
 
 rem --- Opcionales: Python y Node (solo para MCP y demo-consola completa) ---
 echo.

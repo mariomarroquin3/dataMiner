@@ -10,6 +10,9 @@ if "%PORT%"=="" set "PORT=8766"
 set "VENV=%USERPROFILE%\.dataminer-mcp-venv"
 set "PY=python"
 where py >nul 2>&1 && set "PY=py -3"
+rem mcp 1.6.0 y pydantic 2.10.6 no instalan en Python 3.14: preferir 3.12 o 3.13 si estan
+py -3.13 --version >nul 2>&1 && set "PY=py -3.13"
+py -3.12 --version >nul 2>&1 && set "PY=py -3.12"
 if not exist "%VENV%\Scripts\mcp-server-sqlite.exe" (
   echo Instalando mcp-server-sqlite ^(una sola vez^)...
   %PY% -m venv "%VENV%"

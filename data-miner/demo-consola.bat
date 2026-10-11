@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
-call config.bat
+call "%~dp0config.bat"
 rem La demo por consola usa guiones fijos (sin IA), aunque tengas key
 set "AI_PROVIDER=mock"
 
@@ -29,7 +29,7 @@ if defined PY (
 where npx >nul 2>&1
 if not errorlevel 1 if defined PY (
   echo Levantando la base de datos MCP en otra ventana...
-  start "MCP SQLite" /min cmd /c iniciar-mcp.bat
+  start "MCP SQLite" /min cmd /c "%~dp0iniciar-mcp.bat"
   set "MCP_DB_URL=http://localhost:8766/mcp"
   for /l %%i in (1,1,60) do (
     curl -s -o nul http://localhost:8766/mcp && goto :mcp_listo
