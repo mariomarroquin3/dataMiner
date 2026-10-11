@@ -301,7 +301,8 @@ class {
   }
 
   private string function numeroTexto( required numeric n ) {
-    return createObject( "java", "java.math.BigDecimal" ).init( javaCast( "double", n ) ).stripTrailingZeros().toPlainString()
+    // valueOf (no init): init( double ) convierte 1.35 en 1.350000000000000088817841970012523...
+    return createObject( "java", "java.math.BigDecimal" ).valueOf( javaCast( "double", n ) ).stripTrailingZeros().toPlainString()
   }
 
   /** JSON: un arreglo de objetos, o un objeto con un arreglo dentro (data, items, results...). Aplana un nivel: dir.ciudad -> dir_ciudad */
