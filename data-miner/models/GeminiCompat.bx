@@ -28,7 +28,7 @@ class extends="bxModules.bxai.models.providers.OpenAICompatibleService" {
   }
 
   private function sendChatRequest( required chatRequest, required struct dataPacket, chatUrl = getChatURL() ) {
-    var hoy = dateFormat( now(), "yyyy-mm-dd" )
+    var hoy = dateFormat( now(), "yyyy-MM-dd" )
     while ( true ) {
       if ( agotado( arguments.dataPacket.model ?: "", hoy ) ) {
         var otro = siguiente( hoy )
