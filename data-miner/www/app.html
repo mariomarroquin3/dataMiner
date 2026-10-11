@@ -2,409 +2,618 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Data Miner · Equipo de agentes</title>
-<script>
-  // Tema elegido en la landing (o con el botón de aquí); si no hay, sigue al sistema
-  (function(){ try { var t = localStorage.getItem('dm-tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.theme = t; } catch(e){} })();
-</script>
+<title>VeriMine · Agente</title>
+<meta name="description" content="Sube tus datos, pregunta en español y recibe decisiones con cada cifra verificada contra su SQL.">
+<link rel="icon" href="img/verimine.png">
+<link rel="stylesheet" href="css/verimine.css">
 <style>
-  :root{
-    --bg:#f6f7fb;--bg2:#eef0f7;--panel:#ffffff;--panel2:#f9fafc;--line:#e4e7f0;--line2:#d5d9e6;
-    --txt:#141a2e;--txt2:#3d4560;--mut:#6b7390;
-    --acc:#5b5bf0;--acc2:#7c3aed;--accbg:#eef0ff;--acctx:#3b3bd1;
-    --ok:#0f9f6e;--okbg:#e6f7f0;--bad:#d93a3a;--badbg:#fdeceb;--warn:#b7791f;--warnbg:#fdf4e3;
-    --priv:#0e7c66;--privbg:#e5f6f1;
-    --sh:0 1px 2px rgba(20,26,46,.05),0 4px 16px rgba(20,26,46,.05);
-    --r:14px;
-  }
-  @media (prefers-color-scheme:dark){:root:not([data-theme="claro"]){
-    --bg:#0c0f1a;--bg2:#121626;--panel:#151a2b;--panel2:#1a2034;--line:#252c44;--line2:#323a57;
-    --txt:#eceff8;--txt2:#c3c9dc;--mut:#8a92ad;
-    --acc:#7b7bff;--acc2:#a78bfa;--accbg:#1f2347;--acctx:#b4b6ff;
-    --ok:#34d399;--okbg:#0d2e24;--bad:#f87171;--badbg:#3a1618;--warn:#fbbf24;--warnbg:#33270b;
-    --priv:#5eead4;--privbg:#0c2b27;
-    --sh:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
-  }}
-  :root[data-theme="oscuro"]{
-    --bg:#0c0f1a;--bg2:#121626;--panel:#151a2b;--panel2:#1a2034;--line:#252c44;--line2:#323a57;
-    --txt:#eceff8;--txt2:#c3c9dc;--mut:#8a92ad;
-    --acc:#7b7bff;--acc2:#a78bfa;--accbg:#1f2347;--acctx:#b4b6ff;
-    --ok:#34d399;--okbg:#0d2e24;--bad:#f87171;--badbg:#3a1618;--warn:#fbbf24;--warnbg:#33270b;
-    --priv:#5eead4;--privbg:#0c2b27;
-    --sh:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
-  code{font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace}
-  button{font:inherit}
+  /* ---- Hero con aurora: paso 1 (subir) o cabecera compacta (datos listos) ---- */
+  .hero { position: relative; padding: 64px 0 56px; isolation: isolate; transition: padding .3s }
+  .hero .vm-aurora { inset: -72px 0 0 }
+  .hero .in { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 24px; text-align: center }
+  .hero h1 { margin: 0 0 12px; font-size: clamp(2rem, 4.4vw, 3.1rem); line-height: 1.08; letter-spacing: -.03em; font-weight: 900 }
+  .hero p.sub { margin: 0 auto 30px; max-width: 600px; color: var(--txt-2); font-size: 1.08rem }
+  .hero .enlaces { margin-top: 10px; display: flex; justify-content: center; gap: 18px; flex-wrap: wrap }
+  @media (max-width: 640px) { .hero { padding: 40px 0 36px } .hero p.sub { font-size: 1rem } }
 
-  /* Cabecera */
-  header.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  header.top .in{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
-  .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-size:18px;box-shadow:0 4px 12px rgba(91,91,240,.35)}
-  .brand b{display:block;font-size:1rem;letter-spacing:-.01em}
-  .brand span{font-size:.78rem;color:var(--mut)}
-  .pill{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--mut);border:1px solid var(--line);background:var(--panel);padding:5px 10px;border-radius:999px}
-  .pill i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px var(--okbg)}
+  /* Zona de carga grande */
+  .drop { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 320px; padding: 40px 24px;
+    border: 1.5px dashed rgba(255, 255, 255, .28); border-radius: var(--r-xl); background: rgba(10, 10, 18, .55); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    box-shadow: var(--sombra); cursor: pointer; transition: border-color .2s, background .2s, box-shadow .25s }
+  .drop:hover, .drop.over { border-color: var(--cian); background: rgba(25, 230, 255, .06); box-shadow: var(--sombra), var(--brillo) }
+  .drop.over { transform: scale(1.01) }
+  .drop input { display: none }
+  .drop .ico { width: 76px; height: 76px; border-radius: 22px; display: grid; place-items: center; background: linear-gradient(135deg, rgba(123, 63, 242, .45), rgba(25, 230, 255, .25)); border: 1px solid var(--linea-2); margin-bottom: 8px }
+  .drop .ico svg { width: 36px; height: 36px; color: #fff }
+  .drop b { font-size: 1.35rem; font-weight: 700; letter-spacing: -.01em }
+  .drop .o { color: var(--mut); font-size: .9rem }
+  .drop small { margin-top: 12px; color: var(--mut); font-size: .86rem }
+  @media (max-width: 640px) { .drop { min-height: 260px; padding: 28px 16px } .drop b { font-size: 1.15rem } }
 
-  .wrap{max-width:1240px;margin:0 auto;padding:24px 20px 60px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:24px;align-items:start}
-  @media (max-width:900px){.wrap{grid-template-columns:1fr;padding:16px}}
-  aside{position:sticky;top:76px;display:flex;flex-direction:column;gap:16px}
-  @media (max-width:900px){aside{position:static;order:2}}
+  /* Escenario de transformación (archivo → eje → resultados) */
+  .escena { position: relative; height: 320px; border-radius: var(--r-xl); background: rgba(10, 10, 18, .55); border: 1px solid var(--linea); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: var(--sombra); overflow: hidden; transition: opacity .4s, transform .4s }
+  .escena.cerrar { opacity: 0; transform: translateY(-10px) }
+  .tf-docs { position: absolute; left: 0; top: 0; bottom: 0; width: 50% }
+  .tf-doc { position: absolute; top: 50%; left: -30%; width: 150px; height: 190px; margin-top: -95px; display: flex; transition: left 1.3s cubic-bezier(.4, 0, .2, 1); filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .5)) }
+  .tf-doc.entra { left: calc(100% - 75px) }
+  .tf-strip { width: calc(100% / 6); height: 100%; overflow: hidden; transition: transform .7s cubic-bezier(.4, 0, 1, 1), opacity .6s; transition-delay: calc(var(--i) * 45ms) }
+  .tf-face { width: 150px; height: 100%; margin-left: calc(var(--i) * -25px); padding: 12px; border-radius: 12px; background: #15151f; border: 1px solid rgba(255, 255, 255, .14); display: flex; flex-direction: column; gap: 7px }
+  .tf-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px } .tf-head i { width: 14px; height: 14px; border-radius: 4px; background: var(--vio-2) } .tf-head span { font-size: .66rem; font-weight: 700; color: var(--txt-2); text-transform: uppercase }
+  .tf-line { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .13) }
+  .tf-name { margin-top: auto; font-size: .64rem; color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .tf-doc.triturar .tf-strip { opacity: 0; transform: translateY(calc((var(--i) - 2.5) * 34px)) rotate(calc((var(--i) - 2.5) * 9deg)) scale(.85) }
+  .tf-axis { position: absolute; left: 50%; top: 24px; bottom: 24px; width: 2px; margin-left: -1px; background: linear-gradient(to bottom, transparent, var(--cian) 25%, var(--vio-2) 75%, transparent); box-shadow: 0 0 18px rgba(25, 230, 255, .5); transition: box-shadow .2s }
+  .tf-axis.pulso { box-shadow: 0 0 40px rgba(25, 230, 255, .9), 0 0 80px rgba(177, 75, 255, .6) }
+  .tf-center { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; transform: translate(-50%, -50%); border-radius: 16px; background: linear-gradient(135deg, var(--vio), var(--vio-2)); display: grid; place-items: center; box-shadow: 0 0 30px rgba(123, 63, 242, .6) }
+  .tf-center svg { width: 30px; height: 30px; color: #fff }
+  .tf-p { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 50%; margin: -2px; animation: tfp var(--t) ease-out forwards }
+  @keyframes tfp { to { transform: translate(var(--dx), var(--dy)); opacity: 0 } }
+  .tf-results { position: absolute; left: calc(50% + 40px); right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px }
+  .tf-chip { display: flex; align-items: baseline; gap: 10px; padding: 9px 14px; border-radius: var(--pill); background: rgba(255, 255, 255, .06); border: 1px solid var(--linea-2); opacity: 0; transform: translateX(-24px) scale(.9); transition: opacity .35s, transform .45s cubic-bezier(.2, .9, .3, 1.3); font-size: .9rem; color: var(--txt-2) }
+  .tf-chip.sale { opacity: 1; transform: none }
+  .tf-chip b { font-weight: 900; color: var(--cian-txt); font-variant-numeric: tabular-nums; white-space: nowrap }
+  .tf-chip.ok b { color: var(--ok) } .tf-chip.warn b { color: var(--warn) } .tf-chip.bad b { color: var(--bad) } .tf-chip.priv b { color: #cfb3ff }
+  @media (max-width: 640px) { .escena { height: 300px } .tf-doc { width: 110px; height: 140px; margin-top: -70px } .tf-doc.entra { left: calc(100% - 55px) } .tf-face { width: 110px; padding: 8px; margin-left: calc(var(--i) * -18.33px) } .tf-results { left: calc(50% + 20px); right: 10px; gap: 6px } .tf-chip { font-size: .78rem; padding: 7px 10px; gap: 6px } .tf-chip span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap } }
 
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
-  .card h3{margin:0 0 12px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);display:flex;align-items:center;gap:8px}
-  .card h3 .n{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;color:var(--mut);background:var(--bg2);border-radius:999px;padding:1px 8px}
-  .mut{color:var(--mut);font-size:.85rem}
+  /* ---- Flujo en una columna: 1 resultados del archivo → 2 pregunta → 3 respuesta ---- */
+  .flujo { max-width: 1040px; margin: 0 auto; padding: 28px 24px 90px; display: flex; flex-direction: column; gap: 20px }
+  @media (max-width: 640px) { .flujo { padding: 8px 16px 60px } }
+  .sec-h { display: flex; align-items: center; gap: 12px; margin: 0 0 14px }
+  .sec-h .num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--vio), var(--vio-2)); color: #fff; font-weight: 900; font-size: .85rem; flex: none }
+  .sec-h h2 { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em }
+  .sec-h .lado { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+  .sec-h .resumen { color: var(--mut); font-size: .88rem }
 
-  /* Hero / misión */
-  .hero h1{margin:0 0 6px;font-size:1.75rem;line-height:1.2;letter-spacing:-.02em}
-  .hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .hero p.sub{margin:0 0 18px;color:var(--txt2);max-width:760px}
-  .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 18px;padding:0;list-style:none}
-  .flow li{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--txt2);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 6px}
-  .flow li b{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--accbg);font-size:.72rem}
-  .flow .sep{border:0;background:none;padding:0;color:var(--line2)}
+  /* 1. Resultados: título ghost-type → placa de sonar con 4 pines → detalle en modales */
+  #secDatos { padding: 28px 28px 22px }
+  @media (max-width: 640px) { #secDatos { padding: 20px 16px 16px } }
+  .cab-res { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px 40px; align-items: end; margin-bottom: 10px }
+  @media (max-width: 860px) { .cab-res { grid-template-columns: 1fr } }
+  .vm-card h2.gt { display: block; font-size: clamp(1.7rem, 3.2vw, 2.6rem); font-weight: 900; letter-spacing: -.03em; line-height: 1.12; margin: 0; height: 2.3em; overflow: hidden }
+  .gt-base { display: block; white-space: nowrap }
+  .gt-ghost { white-space: nowrap }
+  .gt-ghost { opacity: .38; transition: opacity .3s; background-size: 200% 100%; border-radius: 4px }
+  .gt-ghost.acepta { opacity: 1; color: transparent; -webkit-background-clip: text; background-clip: text; background-image: linear-gradient(90deg, var(--cian-txt), var(--vio-2) 50%, var(--txt) 50%); animation: gtBarrido .9s ease forwards }
+  .gt-ghost.fijo { animation: none; color: var(--txt); background: none }
+  .gt-ghost.sel { background: rgba(25, 230, 255, .28); color: var(--txt) }
+  @keyframes gtBarrido { from { background-position: 100% 0 } to { background-position: 0 0 } }
+  .gt-caret { display: inline-block; width: 3px; height: .95em; margin-left: 3px; vertical-align: -.1em; background: var(--cian); border-radius: 2px }
+  .gt-caret.idle { animation: parpadeo 1s steps(2) infinite } @keyframes parpadeo { 50% { opacity: 0 } }
+  .cab-res .frase { margin: 0; color: var(--txt-2); font-size: 1.05rem; line-height: 1.5 }
+  .cab-res .frase b { color: var(--txt) }
+  .cab-res .lado { margin-top: 8px; display: flex; gap: 8px; align-items: center }
+  .placa { position: relative; border-radius: var(--r); background: rgba(0, 0, 0, .35); border: 1px solid var(--linea); overflow: hidden; margin-top: 14px }
+  .placa canvas { display: block; width: 100%; height: 230px }
+  .placa .pines { position: absolute; inset: 0; pointer-events: none; transition: transform .15s ease-out }
+  .pin { position: absolute; bottom: 0; width: 1px; background: linear-gradient(to top, var(--pin, #fff), transparent); transform: translateX(-50%) }
+  .pin::before { content: ""; position: absolute; top: -5px; left: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--pin, #fff); box-shadow: 0 0 0 4px rgba(255, 255, 255, .08), 0 0 16px var(--pin, #fff) }
+  .pin.on::before { animation: pinPulso 1.2s ease-out }
+  @keyframes pinPulso { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .5), 0 0 16px var(--pin) } 100% { box-shadow: 0 0 0 26px rgba(255, 255, 255, 0), 0 0 16px var(--pin) } }
+  @media (max-width: 640px) { .placa canvas { height: 150px } }
+  .hallazgos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--linea); margin-top: 0 }
+  @media (max-width: 760px) { .hallazgos { grid-template-columns: repeat(2, 1fr) } }
+  .hz { position: relative; padding: 22px 18px 20px; text-align: center; border-right: 1px solid var(--linea); background: none; border-top: 0; border-bottom: 0; border-left: 0; color: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: background .2s; border-radius: 0 }
+  .hz:last-child { border-right: 0 }
+  @media (max-width: 760px) { .hz:nth-child(2) { border-right: 0 } .hz:nth-child(-n+2) { border-bottom: 1px solid var(--linea) } .hz .v small { display: block; font-size: .8rem } }
+  .hz:hover, .hz.on { background: rgba(255, 255, 255, .04) }
+  .hz .et { font-size: .84rem; color: var(--mut); display: flex; align-items: center; gap: 6px }
+  .hz .v { font-size: 2.3rem; font-weight: 900; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--pin) }
+  .hz .v small { font-size: .95rem; font-weight: 600; color: var(--mut); letter-spacing: 0 }
+  .hz.nota .v { font-size: clamp(3.6rem, 6vw, 5.4rem); transition: transform .15s ease-out; text-shadow: 0 0 40px color-mix(in srgb, var(--pin) 45%, transparent) }
+  .hz p { margin: 2px 0 0; font-size: .86rem; color: var(--txt-2); line-height: 1.45; max-width: 260px }
+  .hz .mas { margin-top: 6px; font-size: .8rem; color: var(--cian-txt); font-weight: 700; opacity: .85 }
+  .hz:hover .mas { opacity: 1; text-decoration: underline }
+  .hz .sem { width: 70%; margin: 6px auto 2px }
+  .sem { display: flex; height: 7px; border-radius: 4px; overflow: hidden; gap: 2px }
+  .sem i { display: block; height: 100% } .sem .a { background: var(--bad) } .sem .m { background: var(--warn) } .sem .b { background: rgba(255, 255, 255, .28) }
+  .escala-w { position: relative; padding-bottom: 20px; margin: 14px 0 4px }
+  .escala { position: relative; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--bad) 0 60%, var(--warn) 60% 85%, var(--ok) 85% 100%); opacity: .9 }
+  .escala i { position: absolute; top: -5px; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: #fff; border: 3px solid var(--bg-2); box-shadow: 0 0 0 2px rgba(255, 255, 255, .35), 0 4px 12px rgba(0, 0, 0, .5) }
+  .escala-l { display: flex; justify-content: space-between; font-size: .74rem; color: var(--mut); margin-top: 8px; position: relative }
+  .escala-l span:nth-child(2) { position: absolute; left: 60% } .escala-l span:nth-child(3) { position: absolute; left: 85% }
+  .mod-tabla { margin-top: 18px } .mod-tabla:first-child { margin-top: 0 }
+  .mod-tabla > .th { display: flex; align-items: center; gap: 10px; margin-bottom: 8px } .mod-tabla > .th b { font-size: 1.05rem } .mod-tabla > .th span { color: var(--mut); font-size: .84rem }
+  .mod-tabla .mini { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center }
+  .mod-tabla .mini span { width: 30px; height: 30px; border-radius: 50%; background: var(--bg-2); display: grid; place-items: center; font-weight: 900; font-size: .78rem; color: inherit }
+  .modal.info { justify-content: center; align-items: center }
+  .modal.info .caja { max-width: 860px; width: 100%; flex: none; max-height: calc(100vh - 48px) }
+  .modal.info .cont { overflow: auto; padding: 18px 20px 22px }
+  @media (max-width: 640px) { .modal.info .caja { max-height: 100vh } }
+  .partidas { margin-top: 12px; padding: 10px 14px; border-radius: var(--r-sm); background: var(--warn-bg); font-size: .88rem }
+  .grupo { margin-top: 10px }
+  .grupo > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--r-sm); background: rgba(255, 255, 255, .03); font-weight: 700; font-size: .95rem; cursor: pointer; list-style: none }
+  .grupo > summary::-webkit-details-marker { display: none }
+  .grupo > summary .pt { width: 10px; height: 10px; border-radius: 50%; flex: none }
+  .grupo.a > summary .pt { background: var(--bad); box-shadow: 0 0 10px var(--bad) } .grupo.m > summary .pt { background: var(--warn) } .grupo.b > summary .pt { background: rgba(255, 255, 255, .35) }
+  .grupo > summary .n { margin-left: auto; font-weight: 500; color: var(--mut); font-size: .82rem }
+  .grupo > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(45deg); margin-left: 4px; transition: transform .15s }
+  .grupo:not([open]) > summary::after { transform: rotate(-45deg) }
+  .grupo ul { margin: 0; padding: 0 4px; list-style: none }
+  .grupo li { padding: 12px 8px; border-bottom: 1px solid var(--linea); display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: .9rem; line-height: 1.45 }
+  .grupo li:last-child { border-bottom: 0 }
+  .grupo li .col { font-weight: 700; color: var(--txt); grid-row: span 2; align-self: start; padding: 2px 8px; border-radius: 6px; background: var(--vidrio-2); font-size: .82rem; font-family: var(--mono); white-space: nowrap }
+  .grupo li .que { color: var(--txt) } .grupo li .que span { color: var(--mut) }
+  .grupo li .fix { color: var(--ok); font-size: .86rem }
+  @media (max-width: 560px) { .grupo li { grid-template-columns: 1fr } .grupo li .col { grid-row: auto; justify-self: start } }
+  .estructura { margin-top: 10px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--vio-bg); font-size: .9rem; line-height: 1.5 }
+  .estructura b { color: #e3d4ff } .estructura .tec { color: var(--mut); font-size: .78rem; margin-left: 6px }
+  .estructura ul { margin: 8px 0 0; padding: 0; list-style: none } .estructura li { padding: 4px 0; color: var(--txt-2); font-size: .86rem } .estructura li b { color: var(--txt) }
+  .priv { padding: 10px 12px; border-radius: var(--r-sm); font-size: .86rem; margin-top: 10px; background: var(--cian-bg); color: var(--cian-txt) } .priv code { font-weight: 700 }
+  .acciones-q { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--linea) }
+  .acciones-q .vm-mut { width: 100%; font-size: .8rem }
+  .disp { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--linea); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: .9rem; color: var(--txt-2) }
+  .disp .vm-btn { margin-left: auto }
+  .lista-t { display: flex; flex-direction: column; gap: 6px }
+  .lista-t .tbl { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--linea); border-radius: var(--r-sm); background: rgba(255, 255, 255, .02) }
+  .lista-t .ti { width: 32px; height: 32px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--vio-bg) }
+  .lista-t .tn { flex: 1; min-width: 0 } .lista-t .tn b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap } .lista-t .tn small { color: var(--mut); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .lista-t .tf { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; color: var(--txt-2) }
+  #secDatos.plegado .cuerpo-datos { display: none }
+  #secDatos.plegado .sec-h { margin-bottom: 0 }
 
-  .ask{background:var(--panel);border:1px solid var(--line2);border-radius:16px;box-shadow:var(--sh);padding:6px;transition:border-color .15s,box-shadow .15s}
-  .ask:focus-within{border-color:var(--acc);box-shadow:0 0 0 4px var(--accbg),var(--sh)}
-  .bar{display:flex;gap:6px;align-items:flex-end}
-  textarea{flex:1;min-width:0;min-height:76px;padding:12px;border:0;outline:0;background:transparent;color:var(--txt);font:inherit;font-size:1rem;resize:vertical}
-  textarea::placeholder{color:var(--mut)}
-  #go{margin:6px;padding:12px 18px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;font-weight:650;cursor:pointer;white-space:nowrap;box-shadow:0 6px 16px rgba(91,91,240,.3);transition:transform .1s,filter .15s}
-  #go:hover{filter:brightness(1.07)} #go:active{transform:translateY(1px)}
-  #go:disabled{opacity:.6;cursor:wait;filter:none}
-  .kbd{font-size:.72rem;color:var(--mut);padding:0 12px 6px}
-  @media (max-width:560px){.bar{flex-direction:column;align-items:stretch}}
+  @media (max-width: 600px) { #navOtro .t { display: none } }
+  /* 2. Conversación */
+  .chat { padding: 0; overflow: hidden }
+  .chat .sec-h { padding: 18px 22px 14px; margin: 0; border-bottom: 1px solid var(--linea) }
+  .hilo { padding: 20px 22px 8px; display: flex; flex-direction: column; gap: 18px; min-height: 160px }
+  .chat-vacio { padding: 10px 0 14px; color: var(--txt-2) } .chat-vacio p { margin: 0 0 14px; font-size: 1rem }
+  .msg-u { align-self: flex-end; max-width: 78%; background: linear-gradient(135deg, rgba(123, 63, 242, .35), rgba(123, 63, 242, .18)); border: 1px solid rgba(177, 75, 255, .35); border-radius: 18px 18px 4px 18px; padding: 12px 16px; font-size: 1rem; line-height: 1.5; animation: subir .25s ease-out }
+  @keyframes subir { from { opacity: 0; transform: translateY(8px) } }
+  .msg-a { display: flex; flex-direction: column; gap: 12px; max-width: 100%; animation: subir .3s ease-out }
+  .msg-a .texto { font-size: 1.08rem; line-height: 1.6 }
+  .pasos { border: 1px solid var(--linea); border-radius: var(--r-sm); background: rgba(255, 255, 255, .02) }
+  .pasos > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 14px; font-size: .9rem; color: var(--txt-2); cursor: pointer; list-style: none }
+  .pasos > summary > span:first-child, .pasos > summary b { white-space: nowrap }
+  .pasos > summary::-webkit-details-marker { display: none }
+  .pasos > summary b { color: var(--txt) } .pasos > summary .n { margin-left: auto; color: var(--mut); font-size: .8rem }
+  .pasos > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--mut); border-bottom: 2px solid var(--mut); transform: rotate(-45deg); transition: transform .15s }
+  .pasos[open] > summary::after { transform: rotate(45deg) }
+  .pasos .lista { padding: 0 14px 10px; display: flex; flex-direction: column; gap: 4px }
+  .paso-h { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; font-size: .84rem; padding: 6px 0; border-top: 1px solid var(--linea) }
+  .paso-h .ico { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--vidrio-2); font-size: .8rem }
+  .paso-h code { color: var(--txt-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .8rem }
+  .paso-h .r { color: var(--mut); white-space: nowrap } .paso-h .r.ok { color: var(--ok) } .paso-h .r.no { color: var(--bad) }
+  .descartados { margin-top: 10px } .descartados > summary { cursor: pointer; color: var(--bad); font-size: .86rem; margin-bottom: 8px; list-style: none } .descartados > summary::-webkit-details-marker { display: none } .descartados .vm-hecho { opacity: .8 }
+  .pensando { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--linea); border-radius: var(--r-sm); background: rgba(255, 255, 255, .02); font-size: .92rem; color: var(--txt-2) }
+  .pensando .fase { color: var(--cian-txt); font-weight: 700 }
+  .hechos-res { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: .9rem }
+  .hechos-res .vm-btn { padding: 4px 6px }
+  .fuentes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .82rem; color: var(--mut) }
+  .fuentes span { padding: 3px 10px; border-radius: var(--pill); background: var(--vidrio); border: 1px solid var(--linea); color: var(--txt-2); font-family: var(--mono); font-size: .76rem }
+  .msg-acc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+  .sig { padding-top: 4px } .sig .et { font-size: .82rem; color: var(--mut); margin-bottom: 8px }
+  .accion { display: flex; gap: 14px; align-items: flex-start; border: 1px solid var(--linea); border-radius: var(--r-sm); padding: 14px; margin: 0 0 10px; background: rgba(255, 255, 255, .02) }
+  .accion:last-child { margin-bottom: 0 }
+  .accion .num { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--vio), var(--vio-2)); color: #fff; font-weight: 900; font-size: .82rem }
+  .accion .txt { flex: 1; min-width: 0 } .accion .txt b { font-size: 1rem } .accion .txt p { margin: 4px 0 8px; color: var(--mut); font-size: .86rem }
+  .accion .usd { flex: none; text-align: right; font-size: 1.35rem; font-weight: 900; color: var(--cian-txt); font-variant-numeric: tabular-nums; letter-spacing: -.02em }
+  .accion .usd small { display: block; font-size: .68rem; font-weight: 500; color: var(--mut); letter-spacing: 0 }
+  @media (max-width: 560px) { .accion { flex-wrap: wrap } .accion .usd { width: 100%; text-align: left } .msg-u { max-width: 92% } }
+  .comp { position: sticky; bottom: 0; margin: 12px 10px 10px; padding: 10px 10px 8px 14px; border-radius: var(--r); background: rgba(10, 10, 18, .9); border: 1px solid var(--linea-2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: var(--sombra); transition: border-color .15s, box-shadow .2s }
+  .comp:focus-within { border-color: rgba(25, 230, 255, .6); box-shadow: var(--sombra), var(--brillo) }
+  .sug { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--linea) } .sug:empty { display: none }
+  .sug .et { width: 100%; font-size: .76rem; color: var(--mut) }
+  .sug button { background: rgba(255, 255, 255, .05); border: 1px solid var(--linea); color: var(--txt-2); padding: 6px 12px; border-radius: var(--pill); font-size: .82rem; cursor: pointer; text-align: left; transition: border-color .15s, color .15s, background .15s }
+  .sug button:hover { border-color: rgba(25, 230, 255, .5); color: var(--cian-txt); background: var(--cian-bg) }
+  .comp-in { display: flex; align-items: flex-end; gap: 8px }
+  .comp-in textarea { flex: 1; min-height: 64px; max-height: 240px; padding: 8px 0 12px; border: 0; outline: 0; background: transparent; font-size: 1.02rem; line-height: 1.5; resize: none }
+  .comp-in textarea::placeholder { color: var(--mut) }
+  .enviar { flex: none; width: 42px; height: 42px; border-radius: 12px; border: 0; background: linear-gradient(135deg, #5a2ae0, #8a3cff); color: #fff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 18px rgba(123, 63, 242, .4); transition: filter .15s, transform .1s }
+  .enviar svg { width: 20px; height: 20px } .enviar:hover { filter: brightness(1.1) } .enviar:active { transform: translateY(1px) } .enviar:disabled { opacity: .5; cursor: wait }
+  .comp-pie { display: flex; justify-content: space-between; font-size: .76rem; color: var(--mut); margin-top: 4px }
+  .informe { display: flex; align-items: center; gap: 16px; flex-wrap: wrap }
+  .informe .ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, rgba(123, 63, 242, .45), rgba(25, 230, 255, .25)); border: 1px solid var(--linea-2); flex: none }
+  .informe .ico svg { width: 22px; height: 22px }
+  .informe .txt { flex: 1; min-width: 180px } .informe .txt b { display: block } .informe .txt span { color: var(--mut); font-size: .86rem }
+  .informe .btns { display: flex; gap: 8px; flex-wrap: wrap }
 
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-  .chips button{background:var(--panel);border:1px solid var(--line);color:var(--txt2);padding:7px 12px;border-radius:999px;font-size:.83rem;cursor:pointer;text-align:left;transition:all .15s}
-  .chips button:hover{border-color:var(--acc);color:var(--acctx);background:var(--accbg)}
-  #ej{max-height:84px;overflow:hidden;transition:max-height .25s}
-  #ej.abierto{max-height:800px}
-  .more{margin-top:8px;background:none;border:0;color:var(--acctx);font-size:.82rem;cursor:pointer;padding:0}
-
-  /* Subida */
-  .up{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:20px 12px;border:1.5px dashed var(--line2);border-radius:12px;cursor:pointer;background:var(--panel2);transition:all .15s}
-  .up:hover,#drop.over .up{border-color:var(--acc);background:var(--accbg)}
-  .up input{display:none}
-  .up .ic{font-size:1.6rem}
-  .up b{font-size:.92rem}
-  .up span{font-size:.78rem;color:var(--mut)}
-  .src{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
-  .src div{font-size:.72rem;text-align:center;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:6px 4px;background:var(--panel)}
-
-  /* Tablas */
-  #tablas{display:flex;flex-direction:column;gap:6px}
-  .tbl{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);font-size:.82rem}
-  .tbl .ti{width:26px;height:26px;flex:none;border-radius:7px;display:grid;place-items:center;background:var(--accbg);font-size:.8rem}
-  .tbl .tn{min-width:0;flex:1}
-  .tbl b{display:block;color:var(--txt);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tbl small{color:var(--mut);font-size:.74rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tbl .tf{font-variant-numeric:tabular-nums;color:var(--txt2);font-weight:600;font-size:.78rem;white-space:nowrap}
-  #mcp{margin-top:10px;font-size:.78rem;padding:8px 10px;border-radius:10px;background:var(--bg2);color:var(--mut);word-break:break-all}
-
-  /* Calidad */
-  #calidad{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-  #calidad:empty{display:none}
-  .q{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel2);font-size:.85rem}
-  .qh{display:flex;align-items:center;gap:10px}
-  .qh .qn{flex:1;min-width:0} .qh .qn b{display:block;overflow:hidden;text-overflow:ellipsis}
-  .qh .qn .mut{font-size:.76rem}
-  .ring{width:46px;height:46px;flex:none;border-radius:50%;display:grid;place-items:center}
-  .ring span{width:36px;height:36px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-weight:700;font-size:.85rem}
-  .q ul{margin:10px 0 0;padding:0;list-style:none}
-  .q li{margin:6px 0;font-size:.8rem;line-height:1.4}
-  .q li i{color:var(--mut);font-style:normal;display:block;margin-top:2px}
-  .sev{display:inline-block;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:5px;margin-right:6px;letter-spacing:.03em;vertical-align:1px}
-  .alta{background:var(--badbg);color:var(--bad)} .media{background:var(--warnbg);color:var(--warn)} .baja{background:var(--bg2);color:var(--mut)}
-  .anon{margin:8px 0 2px;padding:8px 10px;border-radius:10px;background:var(--privbg);color:var(--priv);font-size:.8rem}
-  .anon code{font-size:.78rem;font-weight:600}
-  .alerta{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
-  .alerta-btns{display:flex;flex-wrap:wrap;gap:8px}
-  .abtn{background:var(--panel);border:1px solid var(--line);color:var(--txt2);padding:7px 12px;border-radius:999px;font-size:.83rem;cursor:pointer}
-  .abtn:hover{border-color:var(--acc);color:var(--acctx);background:var(--accbg)}
-  .abtn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
-  #salidaAlerta{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--txt2);font-size:.8rem;white-space:pre-wrap;max-height:320px;overflow:auto}
-  .norm{margin:10px 0 2px;padding:8px 10px;border-radius:10px;background:var(--accbg);color:var(--acctx);font-size:.8rem}
-  .norm ul{margin:6px 0 0}.norm li{color:var(--txt2)}
-
-  /* Resultados */
-  #out{display:flex;flex-direction:column;gap:16px;margin-top:22px}
-  #out:empty{display:none}
-  #out{scroll-margin-top:84px}
-  .resp-card{background:linear-gradient(135deg,var(--accbg),var(--panel) 70%)}
-  .resp{font-size:1.08rem;line-height:1.6;color:var(--txt)}
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-  @media (max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
-  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--sh)}
-  .stat b{display:block;font-size:1.5rem;line-height:1.1;font-variant-numeric:tabular-nums}
-  .stat span{font-size:.75rem;color:var(--mut)}
-  .stat.ok b{color:var(--ok)} .stat.bad b{color:var(--bad)} .stat.it b{color:var(--warn)}
-
-  .hecho{border:1px solid var(--line);border-left:4px solid var(--ok);border-radius:10px;padding:10px 12px;margin:0 0 10px;background:var(--panel2)}
-  .hecho.bad{border-left-color:var(--bad)}
-  .descartados{margin-top:12px}.descartados summary{cursor:pointer;color:var(--bad);font-size:.85rem;margin-bottom:8px}.descartados .hecho{opacity:.8}
-  .hecho code{display:block;color:var(--mut);font-size:.76rem;margin-top:8px;white-space:pre-wrap;word-break:break-word;background:var(--bg2);border-radius:8px;padding:8px 10px}
-  .interp{border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:10px 12px;margin:0 0 10px;background:var(--panel2)}
-  .tag{display:inline-block;font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:6px;margin-right:8px;letter-spacing:.04em;vertical-align:1px}
-  .tag.ok{background:var(--okbg);color:var(--ok)} .tag.no{background:var(--badbg);color:var(--bad)} .tag.it{background:var(--warnbg);color:var(--warn)}
-  .ejec{border-color:var(--acc)}
-  .accion{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 10px;background:var(--panel2)}
-  .accion .num{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:#fff;font-weight:700;font-size:.8rem}
-  .accion .txt{flex:1;min-width:0}.accion .txt p{margin:4px 0 6px;color:var(--mut);font-size:.84rem}
-  .accion .tag:not(.ok):not(.no){background:var(--accbg);color:var(--acctx)}
-  .accion .usd{flex:none;text-align:right;font-size:1.2rem;font-weight:700;color:var(--acctx);font-variant-numeric:tabular-nums}
-  .accion .usd small{display:block;font-size:.66rem;font-weight:400;color:var(--mut)}
-  @media (max-width:560px){.accion{flex-wrap:wrap}.accion .usd{width:100%;text-align:left}}
-
-  .trace{max-height:420px;overflow:auto}
-  .step{display:flex;gap:12px;padding:8px 0;font-size:.82rem;position:relative}
-  .step .ico{width:28px;height:28px;flex:none;border-radius:8px;display:grid;place-items:center;background:var(--bg2);font-size:.85rem;position:relative;z-index:1}
-  .step:not(:last-child)::before{content:"";position:absolute;left:13.5px;top:36px;bottom:-8px;width:1px;background:var(--line)}
-  .step>div:last-child{min-width:0;flex:1}
-  .step code{color:var(--txt2);white-space:pre-wrap;word-break:break-word;font-size:.78rem}
-  details summary{cursor:pointer;list-style:none} details summary::-webkit-details-marker{display:none}
-  details summary h3{margin:0}
-  details summary h3::before{content:"▾";transition:transform .15s}
-  details:not([open]) summary h3::before{transform:rotate(-90deg)}
-  details[open] summary{margin-bottom:12px}
-
-  .rep-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-  a.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;background:var(--acc);color:#fff;text-decoration:none;font-size:.84rem;font-weight:600}
-  a.btn.ghost{background:transparent;color:var(--acctx);border:1px solid var(--line2)}
-  iframe{width:100%;height:900px;border:1px solid var(--line);border-radius:12px;background:#fff}
-
-  .msg{display:flex;align-items:center;gap:12px}
-  .spin{width:22px;height:22px;flex:none;border-radius:50%;border:3px solid var(--accbg);border-top-color:var(--acc);animation:sp .8s linear infinite}
-  @keyframes sp{to{transform:rotate(360deg)}}
-  .err{border-color:var(--bad);background:var(--badbg);color:var(--bad)}
-  .vacio{text-align:center;padding:36px 18px;color:var(--mut);border:1.5px dashed var(--line2);border-radius:var(--r);margin-top:22px}
-  .vacio b{display:block;color:var(--txt2);font-size:1rem;margin-bottom:4px}
-
-  /* Volver a la landing y botón de tema */
-  .navbtn{display:grid;place-items:center;height:34px;min-width:34px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--txt2);font-size:.8rem;text-decoration:none;cursor:pointer}
-  .navbtn:hover{border-color:var(--acc);color:var(--acctx)}
-  .navbtn svg{width:16px;height:16px}
-  .navbtn .sol{display:none}
-  :root[data-theme="oscuro"] .navbtn .sol{display:block} :root[data-theme="oscuro"] .navbtn .luna{display:none}
-  @media (prefers-color-scheme:dark){:root:not([data-theme="claro"]) .navbtn .sol{display:block} :root:not([data-theme="claro"]) .navbtn .luna{display:none}}
-  @media (max-width:560px){.navbtn.txt{display:none}}
+  /* Modal del informe */
+  .modal { position: fixed; inset: 0; z-index: 50; background: rgba(5, 5, 10, .78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: flex; flex-direction: column; padding: 24px; animation: aparecer .2s ease-out }
+  @keyframes aparecer { from { opacity: 0 } }
+  .modal .caja { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--bg-2); border: 1px solid var(--linea-2); border-radius: var(--r-xl); overflow: hidden; box-shadow: 0 30px 80px rgba(0, 0, 0, .6) }
+  .modal .barra { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--linea); flex-wrap: wrap }
+  .modal .barra b { font-size: 1rem; margin-right: auto }
+  .modal iframe { flex: 1; width: 100%; border: 0; background: #fff }
+  @media (max-width: 640px) { .modal { padding: 0 } .modal .caja { border-radius: 0; border: 0 } }
 </style>
 </head>
 <body>
-<header class="top"><div class="in">
-  <a href="index.html" style="display:contents;color:inherit;text-decoration:none"><div class="logo">⛏</div>
-  <div class="brand"><b>Data Miner</b><span>Equipo de agentes · BoxLang AI</span></div></a>
-  <div class="pill"><i></i><span id="estado">Listo</span></div>
-  <a class="navbtn txt" href="index.html">← Inicio</a>
-  <a class="navbtn txt" href="tablero.html">Tablero</a>
-  <button class="navbtn" id="tema" type="button" aria-label="Cambiar entre modo claro y oscuro" title="Cambiar tema">
-    <svg class="luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-    <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-  </button>
-</div></header>
+<div data-nav="agente"></div>
 
-<div class="wrap">
-  <aside>
-    <div class="card" id="drop"><h3>📂 Tus datos</h3>
-      <label class="up"><input type="file" id="archivos" multiple accept=".csv,.tsv,.txt,.xlsx,.xlsm,.xls,.json,.zip">
-        <span class="ic">⬆️</span><b>Elige o arrastra archivos</b>
-        <span>CSV (, ; tab o |), TSV, Excel (cada hoja es una tabla), JSON o un ZIP</span></label>
-      <div class="src"><div>📊 Kaggle</div><div>☁️ Google Drive</div><div>🗄️ Base MCP</div></div>
-      <div id="calidad"></div>
+<section class="hero" id="hero">
+  <div class="vm-aurora" data-aurora='{"color1":"#19e6ff","color2":"#b14bff","brightness":1.45,"speed":0.45,"scale":1.15,"bandHeight":0.5,"bandSpread":1.1,"enableMouseInteraction":true,"mouseInfluence":0.25}'></div>
+  <div class="in">
+    <!-- Paso 1: subir -->
+    <div id="paso1">
+      <h1>Sube tus datos.<br>Te decimos qué hacer.</h1>
+      <p class="sub">Excel, CSV o tu base de datos. Los protegemos antes de analizarlos y comprobamos cada cifra.</p>
+      <div class="drop" id="drop" role="button" tabindex="0" aria-label="Elige o arrastra archivos">
+        <input type="file" id="archivos" multiple accept=".csv,.tsv,.txt,.xlsx,.xlsm,.xls,.json,.zip">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+        <b>Arrastra tus archivos aquí</b>
+        <span class="o">o</span>
+        <button class="vm-btn pri" type="button" id="elegir">Elegir archivos</button>
+        <small>Excel (.xlsx, .xls) · CSV · TSV · JSON · ZIP</small>
+      </div>
+      <div class="escena" id="tf" hidden aria-live="polite"></div>
+      <div class="vm-aviso err" id="errSubida" hidden style="margin-top:14px;text-align:left"></div>
+      <div class="enlaces" id="omitir" hidden><span class="vm-mut">¿Solo quieres probar?</span><button class="vm-btn lnk" type="button" id="btnOmitir">Usar las tablas de ejemplo</button></div>
     </div>
-    <div class="card"><h3>🗂️ Tablas disponibles <span class="n" id="ntablas">0</span></h3>
-      <div id="tablas" class="mut">Cargando…</div><div id="mcp"></div><div id="limpiar" class="alerta-btns" style="margin-top:10px"></div></div>
-  </aside>
+  </div>
+</section>
 
-  <main>
-    <section class="hero">
-      <h1>Pregúntale a tus datos. <em>Un equipo de agentes</em> los analiza.</h1>
-      <p class="sub">Los datos personales se anonimizan al entrar y cada hecho se verifica re-ejecutando su SQL antes de llegar al informe.</p>
-      <ol class="flow">
-        <li><b>🔒</b>Anonimización</li><li class="sep">›</li>
-        <li><b>🧭</b>Coordinador</li><li class="sep">›</li>
-        <li><b>🛠️</b>Ingeniero de datos</li><li><b>📊</b>Analista SQL</li><li><b>🤖</b>Científico ML</li><li class="sep">›</li>
-        <li><b>✅</b>Verificación</li><li class="sep">›</li>
-        <li><b>📄</b>Informe</li>
-      </ol>
-      <div class="ask">
-        <div class="bar">
-          <textarea id="q" placeholder="Ej: Busca en Kaggle un dataset de ventas, entiéndelo y dime qué región vende más"></textarea>
-          <button id="go">Ejecutar misión ➜</button>
-        </div>
-        <div class="kbd">Ctrl + Enter para ejecutar</div>
+<div class="flujo" id="flujo" hidden>
+  <!-- 1. Resultados del archivo -->
+  <section class="vm-card" id="secDatos">
+    <div class="sec-h" id="plegadoH" hidden><span class="num">1</span><h2>Resultados de tus datos</h2>
+      <div class="lado"><span class="resumen" id="resumenDatos"></span><button class="vm-btn vidrio sm" type="button" id="plegar">Ver detalle</button></div></div>
+    <div class="cuerpo-datos">
+      <div class="cab-res">
+        <h2 class="gt" id="tituloRes">Resultados de tus datos</h2>
+        <div><p class="frase" id="fraseRes"></p><div class="lado"><span class="vm-mut" id="subRes"></span><button class="vm-btn vidrio sm" type="button" id="plegar2">Ocultar</button></div></div>
       </div>
-      <div class="chips" id="ej">
-        <button>💼 Diagnóstico de cartera: ¿dónde está el mayor riesgo en creditos y qué hago este mes?</button>
-        <button>📦 Inventario: ¿qué productos se agotan, cuánto pedir y cuánta venta pierdo si no lo hago?</button>
-        <button>📈 Ventas: ¿qué oportunidades y clientes priorizo esta semana y cuánto puedo ganar?</button>
-        <button>👥 Clientes: ¿qué segmento compra más y cuáles clientes debo recuperar? Une clientes_sv_clientes y clientes_sv_compras</button>
-        <button>Perfila los datos cargados y dame los 3 hallazgos más importantes</button>
-        <button>Revisa la calidad de los datos, límpialos y dime cómo recolectarlos mejor</button>
-        <button>Propón el esquema SQL para llevar estas tablas a una base de datos</button>
-        <button>¿Qué productos se van a agotar y cuánto debo pedir?</button>
-        <button>¿Qué oportunidades de venta debo priorizar esta semana?</button>
-        <button>¿Qué segmento de clientes compra más? Une clientes_sv_clientes y clientes_sv_compras</button>
-        <button>¿Qué departamento tiene más mora en creditos?</button>
-        <button>Explora la base de datos MCP y dime qué tablas tiene y qué insight encuentras</button>
-        <button>Calcula correlaciones (Pearson y Spearman) y la covarianza de creditos y grafica las más fuertes</button>
-        <button>Predice impago con Random Forest y compáralo con regresión logística y un árbol</button>
-        <button>Compara regresión lineal, ridge, lasso y polinomial para predecir monto_credito</button>
-        <button>Calcula retorno, volatilidad, Sharpe, drawdown y VaR de la tabla precios (columna precio, fecha)</button>
-        <button>Descarga https://docs.google.com/spreadsheets/d/TU_ID/edit y resúmelo</button>
+      <div class="placa" id="placa"><canvas id="radar"></canvas><div class="pines" id="pines"></div></div>
+      <div class="hallazgos" id="hallazgos"></div>
+      <div class="partidas" id="partidas" hidden></div>
+      <div class="disp" id="disp"></div>
+    </div>
+  </section>
+
+  <!-- 2. Conversación con el equipo -->
+  <section class="vm-card chat" id="secChat">
+    <div class="sec-h"><span class="num">2</span><h2>Pregúntale al equipo</h2></div>
+    <div class="hilo" id="hilo">
+      <div class="chat-vacio" id="chatVacio"><p>Elige una misión o escribe la tuya. El equipo responde con cifras verificadas y qué hacer.</p></div>
+    </div>
+    <div class="comp" id="comp">
+      <div class="sug" id="sug"></div>
+      <div class="comp-in">
+        <label class="visualmente-oculto" for="q">Tu pregunta para el equipo</label>
+        <textarea id="q" rows="1" placeholder="Pregunta lo que quieras sobre tus datos…"></textarea>
+        <button class="enviar" id="go" type="button" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m0 0-6 6m6-6 6 6"/></svg></button>
       </div>
-      <button class="more" id="masEj">Ver todos los ejemplos ▾</button>
-      <div class="alerta">
-        <div class="alerta-btns">
-          <button type="button" class="abtn" id="btnAlertaVer">🛒 Revisar stock en MySQL</button>
-          <button type="button" class="abtn pri" id="btnAlerta">Avisar por Slack</button>
-        </div>
-        <pre id="salidaAlerta" hidden></pre>
-      </div>
-    </section>
-    <div class="vacio" id="vacio"><b>Aún no hay resultados</b>Sube un archivo o elige un ejemplo y pulsa «Ejecutar misión».</div>
-    <div id="out"></div>
-  </main>
+      <div class="comp-pie"><span>Ctrl + Enter para enviar</span><span id="compEstado"></span></div>
+    </div>
+  </section>
 </div>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-label="Informe ejecutivo">
+  <div class="caja">
+    <div class="barra"><b>Informe ejecutivo</b>
+      <a class="vm-btn pri sm" id="mDescargar" href="api/informe.bxm?descargar=1">Descargar</a>
+      <a class="vm-btn vidrio sm" id="mAbrir" href="api/informe.bxm" target="_blank">Abrir en pestaña</a>
+      <button class="vm-btn vidrio sm" id="mCerrar" type="button">Cerrar</button></div>
+    <iframe id="mFrame" title="Informe ejecutivo"></iframe>
+  </div>
+</div>
+
+<div class="modal info" id="modalInfo" hidden role="dialog" aria-modal="true">
+  <div class="caja"><div class="barra"><b id="miTitulo"></b><button class="vm-btn vidrio sm" id="miCerrar" type="button">Cerrar</button></div><div class="cont" id="miCont"></div></div>
+</div>
+
+<script src="js/mock.js"></script>
+<script src="js/ui.js?v=2"></script>
+<script src="js/aurora.js"></script>
+<script src="js/transformar.js"></script>
+<script src="js/ghosttype.js"></script>
+<script src="js/escaner.js"></script>
 <script>
-document.getElementById('tema').addEventListener('click', () => {
-  const r = document.documentElement;
-  const oscuroAhora = r.dataset.theme ? r.dataset.theme === 'oscuro' : matchMedia('(prefers-color-scheme: dark)').matches;
-  r.dataset.theme = oscuroAhora ? 'claro' : 'oscuro';
-  try { localStorage.setItem('dm-tema', r.dataset.theme); } catch (e) {}
+const { $, esc, num, usd, estado } = VM;
+// La nav la arma ui.js al cargar el DOM; el botón "Subir otro archivo" se agrega después y solo se ve desde el paso 2
+document.addEventListener('DOMContentLoaded', () => {
+  $('.vm-nav-r').insertAdjacentHTML('afterbegin', '<button class="vm-navbtn" id="navOtro" type="button" hidden title="Subir otro archivo">⬆<span class="t"> Subir otro archivo</span></button>');
+  $('#navOtro').onclick = () => paso(1);
 });
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const icono = e => e.sql.startsWith('anonimizar') ? '🔒' : e.sql.startsWith('descarga') ? '📥' : e.sql.startsWith('perfilar') ? '🔬' : /^(ml|entrenar|comparar|predecir)/i.test(e.sql) ? '🤖' : /^stock\./i.test(e.sql) ? '📦' : /^ventas\./i.test(e.sql) ? '🎯' : /^(estad|correl|covar|describ|finanz)/i.test(e.sql) ? '📈' : /^(calidad|limpiar|esquema|fuga|consejos)/i.test(e.sql) ? '🛠️' : e.fuente === 'mcp' ? '🗄️' : '📊';
 const icoFuente = f => /mcp/i.test(f) ? '🗄️' : /kaggle/i.test(f) ? '📊' : /drive|google/i.test(f) ? '☁️' : /subida/i.test(f) ? '⬆️' : '📄';
-const num = n => typeof n === 'number' ? n.toLocaleString('es') : esc(n);
-const estado = t => $('#estado').textContent = t;
-let proveedor = '';
+const sevOrden = { alta: 0, media: 1, baja: 2 };
+let proveedor = '', lastMcp = '', listaTablas = [], ultimaCalidad = null;
 
-let lastMcp = '';
+// Pasos: 1 subir → 2 datos listos (resultados + pregunta) → 3 respuesta
+function paso(n) {
+  $('#hero').hidden = n !== 1; $('#flujo').hidden = n === 1;
+  const b = $('#navOtro'); if (b) b.hidden = n === 1;
+  if (n !== 1) { pintarDatos(); sugerir(MISIONES, 'Misiones sugeridas'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+}
+function plegar(si) { $('#secDatos').classList.toggle('plegado', si); $('#plegadoH').hidden = !si; }
+$('#plegar').onclick = () => plegar(false); $('#plegar2').onclick = () => plegar(true);
+
 function tablas(d) {
   lastMcp = d.mcp || lastMcp;
-  const ts = d.tablas || [];
-  $('#ntablas').textContent = ts.length;
-  $('#tablas').innerHTML = ts.map(t => `<div class="tbl"><div class="ti">${icoFuente(t.fuente)}</div>
-      <div class="tn"><b title="${esc(t.tabla)}">${esc(t.tabla)}</b><small title="${esc(t.fuente)}">${esc(t.fuente)}</small></div>
-      <div class="tf">${num(t.filas)} filas</div></div>`).join('') || '<span class="mut">Ninguna todavía</span>';
-  $('#mcp').innerHTML = lastMcp ? `🗄️ Base remota vía MCP: <b>${esc(lastMcp)}</b>` : 'Sin base MCP (define MCP_DB_URL)';
-  // Limpiar contexto: quitar las tablas de ejemplo o empezar de cero (tablas + memoria del equipo)
+  listaTablas = d.tablas || [];
+  $('#omitir').hidden = !listaTablas.length || $('#drop').hidden;
+  $('#btnOmitir').textContent = listaTablas.some(t => t.ejemplo) ? `Usar las ${listaTablas.length} tablas de ejemplo` : `Preguntar con las ${listaTablas.length} tablas cargadas`;
+  if (!$('#flujo').hidden) pintarDatos();
+}
+
+// Sección 1: título ghost-type, placa de sonar y 4 hallazgos; el detalle de cada uno vive en un modal
+const nivelDe = p => p >= 85 ? 'buena' : p >= 60 ? 'aceptable' : 'baja';
+const colorDe = p => p >= 85 ? '#3fe3a4' : p >= 60 ? '#ffc24d' : '#ff5c7a';
+function fraseVeredicto(prom, altos, medios) {
+  const n = (k, s, p) => k === 1 ? `1 ${s}` : `${k} ${p}`;
+  if (prom >= 85) return altos + medios ? `Tus datos están en buen estado. Hay ${n(altos + medios, 'detalle', 'detalles')} que puedes afinar, pero puedes confiar en las cifras.` : 'Tus datos están en buen estado. Puedes confiar en las cifras.';
+  if (prom >= 60) return `Se pueden analizar. Conviene revisar ${n(altos + medios, 'punto', 'puntos')} para que las cifras sean más precisas.`;
+  return altos ? `Se pueden analizar, pero hay ${n(altos, 'cosa', 'cosas')} que arreglar antes de confiar en las cifras.` : 'Se pueden analizar, pero conviene limpiarlos antes de confiar en las cifras.';
+}
+const ESTRUCTURA = {
+  'No cumple 1FN': 'Hay celdas con varios datos juntos (listas o campos compuestos). Primero hay que separarlos.',
+  '1FN': 'Es una sola hoja que mezcla varias tablas (por ejemplo factura, cliente y proveedor).',
+  '2FN': 'Casi lista: algunos datos dependen de otra columna y se repiten.',
+  '3FN (probable)': 'Bien estructurada: cada dato está una sola vez.'
+};
+const FORMA = { '1FN': 'Varios datos en una celda', '2FN': 'Dato repetido', '3FN': 'Dato repetido', 'Variantes': 'Escrito de varias formas', 'Anomalía': 'Dato que cambia a medias', 'Clave': 'Sin clave clara', 'Estructura': 'Estructura' };
+let radar = null, ghost = null, resumenActual = null;
+
+// Reúne lo que necesitan la placa y los modales a partir del último diagnóstico
+function resumir() {
+  const C = (ultimaCalidad && ultimaCalidad.calidad) || [], ts = listaTablas;
+  const filas = C.length ? C.reduce((s, c) => s + +c.filas, 0) : ts.reduce((s, t) => s + (+t.filas || 0), 0);
+  const P = C.flatMap(c => (c.problemas || []).map(p => ({ ...p, tabla: c.tabla })));
+  const altos = P.filter(p => p.severidad === 'alta').length, medios = P.filter(p => p.severidad === 'media').length, bajos = P.length - altos - medios;
+  const privCols = C.flatMap(c => (c.anonimizacion || []).map(a => ({ ...a, tabla: c.tabla })));
+  const N = C.map(c => c.normalizacion).filter(Boolean).sort((a, b) => Object.keys(ESTRUCTURA).indexOf(a.nivel) - Object.keys(ESTRUCTURA).indexOf(b.nivel));
+  const peor = N[0] || null, red = peor ? Math.round(+peor.redundancia_pct) : 0;
+  const prom = C.length ? Math.round(C.reduce((s, c) => s + +c.puntaje, 0) / C.length) : null;
+  return { C, ts, filas, P, altos, medios, bajos, privCols, priv: privCols.length, peor, red, prom };
+}
+
+function pintarDatos() {
+  const R = resumenActual = resumir();
+  const { C, ts, filas, P, altos, medios, bajos, privCols, priv, peor, red, prom } = R;
+  const hayDiag = C.length > 0;
+  $('#subRes').textContent = hayDiag ? `${C.length === 1 ? '1 tabla' : C.length + ' tablas'} de tu archivo · ${num(filas)} filas · ${ts.length} disponibles` : `${ts.length} tablas de ejemplo · ${num(filas)} filas`;
+  $('#fraseRes').innerHTML = hayDiag ? fraseVeredicto(prom, altos, medios) : 'Son datos de ejemplo para probar. <b>Sube un archivo</b> para ver su diagnóstico de calidad.';
+  $('#resumenDatos').textContent = hayDiag ? `${C.length === 1 ? '1 tabla' : C.length + ' tablas'} · ${num(filas)} filas · calidad ${prom}${priv ? ' · 🔒 ' + priv : ''}${altos ? ' · ' + altos + ' por arreglar' : ''}` : `${ts.length} tablas · ${num(filas)} filas`;
+
+  // Título: se escribe solo y sugiere los hallazgos reales
+  const sugerencias = hayDiag ? [`calidad ${prom} de 100`, altos ? `${altos === 1 ? '1 cosa' : altos + ' cosas'} por arreglar` : 'sin problemas graves', priv ? `${priv} ${priv === 1 ? 'columna protegida' : 'columnas protegidas'}` : 'sin datos personales', peor && !peor.nivel.startsWith('3FN') ? `${red} % de celdas repetidas` : 'bien organizados'] : ['con tablas de ejemplo', 'sube un archivo'];
+  if (ghost) ghost.destroy();
+  const t = $('#tituloRes'); delete t.dataset.gtOn;
+  ghost = GhostType.mount(t, { text: 'Resultados de tus datos', completions: sugerencias.map(x => '· ' + x) });
+
+  // Los 4 hallazgos (pines de la placa): calidad, privacidad, problemas, estructura
+  const estrCol = !peor || peor.nivel.startsWith('3FN') ? '#3fe3a4' : red > 30 ? '#ffc24d' : '#cfb3ff';
+  const H = hayDiag ? [
+    { id: 'calidad', color: colorDe(prom), et: 'Calidad de tus datos', v: `<span class="cnt" data-n="${prom}">0</span><small>/100</small>`, p: `Calidad ${nivelDe(prom)}. ${altos ? 'Hay cosas que arreglar antes de confiar en las cifras.' : prom >= 85 ? 'Puedes confiar en las cifras.' : 'Se puede analizar con cuidado.'}`, nota: true },
+    { id: 'privacidad', color: priv ? '#cfb3ff' : '#3fe3a4', et: '🔒 Privacidad', v: priv ? `${priv}<small> ${priv === 1 ? 'columna' : 'columnas'}</small>` : 'Limpio', p: priv ? `La IA no ve ${privCols.slice(0, 3).map(a => a.columna).join(', ')}${priv > 3 ? ' ni ' + (priv - 3) + ' más' : ''}: se reemplazan por códigos.` : 'No se detectaron DUI, nombres, teléfonos ni correos.' },
+    { id: 'problemas', color: altos ? '#ff5c7a' : medios ? '#ffc24d' : '#3fe3a4', et: '⚠️ Problemas', v: P.length ? `${P.length}` : 'Ninguno', p: P.length ? `${altos ? `<b>${altos}</b> para arreglar primero` : ''}${altos && medios ? ' · ' : ''}${medios ? `<b>${medios}</b> para revisar` : ''}${(altos || medios) && bajos ? ' · ' : ''}${bajos ? `<b>${bajos}</b> menores` : ''}` : 'Nada que corregir.', sem: P.length ? { altos, medios, bajos } : null },
+    { id: 'estructura', color: estrCol, et: '🧩 Estructura', v: !peor ? 'Sin revisar' : peor.nivel.startsWith('3FN') ? 'Bien' : `${red}<small> % repetido</small>`, p: peor ? (peor.nivel.startsWith('3FN') ? 'Bien organizada: cada dato está una sola vez.' : red > 30 ? 'Se puede separar en varias tablas para no repetir datos.' : ESTRUCTURA[peor.nivel] || peor.nivel) : 'No se analizó la estructura.' }
+  ] : [
+    { id: 'tablas', color: '#19e6ff', et: 'Tablas disponibles', v: `${ts.length}`, p: 'De ejemplo, listas para preguntar.', nota: true },
+    { id: 'filas', color: '#cfb3ff', et: 'Filas', v: num(filas), p: 'En total, en todas las tablas.' },
+    { id: 'privacidad', color: '#3fe3a4', et: '🔒 Privacidad', v: 'Activa', p: 'Todo archivo se anonimiza antes de que la IA lo vea.' },
+    { id: 'subir', color: '#ffc24d', et: 'Siguiente paso', v: 'Sube', p: 'Un Excel o CSV para ver su calidad.' }
+  ];
+  $('#hallazgos').innerHTML = H.map((h, i) => `<button class="hz${h.nota ? ' nota' : ''}" type="button" data-h="${h.id}" style="--pin:${h.color}"><span class="et">${h.et}</span><span class="v">${h.v}</span>${h.sem ? `<div class="sem">${h.sem.altos ? `<i class="a" style="flex:${h.sem.altos}"></i>` : ''}${h.sem.medios ? `<i class="m" style="flex:${h.sem.medios}"></i>` : ''}${h.sem.bajos ? `<i class="b" style="flex:${h.sem.bajos}"></i>` : ''}</div>` : ''}<p>${h.p}</p><span class="mas">${hayDiag ? 'Ver detalle' : ''}</span></button>`).join('');
+  $('#pines').innerHTML = H.map((h, i) => `<span class="pin" style="--pin:${h.color};left:${12.5 + i * 25}%;height:${[72, 48, 60, 40][i]}%"></span>`).join('');
+  document.querySelectorAll('#hallazgos .hz').forEach(b => b.onclick = () => { if (hayDiag) abrirDetalle(b.dataset.h); else if (b.dataset.h === 'subir') paso(1); });
+
+  // Placa de sonar + parallax ligero + conteo de la nota
+  if (radar) radar.destroy();
+  radar = Escaner.mount($('#radar'), { pines: H.map((h, i) => ({ x: 12.5 + i * 25, y: 100 - [72, 48, 60, 40][i], color: h.color })) });
+  $('#radar').addEventListener('ping', e => { document.querySelectorAll('#hallazgos .hz').forEach((b, i) => b.classList.toggle('on', i === e.detail.indice)); document.querySelectorAll('#pines .pin').forEach((p, i) => { if (i === e.detail.indice && e.detail.fase < .05 && !p.classList.contains('on')) { p.classList.add('on'); setTimeout(() => p.classList.remove('on'), 1300); } }); });
+  const placa = $('#placa'); placa.onmousemove = e => { const r = placa.getBoundingClientRect(), dx = (e.clientX - r.left) / r.width - .5, dy = (e.clientY - r.top) / r.height - .5; $('#pines').style.transform = `translate(${dx * 14}px,${dy * 8}px)`; const n = $('#hallazgos .nota .v'); if (n) n.style.transform = `translate(${dx * 10}px,${dy * 6}px)`; };
+  placa.onmouseleave = () => { $('#pines').style.transform = ''; const n = $('#hallazgos .nota .v'); if (n) n.style.transform = ''; };
+  const cnt = $('#hallazgos .cnt'); if (cnt) { const fin = +cnt.dataset.n, t0 = performance.now(), dur = 1400; (function paso(now) { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); cnt.textContent = Math.round(fin * e); if (k < 1) requestAnimationFrame(paso); })(t0); }
+
+  // Tablas partidas y tablas disponibles
+  const partidas = (ultimaCalidad && ultimaCalidad.partidas) || [];
+  $('#partidas').hidden = !partidas.length;
+  $('#partidas').innerHTML = partidas.map(p => `🧩 Parecen la misma tabla partida en varias: <b>${esc((p.tablas || []).join(' + '))}</b> (${esc(p.columnas_en_comun_pct)} % de columnas en común).`).join('<br>');
   const hayEjemplos = ts.some(t => t.ejemplo);
-  $('#limpiar').innerHTML = (hayEjemplos ? '<button type="button" class="abtn" data-l="quitarEjemplos=1">Quitar tablas de ejemplo</button>' : '')
-    + (ts.length ? '<button type="button" class="abtn" data-l="reset=1&ejemplos=0">🧹 Empezar de cero</button>' : '');
-  document.querySelectorAll('#limpiar button').forEach(b => b.onclick = async () => {
+  $('#disp').innerHTML = `<span><b>${ts.length}</b> ${ts.length === 1 ? 'tabla disponible' : 'tablas disponibles'} para consultar${hayEjemplos ? ' (incluye ejemplos)' : ''}${lastMcp ? ' · base MCP conectada' : ''}</span><button class="vm-btn vidrio sm" type="button" id="verTablas">Ver tablas</button>`;
+  $('#verTablas').onclick = () => abrirDetalle('tablas');
+}
+
+// ---- Modales de detalle (uno por hallazgo) ----
+const cabTabla = c => `<div class="th"><div class="mini" style="background:conic-gradient(${colorDe(+c.puntaje)} ${+c.puntaje || 0}%,var(--linea) 0);color:${colorDe(+c.puntaje)}"><span>${c.puntaje}</span></div><div><b>${esc(c.tabla)}</b><br><span>${num(c.filas)} filas · calidad ${nivelDe(+c.puntaje)}${c.origen && c.origen.formato ? ' · ' + esc(c.origen.formato) : ''}${c.origen && c.origen.hoja ? ' · hoja ' + esc(c.origen.hoja) : ''}</span></div></div>`;
+const accion = (txt, m, pri) => `<button class="vm-btn ${pri ? 'pri' : 'vidrio'} sm" type="button" data-m="${esc(m)}">${txt}</button>`;
+function abrirDetalle(id) {
+  const R = resumenActual || resumir(), { C, P, altos, medios, bajos, privCols, priv, prom } = R;
+  let titulo = '', html = '';
+  if (id === 'calidad') {
+    titulo = 'Calidad de tus datos';
+    html = `<p class="frase" style="font-size:1.1rem;margin:0">${fraseVeredicto(prom, altos, medios)}</p>
+      <div class="escala-w"><div class="escala"><i style="left:${prom}%"></i></div><div class="escala-l"><span>0 · baja</span><span>60 · aceptable</span><span>85 · buena</span><span>100</span></div></div>
+      <p class="vm-mut">La nota va de 0 a 100 y baja con cada problema según su gravedad: vacíos, duplicados, fechas o montos mal guardados, categorías escritas de varias formas, datos personales sin proteger.</p>
+      ${C.map(c => `<div class="mod-tabla">${cabTabla(c)}<div class="acciones-q" style="margin-top:8px;padding-top:0;border:0">${accion('Explícame la nota', `Explícame por qué ${c.tabla} tiene calidad ${c.puntaje} de 100 y qué debo arreglar primero`, true)}${(c.problemas || []).length ? accion('Limpiar esta tabla', `Limpia la tabla ${c.tabla}, arregla sus problemas y dime qué cambió`) : ''}</div></div>`).join('')}`;
+  } else if (id === 'privacidad') {
+    titulo = 'Privacidad: lo que la IA no ve';
+    html = `<p class="frase" style="margin:0 0 12px">${priv ? `Antes de analizar, <b>${priv} ${priv === 1 ? 'columna se reemplazó' : 'columnas se reemplazaron'}</b> por códigos estables. Los cruces y conteos siguen funcionando; la IA nunca ve el dato real.` : 'No se detectaron datos personales (DUI, NIT, nombres, teléfonos, correos, direcciones).'}</p>
+      ${C.map(c => `<div class="mod-tabla">${cabTabla(c)}${(c.anonimizacion || []).length ? `<div class="vm-tabla"><table><thead><tr><th>Columna</th><th>Qué es</th><th>Qué ve la IA</th></tr></thead><tbody>${c.anonimizacion.map(a => `<tr><td><code>${esc(a.columna)}</code></td><td>${esc(a.tipo)}</td><td>${esc(a.metodo)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="vm-mut">Sin datos personales en esta tabla.</div>'}</div>`).join('')}
+      <p class="vm-mut" style="margin-top:14px">La tabla de equivalencias se queda en tu servidor; ninguna herramienta de la IA puede leerla.</p>`;
+  } else if (id === 'problemas') {
+    titulo = `Problemas: ${P.length ? `${altos} para arreglar primero · ${medios} para revisar · ${bajos} menores` : 'ninguno'}`;
+    const item = p => `<li><span class="col">${esc(p.columna)}</span><span class="que">${esc(p.problema)}${p.detalle ? ` <span>— ${esc(p.detalle)}</span>` : ''}</span><span class="fix">💡 ${esc(p.recomendacion)}</span></li>`;
+    const grupo = (cls, t, abierto, L) => L.length ? `<details class="grupo ${cls}"${abierto ? ' open' : ''}><summary><span class="pt"></span>${t}<span class="n">${L.length}</span></summary><ul>${L.map(item).join('')}</ul></details>` : '';
+    html = C.map(c => { const L = c.problemas || []; return `<div class="mod-tabla">${cabTabla(c)}
+      ${grupo('a', 'Arregla primero', true, L.filter(p => p.severidad === 'alta'))}${grupo('m', 'Conviene revisar', true, L.filter(p => p.severidad === 'media'))}${grupo('b', 'Detalles menores', false, L.filter(p => !['alta', 'media'].includes(p.severidad)))}
+      ${!L.length ? '<div class="vm-mut">Sin problemas detectados.</div>' : `<div class="acciones-q"><span class="vm-mut">El equipo lo arregla por ti:</span>${accion('Limpiar esta tabla', `Limpia la tabla ${c.tabla}, arregla sus problemas y dime qué cambió`, true)}${accion('Cómo recolectar mejor', `Revisa ${c.tabla} y dime cómo recolectar mejor estos datos para que no vuelvan los problemas`)}</div>`}</div>`; }).join('');
+  } else if (id === 'estructura') {
+    titulo = 'Estructura de tus tablas';
+    html = C.map(c => { const nz = c.normalizacion; if (!nz) return `<div class="mod-tabla">${cabTabla(c)}<div class="vm-mut">No se analizó la estructura.</div></div>`;
+      const H = nz.hallazgos || [], puede = !String(nz.nivel).startsWith('3FN');
+      return `<div class="mod-tabla">${cabTabla(c)}<div class="estructura" style="margin-top:0"><b>${esc(ESTRUCTURA[nz.nivel] || nz.nivel)}</b>${+nz.redundancia_pct > 0 ? ` El <b>${Math.round(+nz.redundancia_pct)} %</b> de las celdas se repiten.` : ''}${nz.clave ? ` Clave detectada: <b>${esc(nz.clave)}</b>.` : ''}<span class="tec">(${esc(nz.nivel)})</span>
+        ${H.length ? `<ul>${H.slice(0, 6).map(h => `<li><b>${esc(FORMA[h.forma] || h.forma)}</b> · ${esc(h.columna)}: ${esc(h.problema)}${h.recomendacion ? `<br><span class="fix" style="color:var(--ok)">💡 ${esc(h.recomendacion)}</span>` : ''}</li>`).join('')}</ul>` : ''}</div>
+        <div class="acciones-q">${puede ? accion('Separar en tablas', `Normaliza la tabla ${c.tabla}: sepárala en tablas y propón el esquema SQL`, true) : ''}${accion('Proponer esquema SQL', `Propón el esquema SQL para llevar ${c.tabla} a una base de datos`)}</div></div>`; }).join('');
+  }
+  if (id === 'tablas') {
+    const ts = listaTablas, hayEjemplos = ts.some(t => t.ejemplo);
+    titulo = `Tablas disponibles (${ts.length})`;
+    html = `<p class="vm-mut" style="margin:0 0 12px">Cada archivo que subes se convierte en tablas (una por hoja de Excel). El equipo las consulta con SQL; también puedes pedirle que las una entre sí.</p>
+      <div class="lista-t">${ts.map(t => `<div class="tbl"><div class="ti">${icoFuente(t.fuente)}</div><div class="tn"><b>${esc(t.tabla)}${t.ejemplo ? ' <span class="vm-tag gris">ejemplo</span>' : ''}</b><small>${esc(t.fuente)}</small></div><div class="tf">${num(t.filas)} filas</div></div>`).join('') || '<div class="vm-mut">Ninguna todavía.</div>'}</div>
+      ${lastMcp ? `<p class="vm-mut" style="margin:12px 0 0">🗄️ Base remota vía MCP: <b>${esc(lastMcp)}</b></p>` : ''}
+      <div class="acciones-q"><span class="vm-mut">Pregúntale al equipo por ellas:</span>${accion('Perfila todas las tablas', 'Perfila los datos cargados y dame los 3 hallazgos más importantes', true)}${hayEjemplos ? `<button class="vm-btn vidrio sm" type="button" data-l="quitarEjemplos=1">Quitar ejemplos</button>` : ''}${ts.length ? `<button class="vm-btn vidrio sm" type="button" data-l="reset=1&ejemplos=0">Empezar de cero</button>` : ''}</div>`;
+  }
+  $('#miTitulo').textContent = titulo; $('#miCont').innerHTML = html;
+  document.querySelectorAll('#miCont [data-l]').forEach(b => b.onclick = async () => {
     if (b.dataset.l.startsWith('reset') && !confirm('Se borran todas las tablas cargadas y la memoria del equipo. ¿Seguir?')) return;
-    tablas(await (await fetch('api/mision.bxm?' + b.dataset.l)).json());
-    $('#out').innerHTML = ''; $('#vacio').style.display = '';
+    cerrarDetalle();
+    const d = await (await fetch('api/mision.bxm?' + b.dataset.l)).json();
+    if (b.dataset.l.startsWith('reset')) { ultimaCalidad = null; paso(1); }
+    tablas(d);
   });
+  document.querySelectorAll('#miCont [data-m]').forEach(b => b.onclick = () => { cerrarDetalle(); $('#q').value = b.dataset.m; run(); });
+  $('#modalInfo').hidden = false; document.body.style.overflow = 'hidden'; $('#miCerrar').focus();
 }
-fetch('api/mision.bxm').then(r => r.json()).then(d => { tablas(d); if (d.provider) { proveedor = 'IA: ' + d.provider + (d.modelo ? ' · ' + d.modelo : ''); estado(proveedor); } }).catch(() => tablas({}));
-
-function render(d) {
-  $('#vacio').style.display = 'none';
-  if (d.error) { $('#out').innerHTML = `<div class="card err">⚠️ ${esc(d.error)}</div>`; return; }
-  tablas(d);
-  const H = d.hechos || [], I = d.interpretaciones || [], E = d.evidencia || [];
-  const ver = H.filter(h => h.verificado).length;
-  const tarjeta = h => `<div class="hecho ${h.verificado ? '' : 'bad'}">
-      <span class="tag ${h.verificado ? 'ok' : 'no'}">${h.verificado ? '✓ VERIFICADO' : '✗ NO VERIFICADO'}</span>${esc(h.afirmacion)}
-      <code>[${esc(h.origen || 'csv')}] ${esc(h.sql)}${h.verificado ? '' : '\n→ ' + esc(h.nota)}</code></div>`;
-  // Los verificados arriba; los que no pasaron la verificación van aparte y plegados, para no confundirlos con los buenos
-  const malos = H.filter(h => !h.verificado);
-  const hechos = H.filter(h => h.verificado).map(tarjeta).join('')
-    + (malos.length ? `<details class="descartados"><summary>✗ ${malos.length} afirmación(es) que NO pasaron la verificación (no las uses)</summary>${malos.map(tarjeta).join('')}</details>` : '');
-  const interp = I.map(i => `<div class="interp"><span class="tag it">INTERPRETACIÓN</span>${esc(i)}</div>`).join('');
-  const pasos = E.map(e => `<div class="step"><div class="ico">${icono(e)}</div><div><code>${esc(e.sql)}</code>
-      <div class="mut">${e.error ? '⚠️ ' + esc(e.error) : (e.filas !== '' ? e.filas + ' filas' : '')}</div></div></div>`).join('');
-  const next = (d.siguientes_preguntas || []).map(q => `<button>${esc(q)}</button>`).join('');
-  // Resumen ejecutivo: hasta 3 acciones con su impacto en dólares
-  const usd = v => Number(v) > 0 ? '$' + Math.round(Number(v)).toLocaleString('en-US') : '—';
-  const A = (d.acciones || []).slice(0, 3), total = A.reduce((s, a) => s + (Number(a.impacto_usd) || 0), 0);
-  const ejec = A.length ? `<div class="card ejec"><h3>🎯 Resumen ejecutivo · qué hacer <span class="n">${usd(total)} de impacto estimado</span></h3>
-    ${A.map((a, i) => `<div class="accion ${a.verificado ? '' : 'bad'}"><span class="num">${i + 1}</span>
-      <div class="txt"><b>${esc(a.accion)}</b><p>${esc(a.calculo || '')}</p>
-      <span class="tag ${a.verificado ? 'ok' : 'no'}">${a.verificado ? '✓ CIFRA BASE VERIFICADA' : '✗ CIFRA BASE SIN VERIFICAR'}</span>${a.plazo ? ` <span class="tag">${esc(a.plazo)}</span>` : ''}</div>
-      <div class="usd">${usd(a.impacto_usd)}<small>impacto estimado</small></div></div>`).join('')}</div>` : '';
-  $('#out').innerHTML = `
-    <div class="card resp-card"><h3>💬 Respuesta · ${esc(d.provider)}${d.formato ? " · " + esc(d.formato) : ""}</h3><div class="resp">${esc(d.respuesta)}</div></div>${d.correccion ? `<div class="card"><h3>✏️ Cifras corregidas con el SQL</h3><div class="mut">${esc(d.correccion)}</div>${(d.correccion_detalle || []).map(p => `<div class="mut">• ${esc(p)}</div>`).join('')}</div>` : ''}${d.advertencia ? `<div class="card err">⚠️ ${esc(d.advertencia)}</div>` : ''}
-    ${ejec}
-    <div class="stats">
-      <div class="stat ok"><b>${ver}</b><span>hechos verificados</span></div>
-      <div class="stat ${H.length - ver ? 'bad' : ''}"><b>${H.length - ver}</b><span>no verificados</span></div>
-      <div class="stat it"><b>${I.length}</b><span>interpretaciones</span></div>
-      <div class="stat"><b>${E.length}</b><span>acciones del equipo</span></div>
-    </div>
-    ${(d.anonimizacion || []).length ? `<div class="card"><h3>🔒 Privacidad</h3><div class="anon">La IA trabajó con datos anonimizados: ${d.anonimizacion.map(a => `<code>${esc(a.tabla)}.${esc(a.columna)}</code> (${esc(a.tipo)})`).join(', ')}</div></div>` : ''}
-    <div class="card"><h3>🧾 Hechos vs interpretaciones</h3>${hechos || '<span class="mut">Sin hechos</span>'}${interp}</div>
-    ${(d.graficos || []).length || A.length ? `<div class="card"><h3>📄 Informe ejecutivo${(d.graficos || []).length ? ` con ${d.graficos.length} gráficas` : ''}</h3>
-      <div class="rep-actions"><a class="btn" href="api/informe.bxm?descargar=1">⬇️ Descargar informe</a><a class="btn ghost" href="api/informe.bxm" target="_blank">↗ Abrir en otra pestaña</a></div>
-      <iframe src="api/informe.bxm?t=${Date.now()}"></iframe></div>` : ''}
-    <details class="card"><summary><h3>🧭 Traza del equipo <span class="n">${E.length} acciones</span></h3></summary><div class="trace">${pasos || '<span class="mut">Ninguna</span>'}</div></details>
-    ${next ? `<div class="card"><h3>➜ Siguientes pasos</h3><div class="chips" id="next" style="margin:0">${next}</div></div>` : ''}`;
-  document.querySelectorAll('#next button').forEach(b => b.onclick = () => { $('#q').value = b.textContent; run(); });
-  $('#out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+// Modales de una respuesta: datos anonimizados y fuentes
+const TIPO_DATO = { dui: 'DUI', nit: 'NIT', nombre: 'Nombre de persona', telefono: 'Teléfono', correo: 'Correo', direccion: 'Dirección', fecha_nacimiento: 'Fecha de nacimiento', tarjeta: 'Tarjeta', cuenta: 'Cuenta', pasaporte: 'Pasaporte' };
+function abrirRespuesta(id, d) {
+  let titulo = '', html = '';
+  if (id === 'anon') {
+    const A = d.anonimizacion || [];
+    titulo = `Datos anonimizados (${A.length})`;
+    html = `<p class="frase" style="margin:0 0 12px">Estas columnas se reemplazaron por códigos estables <b>antes</b> de que el equipo las leyera. Los cruces y conteos siguen funcionando; la IA nunca vio el dato real.</p>
+      <div class="vm-tabla"><table><thead><tr><th>Tabla</th><th>Columna</th><th>Qué es</th></tr></thead><tbody>${A.map(a => `<tr><td>${esc(a.tabla)}</td><td><code>${esc(a.columna)}</code></td><td>${esc(TIPO_DATO[String(a.tipo).toLowerCase()] || a.tipo)}</td></tr>`).join('')}</tbody></table></div>
+      <p class="vm-mut" style="margin-top:14px">La tabla de equivalencias se queda en tu servidor; ninguna herramienta de la IA puede leerla.</p>`;
+  } else {
+    const F = fuentesDe(d.evidencia || []), E = d.evidencia || [];
+    titulo = `Fuentes de esta respuesta (${F.length})`;
+    html = `<p class="frase" style="margin:0 0 12px">Tablas que el equipo consultó para responder, con las consultas que hizo sobre cada una.</p>
+      ${F.map(f => { const t = listaTablas.find(x => x.tabla === f) || {}; const Q = E.filter(e => e.sql.toLowerCase().includes(f.toLowerCase())).slice(0, 4);
+        return `<div class="mod-tabla"><div class="th"><div class="mini" style="background:var(--vio-bg)"><span>${icoFuente(t.fuente || '')}</span></div><div><b>${esc(f)}</b><br><span>${t.filas ? num(t.filas) + ' filas · ' : ''}${esc(t.fuente || '')}</span></div></div>
+          ${Q.length ? `<div class="lista">${Q.map(e => `<div class="paso-h"><span class="ico">${icono(e)}</span><code title="${esc(e.sql)}">${esc(abrev(e.sql))}</code><span class="r ${e.error ? 'no' : 'ok'}">${e.error ? '✗' : (e.filas !== '' && e.filas !== undefined ? e.filas + ' filas' : '✓')}</span></div>`).join('')}</div>` : ''}
+          <div class="acciones-q" style="margin-top:8px;padding-top:0;border:0">${accion('Perfila esta tabla', `Perfila la tabla ${f} y dame los 3 hallazgos más importantes`)}</div></div>`; }).join('')}`;
+  }
+  $('#miTitulo').textContent = titulo; $('#miCont').innerHTML = html;
+  document.querySelectorAll('#miCont [data-m]').forEach(b => b.onclick = () => { cerrarDetalle(); $('#q').value = b.dataset.m; run(); });
+  $('#modalInfo').hidden = false; document.body.style.overflow = 'hidden'; $('#miCerrar').focus();
 }
+function cerrarDetalle() { $('#modalInfo').hidden = true; document.body.style.overflow = ''; }
+$('#miCerrar').onclick = cerrarDetalle;
+$('#modalInfo').addEventListener('click', e => { if (e.target === $('#modalInfo')) cerrarDetalle(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modalInfo').hidden) cerrarDetalle(); });
+fetch('api/mision.bxm').then(r => r.json()).then(d => { tablas(d); proveedor = 'Equipo listo'; estado(proveedor); if (d.provider) $('#estado').title = 'IA: ' + d.provider + (d.modelo ? ' · ' + d.modelo : ''); }).catch(() => tablas({}));
+$('#btnOmitir').onclick = () => paso(2);
 
+// El diagnóstico se guarda y la sección 1 se repinta (el detalle vive en los modales)
 function calidad(r) {
-  if (r.error) { $('#calidad').innerHTML = `<div class="q err">⚠️ ${esc(r.error)}</div>`; return; }
-  const err = (r.errores || []).map(e => `<div class="q err">⚠️ ${esc(e)}</div>`).join('');
-  $('#calidad').innerHTML = err + (r.calidad || []).map(c => {
-    const o = c.origen || {}, det = [o.formato, o.hoja && 'hoja ' + o.hoja, o.separador && 'separador ' + o.separador, o.comaDecimal && 'coma decimal'].filter(Boolean).join(' · ');
-    const col = c.puntaje >= 85 ? 'var(--ok)' : c.puntaje >= 60 ? 'var(--warn)' : 'var(--bad)';
-    return `<div class="q"><div class="qh"><div class="ring" style="background:conic-gradient(${col} ${+c.puntaje || 0}%,var(--line) 0)"><span style="color:${col}">${c.puntaje}</span></div>
-      <div class="qn"><b>${esc(c.tabla)}</b><span class="mut">${num(c.filas)} filas · calidad ${esc(c.nivel)}${det ? ' · ' + esc(det) : ''}</span></div></div>
-      ${(c.anonimizacion || []).length ? `<div class="anon">🔒 Anonimizado antes de que lo vea la IA: ${c.anonimizacion.map(a => `<code>${esc(a.columna)}</code> (${esc(a.tipo)} → ${esc(a.metodo)})`).join(', ')}</div>` : (r.anonimiza ? '<div class="anon">🔒 Sin datos personales detectados</div>' : '')}
-      <ul>${c.problemas.slice(0, 6).map(p => `<li><span class="sev ${p.severidad}">${p.severidad.toUpperCase()}</span><b>${esc(p.columna)}</b>: ${esc(p.problema)} — ${esc(p.detalle)}<i>💡 ${esc(p.recomendacion)}</i></li>`).join('')}</ul>
-      ${c.problemas.length > 6 ? `<span class="mut">+${c.problemas.length - 6} más</span>` : ''}
-      ${c.normalizacion ? `<div class="norm"><b>🧩 Normalización: ${esc(c.normalizacion.nivel)}</b>${c.normalizacion.clave ? ` · clave ${esc(c.normalizacion.clave)}` : ''} · redundancia ${esc(c.normalizacion.redundancia_pct)}%
-        ${(c.normalizacion.hallazgos || []).length ? `<ul>${c.normalizacion.hallazgos.slice(0, 4).map(h => `<li><span class="sev media">${esc(h.forma)}</span><b>${esc(h.columna)}</b>: ${esc(h.problema)}</li>`).join('')}</ul>` : ''}</div>` : ''}</div>`;
-  }).join('') + (r.partidas || []).map(p => `<div class="q msg">🧩 Parecen la misma tabla partida: <b>${esc((p.tablas || []).join(' + '))}</b> (${esc(p.columnas_en_comun_pct)}% de columnas en común)</div>`).join('');
+  ultimaCalidad = r;
   tablas({ tablas: r.catalogo, mcp: lastMcp });
-  if ((r.tablas || []).length) $('#q').value = `Revisa la calidad de ${r.tablas.join(', ')}, límpialas si hace falta, analízalas y dime cómo recolectar mejor estos datos`;
 }
+
+// Chips para la animación de transformación, a partir del diagnóstico real
+function chipsDe(r) {
+  const chips = [];
+  for (const c of r.calidad || []) {
+    chips.push({ valor: num(c.filas), texto: `filas en ${c.tabla}` });
+    chips.push({ valor: c.puntaje + '/100', texto: 'calidad ' + c.nivel, tipo: c.puntaje >= 85 ? 'ok' : c.puntaje >= 60 ? 'warn' : 'bad' });
+    if ((c.anonimizacion || []).length) chips.push({ valor: '🔒 ' + c.anonimizacion.length, texto: c.anonimizacion.length === 1 ? 'columna protegida' : 'columnas protegidas', tipo: 'priv' });
+    if ((c.problemas || []).length) chips.push({ valor: c.problemas.length, texto: c.problemas.length === 1 ? 'problema detectado' : 'problemas detectados', tipo: 'warn' });
+  }
+  for (const e of r.errores || []) chips.push({ valor: '✗', texto: e, tipo: 'bad' });
+  return chips.length ? chips : [{ valor: '✓', texto: 'archivo recibido', tipo: 'ok' }];
+}
+
 async function subir(files) {
   if (!files.length) return;
   const fd = new FormData(); [...files].forEach(f => fd.append('archivo', f, f.name));
-  $('#calidad').innerHTML = '<div class="q msg"><div class="spin"></div>Cargando y revisando calidad…</div>';
-  try { calidad(await (await fetch('api/subir.bxm', { method: 'POST', body: fd })).json()); }
-  catch (e) { calidad({ error: e.message }); }
+  const tf = $('#tf'); $('#drop').hidden = true; $('#omitir').hidden = true; $('#errSubida').hidden = true;
+  estado('Cargando y revisando calidad…', 'trabajando');
+  Transformar.iniciar(tf, [...files].map(f => f.name));
+  const t0 = Date.now();
+  let r;
+  try { r = await (await fetch('api/subir.bxm', { method: 'POST', body: fd })).json(); }
+  catch (e) { r = { error: e.message }; }
+  await new Promise(res => setTimeout(res, Math.max(0, 2600 - (Date.now() - t0))));   // que se vea al menos un archivo triturarse
+  await Transformar.resultados(tf, r.error ? [{ valor: '✗', texto: r.error, tipo: 'bad' }] : chipsDe(r));
+  if (!r.error) calidad(r);
+  await Transformar.terminar(tf);
+  $('#drop').hidden = false; $('#archivos').value = '';
+  estado(proveedor || 'Equipo listo');
+  if (!r.error) { plegar(false); paso(2); }
+  else {
+    $('#omitir').hidden = !listaTablas.length;
+    const e = $('#errSubida'); e.hidden = false;
+    e.innerHTML = `No se pudo cargar el archivo: ${esc(r.error)}<br><span class="vm-mut">La carga la procesa el servidor BoxLang (api/subir.bxm). Arranca la web con iniciar-web.bat y vuelve a intentarlo.</span>`;
+  }
 }
 $('#archivos').onchange = e => subir(e.target.files);
 const drop = $('#drop');
+drop.onclick = () => $('#archivos').click();
+drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#archivos').click(); } };
+$('#elegir').onclick = e => { e.stopPropagation(); $('#archivos').click(); };
 ['dragover', 'dragenter'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
 drop.addEventListener('drop', e => subir(e.dataTransfer.files));
 
+// Conversación: cada misión es una burbuja tuya + un bloque del equipo (traza, respuesta, qué hacer, hechos, fuentes, siguientes)
+const abrev = sql => sql.length > 90 ? sql.slice(0, 88) + '…' : sql;
+function fuentesDe(E) {
+  const txt = E.map(e => e.sql).join(' ').toLowerCase();
+  return listaTablas.map(t => t.tabla).filter(n => txt.includes(n.toLowerCase())).slice(0, 6);
+}
+const MISIONES = ['¿Dónde está el mayor riesgo de mi cartera y qué hago este mes?', '¿Qué productos se agotan, cuánto pedir y cuánta venta pierdo si no lo hago?', '¿Qué oportunidades y clientes priorizo esta semana?', '¿Qué segmento compra más y qué clientes debo recuperar?',
+  'Perfila los datos cargados y dame los 3 hallazgos más importantes', 'Revisa la calidad de los datos, límpialos y dime cómo recolectarlos mejor', 'Propón el esquema SQL para llevar estas tablas a una base de datos', '¿Qué departamento tiene más mora en creditos?', 'Explora la base de datos MCP y dime qué tablas tiene y qué insight encuentras', 'Predice impago con Random Forest y compáralo con regresión logística y un árbol', 'Calcula retorno, volatilidad, Sharpe, drawdown y VaR de la tabla precios (columna precio, fecha)'];
+// Sugerencias dentro del compositor: misiones al inicio y, tras cada respuesta, las siguientes preguntas del equipo
+function sugerir(lista, etiqueta) {
+  const L = lista.slice(0, 4), resto = lista.slice(4);
+  $('#sug').innerHTML = `<span class="et">${etiqueta}</span>${L.map(q => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}${resto.length ? `<button type="button" data-mas="1">+${resto.length} más</button>` : ''}`;
+  $('#sug').querySelectorAll('[data-q]').forEach(b => b.onclick = () => { $('#q').value = b.dataset.q.replace(/^\S+\s/, m => /[\p{Emoji}]/u.test(m) ? '' : m); autoAlto(); run(); });
+  const mas = $('#sug [data-mas]'); if (mas) mas.onclick = () => { $('#sug').innerHTML = `<span class="et">${etiqueta}</span>${lista.map(q => `<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}`; $('#sug').querySelectorAll('[data-q]').forEach(b => b.onclick = () => { $('#q').value = b.dataset.q.replace(/^\S+\s/, m => /[\p{Emoji}]/u.test(m) ? '' : m); autoAlto(); run(); }); };
+}
+function bloqueRespuesta(d) {
+  if (d.error) return `<div class="msg-a"><div class="vm-aviso err">No se pudo completar la misión: ${esc(d.error)}</div></div>`;
+  const H = d.hechos || [], I = d.interpretaciones || [], E = d.evidencia || [], A = (d.acciones || []).slice(0, 3);
+  const ver = H.filter(h => h.verificado).length, nG = (d.graficos || []).length, total = A.reduce((s, a) => s + (Number(a.impacto_usd) || 0), 0);
+  const pasos = E.map(e => `<div class="paso-h"><span class="ico">${icono(e)}</span><code title="${esc(e.sql)}">${esc(abrev(e.sql))}</code><span class="r ${e.error ? 'no' : 'ok'}">${e.error ? '✗ ' + esc(e.error) : (e.filas !== '' && e.filas !== undefined ? e.filas + ' filas' : '✓')}</span></div>`).join('');
+  const tarjeta = h => `<div class="vm-hecho ${h.verificado ? '' : 'no'}"><span class="vm-tag ${h.verificado ? 'ok' : 'no'}">${h.verificado ? '✓ Verificado' : '✗ No verificado'}</span>${esc(h.afirmacion)}<code>[${esc(h.origen || 'csv')}] ${esc(h.sql)}${h.verificado ? '' : '\n<span class="nota">→ ' + esc(h.nota) + '</span>'}</code></div>`;
+  // Los verificados arriba; los que no pasaron la verificación van aparte y plegados, para no confundirlos con los buenos
+  const malos = H.filter(h => !h.verificado);
+  const hechos = H.filter(h => h.verificado).map(tarjeta).join('')
+    + I.map(i => `<div class="vm-hecho it"><span class="vm-tag it">Interpretación</span>${esc(i)}</div>`).join('')
+    + (malos.length ? `<details class="descartados"><summary>✗ ${malos.length} ${malos.length === 1 ? 'afirmación que no pasó' : 'afirmaciones que no pasaron'} la verificación (no las uses)</summary>${malos.map(tarjeta).join('')}</details>` : '');
+  const F = fuentesDe(E);
+  return `<div class="msg-a">
+    <div class="texto">${esc(d.respuesta)}</div>
+    ${d.correccion ? `<div class="vm-aviso">✏️ ${esc(d.correccion)}${(d.correccion_detalle || []).map(p => `<br>• ${esc(p)}`).join('')}</div>` : ''}
+    ${d.advertencia ? `<div class="vm-aviso err">${esc(d.advertencia)}</div>` : ''}
+    ${A.length ? `<div class="vm-card alta" style="padding:16px"><h2 style="margin-bottom:12px">Qué hacer <span class="n">${usd(total)} de impacto estimado</span></h2>${A.map((a, i) => `<div class="accion"><span class="num">${i + 1}</span><div class="txt"><b>${esc(a.accion)}</b><p>${esc(a.calculo || '')}</p><span class="vm-tag ${a.verificado ? 'ok' : 'no'}">${a.verificado ? '✓ Cifra base verificada' : '✗ Cifra base sin verificar'}</span>${a.plazo ? ` <span class="vm-tag vio">${esc(a.plazo)}</span>` : ''}</div><div class="usd">${usd(a.impacto_usd)}<small>impacto estimado</small></div></div>`).join('')}</div>` : ''}
+    ${nG || A.length ? `<div class="msg-acc" style="justify-content:center;padding:6px 0"><button class="vm-btn pri" type="button" data-inf="1" style="padding:14px 36px;font-size:1.05rem">Ver informe${nG ? ` · ${nG} gráficas` : ''}</button></div>` : ''}
+    ${E.length ? `<details class="pasos"><summary><span>🧭 <b>El equipo trabajó</b> · ${E.length} ${E.length === 1 ? 'acción' : 'acciones'}</span><span class="n">${esc(d.provider || '')}${d.formato ? ' · ' + esc(d.formato) : ''}</span></summary><div class="lista">${pasos}</div></details>` : ''}
+    ${H.length || I.length ? `<details class="pasos"><summary><span class="vm-tag ok">✓ ${ver} ${ver === 1 ? 'hecho verificado' : 'hechos verificados'}</span>${H.length - ver ? `<span class="vm-tag no">✗ ${H.length - ver} sin verificar</span>` : ''}${I.length ? `<span class="vm-tag it">${I.length} ${I.length === 1 ? 'interpretación' : 'interpretaciones'}</span>` : ''}<span class="n">ver el SQL de cada uno</span></summary><div class="lista" style="padding-top:10px">${hechos}</div></details>` : ''}
+    <div class="msg-acc">${(d.anonimizacion || []).length ? `<button class="vm-btn vidrio sm" type="button" data-anon="1">🔒 Datos anonimizados (${d.anonimizacion.length})</button>` : ''}${F.length ? `<button class="vm-btn vidrio sm" type="button" data-fuentes="1">Fuentes (${F.length})</button>` : ''}</div>
+  </div>`;
+}
+const FASES = ['anonimizando datos', 'perfilando tablas', 'consultando con SQL', 'entrenando modelos', 'verificando cada cifra', 'armando el informe'];
 async function run() {
-  const pedido = $('#q').value.trim(); if (!pedido) return;
-  $('#go').disabled = true; estado('Trabajando…');
-  $('#vacio').style.display = 'none';
-  $('#out').innerHTML = '<div class="card msg"><div class="spin"></div><div><b>El equipo está trabajando…</b><div class="mut">datos → análisis → ML → verificación</div></div></div>';
-  try {
-    const r = await fetch('api/mision.bxm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pedido }) });
-    render(await r.json());
-  } catch (e) { render({ error: e.message }); }
-  $('#go').disabled = false; estado(proveedor || 'Listo');
+  const pedido = $('#q').value.trim(); if (!pedido) { $('#q').focus(); return; }
+  $('#go').disabled = true; estado('El equipo está trabajando…', 'trabajando'); $('#compEstado').textContent = 'Trabajando…';
+  $('#chatVacio').hidden = true;
+  const hilo = $('#hilo');
+  hilo.insertAdjacentHTML('beforeend', `<div class="msg-u">${esc(pedido)}</div><div class="pensando" id="pensando"><div class="vm-spin"></div><div>El equipo está trabajando: <span class="fase">${FASES[0]}</span></div></div>`);
+  $('#q').value = ''; autoAlto(); $('#sug').innerHTML = '';
+  let f = 0; const tick = setInterval(() => { const e = $('#pensando .fase'); if (e) e.textContent = FASES[++f % FASES.length]; }, 1800);
+  $('#pensando').scrollIntoView({ behavior: 'smooth', block: 'end' });
+  let d;
+  try { d = await (await fetch('api/mision.bxm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pedido }) })).json(); }
+  catch (e) { d = { error: e.message }; }
+  clearInterval(tick);
+  const p = $('#pensando'); p.outerHTML = bloqueRespuesta(d);
+  if (!d.error) { tablas(d); plegar(true); sugerir((d.siguientes_preguntas || []).length ? d.siguientes_preguntas : MISIONES, (d.siguientes_preguntas || []).length ? 'Siguientes preguntas' : 'Misiones sugeridas'); } else sugerir(MISIONES, 'Misiones sugeridas');
+  const ultimo = hilo.lastElementChild;
+  ultimo.querySelectorAll('[data-inf]').forEach(b => b.onclick = () => abrirInforme());
+  ultimo.querySelectorAll('[data-anon]').forEach(b => b.onclick = () => abrirRespuesta('anon', d));
+  ultimo.querySelectorAll('[data-fuentes]').forEach(b => b.onclick = () => abrirRespuesta('fuentes', d));
+  ultimo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('#go').disabled = false; estado(proveedor || 'Equipo listo'); $('#compEstado').textContent = '';
 }
+function autoAlto() { const t = $('#q'); t.style.height = 'auto'; t.style.height = Math.min(200, t.scrollHeight) + 'px'; }
+$('#q').addEventListener('input', autoAlto);
 $('#go').onclick = run;
-$('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) run(); });
-document.querySelectorAll('#ej button').forEach(b => b.onclick = () => { $('#q').value = b.textContent; $('#q').focus(); });
-// Alerta de compras (sin IA): lee MySQL, calcula el pronóstico y, con enviar=1, avisa por Slack
-async function alertaStock(enviar) {
-  const out = $('#salidaAlerta'); out.hidden = false; out.textContent = 'Calculando…';
-  try {
-    const r = await (await fetch('api/alerta-stock.bxm' + (enviar ? '?enviar=1' : ''))).json();
-    out.textContent = r.ok ? r.texto.replace(/\*/g, '') + (enviar ? '\n\nSlack: ' + (r.slack?.motivo || '') : '') + '\n' + (r.mysql || '')
-      : '⚠️ ' + (r.error || 'Error') + '\nConfigura MYSQL_* y SLACK_WEBHOOK_URL en config.local.bat';
-  } catch (e) { out.textContent = '⚠️ ' + e.message; }
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); } });
+
+// Modal del informe (HTML autocontenido que genera el servidor)
+const informeUrl = extra => (window.MOCK?.informeUrl || 'api/informe.bxm') + (window.MOCK ? '' : (extra || ''));
+function abrirInforme() {
+  $('#mFrame').src = informeUrl('?t=' + Date.now());
+  $('#mDescargar').href = informeUrl('?descargar=1'); $('#mAbrir').href = informeUrl('');
+  $('#modal').hidden = false; document.body.style.overflow = 'hidden'; $('#mCerrar').focus();
 }
-$('#btnAlertaVer').onclick = () => alertaStock(false);
-$('#btnAlerta').onclick = () => alertaStock(true);
-$('#masEj').onclick = () => { const a = $('#ej').classList.toggle('abierto'); $('#masEj').textContent = a ? 'Ver menos ▴' : 'Ver todos los ejemplos ▾'; };
+function cerrarInforme() { $('#modal').hidden = true; $('#mFrame').src = 'about:blank'; document.body.style.overflow = ''; }
+$('#mCerrar').onclick = cerrarInforme;
+$('#modal').addEventListener('click', e => { if (e.target === $('#modal')) cerrarInforme(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) cerrarInforme(); });
 </script>
 </body>
 </html>
