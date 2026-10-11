@@ -28,7 +28,10 @@ class {
       COL_TEL      : "(telefono|tel|celular|cel|movil|phone|whatsapp)(_|$|[0-9])",
       COL_DOC      : "(pasaporte|passport|licencia|carnet)",
       COL_TARJETA  : "(tarjeta|card|cuenta_banc|cuenta_bancaria|iban|num_cuenta)",
-      COL_NOMBRE   : "^(nombre|nombres|name|apellido|apellidos|cliente_nombre|nombre_cliente|nombre_completo|full_name|razon_social|contacto|empleado|empleados|titular|cliente|clientes|vendedor|vendedora|vendedores|gerente|gerentes|encargado|encargada|responsable|cajero|cajera|supervisor|supervisora|asesor|asesora)(_|$|[0-9])",
+      COL_NOMBRE   : "^(nombre|nombres|name|apellido|apellidos|cliente_nombre|nombre_cliente|nombre_completo|full_name|razon_social|contacto|titular)(_|$|[0-9])",
+      // Roles de personas (Cliente, Vendedor, Gerente, Jefe inmediato...): siempre son nombres de personas,
+      // así que se pseudonimizan aunque la hoja no tenga DUI ni teléfono
+      COL_ROL      : "^(empleado|empleados|empleada|cliente|clientes|vendedor|vendedora|vendedores|gerente|gerentes|encargado|encargada|responsable|cajero|cajera|supervisor|supervisora|asesor|asesora|jefe|jefa|jefes|cobrador|cobradora|repartidor|repartidora|motorista|tecnico|tecnica|agente|ejecutivo|ejecutiva|colaborador|colaboradora|trabajador|trabajadora|paciente|alumno|alumna|estudiante|beneficiario|beneficiaria|socio|socia|afiliado|afiliada)(_|$|[0-9])",
       COL_DIR      : "(direccion|domicilio|address|residencia|calle)",
       COL_NAC      : "(fecha_nac|nacimiento|f_nac|birth|fec_nac)",
       // por contenido
@@ -134,6 +137,7 @@ class {
     if ( col.reFind( variables.re.COL_TEL ) )     return { tipo: "teléfono", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "tel" }
     if ( col.reFind( variables.re.COL_DOC ) )     return { tipo: "documento", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "doc" }
     if ( col.reFind( variables.re.COL_TARJETA ) ) return { tipo: "tarjeta o cuenta", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "cuenta" }
+    if ( col.reFind( variables.re.COL_ROL ) )     return { tipo: "nombre", metodo: "pseudónimo estable (Persona_…)", fn: "pseudo", prefijo: "Persona" }
     if ( col.reFind( variables.re.COL_NOMBRE ) ) {
       var debil = !col.reFind( "(apellido|nombre_completo|full_name|cliente_nombre|nombre_cliente|nombres_y_apellidos)" )
       return { tipo: "nombre", metodo: "pseudónimo estable (Persona_…)", fn: "pseudo", prefijo: "Persona", debil: debil }
