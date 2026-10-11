@@ -53,7 +53,7 @@ class {
     var acciones = todas.len() > 3 ? todas.slice( 1, 3 ) : todas
     var impactoTotal = acciones.reduce( ( s, a ) => s + monto( a.impacto_usd ?: 0 ), 0 )
     var accionesHTML = acciones.map( ( a, i ) => '<li class="#( a.verificado ?: false ) ? "ok" : "bad"#"><span class="n">#i#</span><div class="ac"><b>#esc( a.accion )#</b>' &
-      '<p>#esc( a.calculo ?: "" )#</p><span class="tag">#( a.verificado ?: false ) ? "✓ Cifra verificada" : "✗ Cifra sin verificar"#</span>' & ( len( a.plazo ?: "" ) ? '<span class="plazo">#esc( a.plazo )#</span>' : "" ) & '</div>' &
+      '<p>#esc( a.calculo ?: "" )#</p><span class="tag">#( a.verificado ?: false ) ? "✓ Cifra base verificada" : "✗ Cifra base sin verificar"#</span>' & ( len( a.plazo ?: "" ) ? '<span class="plazo">#esc( a.plazo )#</span>' : "" ) & '</div>' &
       '<div class="usd">#monto( a.impacto_usd ?: 0 ) ? "$" & numberFormat( monto( a.impacto_usd ?: 0 ), "9,999" ) : "—"#<small>impacto estimado</small></div></li>' ).toList( "" )
     return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>#esc( titulo )#</title>
@@ -115,6 +115,7 @@ footer{text-align:center;color:##6b7390;font-size:.78rem;margin-top:24px}
 <div class="kpi"><b>#( reporte.hechos ?: [] ).len() - nVer#</b><span>no verificados</span></div>
 </div>
 #len( accionesHTML ) ? "<div class=""sec ejec""><h2>Resumen ejecutivo · qué hacer</h2><ul class=""a"">#accionesHTML#</ul></div>" : ""#
+#len( reporte.advertencia ?: "" ) ? "<div class=""sec"" style=""border-color:##d93a3a;background:##fdeceb;color:##a32020""><b>⚠ #esc( reporte.advertencia )#</b></div>" : ""#
 <div class="sec"><h2>Resumen</h2><p class="resumen">#esc( reporte.respuesta ?: "" )#</p></div>
 <div class="sec"><h2>Hechos verificados</h2>#cadena#<ul class="h">#hechos#</ul></div>
 #len( interp ) ? "<div class=""sec""><h2>Interpretaciones</h2><ul class=""i"">#interp#</ul></div>" : ""#

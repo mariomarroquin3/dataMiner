@@ -313,10 +313,10 @@ function render(d) {
   const ejec = A.length ? `<div class="card ejec"><h3>🎯 Resumen ejecutivo · qué hacer <span class="n">${usd(total)} de impacto estimado</span></h3>
     ${A.map((a, i) => `<div class="accion ${a.verificado ? '' : 'bad'}"><span class="num">${i + 1}</span>
       <div class="txt"><b>${esc(a.accion)}</b><p>${esc(a.calculo || '')}</p>
-      <span class="tag ${a.verificado ? 'ok' : 'no'}">${a.verificado ? '✓ CIFRA VERIFICADA' : '✗ CIFRA SIN VERIFICAR'}</span>${a.plazo ? ` <span class="tag">${esc(a.plazo)}</span>` : ''}</div>
+      <span class="tag ${a.verificado ? 'ok' : 'no'}">${a.verificado ? '✓ CIFRA BASE VERIFICADA' : '✗ CIFRA BASE SIN VERIFICAR'}</span>${a.plazo ? ` <span class="tag">${esc(a.plazo)}</span>` : ''}</div>
       <div class="usd">${usd(a.impacto_usd)}<small>impacto estimado</small></div></div>`).join('')}</div>` : '';
   $('#out').innerHTML = `
-    <div class="card resp-card"><h3>💬 Respuesta · ${esc(d.provider)}${d.formato ? " · " + esc(d.formato) : ""}</h3><div class="resp">${esc(d.respuesta)}</div></div>
+    <div class="card resp-card"><h3>💬 Respuesta · ${esc(d.provider)}${d.formato ? " · " + esc(d.formato) : ""}</h3><div class="resp">${esc(d.respuesta)}</div></div>${d.advertencia ? `<div class="card err">⚠️ ${esc(d.advertencia)}</div>` : ''}
     ${ejec}
     <div class="stats">
       <div class="stat ok"><b>${ver}</b><span>hechos verificados</span></div>

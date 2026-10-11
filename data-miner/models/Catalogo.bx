@@ -88,9 +88,11 @@ class {
 
   /** Lista de tablas con filas, columnas y fuente */
   array function listar() {
-    return variables.tablas.keyArray().map( n => {
-      return { tabla: n, filas: variables.tablas[ n ].recordCount, columnas: variables.tablas[ n ].columnList, fuente: variables.origenes[ n ].fuente }
+    // Las tablas de ejemplo (fuente "local") van al final y marcadas, para que el agente use primero lo que subió el usuario
+    var lista = variables.tablas.keyArray().map( n => {
+      return { tabla: n, filas: variables.tablas[ n ].recordCount, columnas: variables.tablas[ n ].columnList, fuente: variables.origenes[ n ].fuente, ejemplo: variables.origenes[ n ].fuente == "local" }
     } )
+    return lista.filter( t => !t.ejemplo ).append( lista.filter( t => t.ejemplo ), true )
   }
 
   /** Perfil de una tabla desconocida: tipo, nulos, distintos, ejemplos y estadísticas */

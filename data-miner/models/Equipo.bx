@@ -262,6 +262,8 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
       name        : "Coordinador",
       description : "Coordina el equipo de datos",
       instructions: "Coordinas un equipo de análisis de datos desconocidos. Plan: " & plan & " Separa hechos (con su SQL) de interpretaciones. Privacidad: los datos personales ya llegan anonimizados (pseudónimos como DUI_1a2b3c4d o Persona_…, direcciones reducidas al departamento, edades en rangos). Úsalos como identificadores, nunca intentes reidentificar a nadie y no pidas los valores reales." &
+        " Datos: usa primero las tablas que el usuario subió o descargó (en listar_tablas tienen ejemplo=false); las de ejemplo (ejemplo=true: creditos, precios, clientes_sv_*, operaciones_sv_*) úsalas solo si el pedido las nombra." &
+        " Honestidad: nunca digas que se ejecutó un análisis, modelo o cálculo que ninguna tool hizo en esta misión. Si piden una técnica que el equipo no tiene (por ejemplo una regresión por cuantiles fuera del pronóstico de stock), dilo claro y ofrece la más cercana que sí existe." &
         " Hablas con el gerente de una empresa: antes de proponer las acciones, consulta una vez guia_negocio del área que corresponda (ventas, inventario, cartera o finanzas) y estima el impacto como dice la guía, pidiendo al equipo las cifras que falten." & static.FORMATO,
       model       : modelo( "coordinador" ),
       tools       : [ listar, guia ],
@@ -278,9 +280,19 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
     variables.flujo = variables.coordinador
       .transform( ( texto ) => estructurar( texto ) )
       .transform( ( reporte ) => {
+        // ¿El equipo analizó algo en esta misión? (sin contar descargas ni la verificación que viene después)
+        var hechasAhora = variables.catalogo.getConsultas().len() - ( variables.antesMision ?: 0 )
+        var analisis = hechasAhora > 0
+          ? variables.catalogo.getConsultas().slice( ( variables.antesMision ?: 0 ) + 1, hechasAhora ).filter( c => !toString( c.sql ?: "" ).reFindNoCase( "^descarga\(" ) ).len()
+          : 0
         reporte.hechos = ( reporte.hechos ?: [] ).map( h => verificar( h ) )
         // Las acciones del resumen ejecutivo también se verifican: su cifra base debe salir de un SQL que corre
-        reporte.acciones = ( reporte.acciones ?: [] ).filter( a => isStruct( a ) && len( a.accion ?: "" ) ).map( a => verificar( a, false ) )
+        reporte.acciones = ( reporte.acciones ?: [] ).filter( a => isStruct( a ) && len( a.accion ?: "" ) ).map( a => verificarAccion( a ) )
+        if ( !analisis && ( reporte.hechos.len() || reporte.acciones.len() ) ) {
+          // El modelo respondió sin usar ninguna tool de análisis: lo que diga no está respaldado por los datos
+          reporte.advertencia = "El equipo no ejecutó ningún análisis en esta misión: la respuesta no está respaldada por los datos. Repite el pedido nombrando la tabla."
+          reporte.acciones = reporte.acciones.map( a => a.append( { verificado: false, nota: "Sin análisis en esta misión" } ) )
+        }
         return reporte;
       } )
     return this
@@ -289,6 +301,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
   /** Ejecuta una misión completa (vía el pipeline) y devuelve reporte + evidencia + verificación */
   struct function mision( required string pedido, struct options = {} ) {
     var antes = variables.catalogo.getConsultas().len()
+    variables.antesMision = antes
     variables.informe.limpiar()
     variables.verificador.reiniciar()
     var reporte = variables.flujo.run( pedido, {}, options )
@@ -322,6 +335,20 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
     hecho.append( { verificado: c.estado != "no_coincide", cifras: c.estado, nota: c.estado == "no_coincide" ? "⚠ " & c.nota : "SQL re-ejecutado. " & c.nota } )
     hecho.bloque = variables.verificador.sellar( hecho, r )
     return hecho
+  }
+
+  /**
+   * Acción del resumen ejecutivo: su SQL tiene que correr y las cifras base que cita en "calculo"
+   * tienen que salir de ese SQL. El monto de impacto es una estimación y no se contrasta.
+   */
+  private struct function verificarAccion( required struct accion ) {
+    verificar( accion, false )
+    if ( !accion.verificado ) return accion
+    var c = variables.verificador.contrastar( { afirmacion: accion.calculo ?: "", sql: accion.sql } )
+    // "calculo" mezcla la cifra base con porcentajes y supuestos derivados: basta con que la cifra base salga del SQL
+    var alguna = ( c.cifras ?: [] ).some( x => x.coincide )
+    if ( c.estado == "no_coincide" && !alguna ) return accion.append( { verificado: false, nota: "⚠ Ninguna cifra del cálculo sale del SQL. " & c.nota } )
+    return accion.append( { nota: c.estado == "sin_cifra" ? "SQL re-ejecutado (el cálculo no trae cifras que contrastar)" : "Cifra base verificada con el SQL" } )
   }
 
   /** Para el endpoint que vuelve a comprobar la cadena de hechos sellados */
