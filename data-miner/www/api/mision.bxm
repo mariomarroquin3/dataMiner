@@ -62,6 +62,14 @@
           guiones.analista = [ { toolCalls: [ { name: "alerta_stock", arguments: { enviar: enviarSlack } } ] },
             "Listo: pronostico_stock actualizado en MySQL." ]
         }
+        // Un enlace de Google Drive o Sheets en el pedido: el agente Datos lo descarga de verdad (sin IA)
+        enlaceDrive = pedido.reMatchNoCase( "https?://(drive|docs)\.google\.com/[^\s""'<>]+" )
+        if ( enlaceDrive.len() ) {
+          guiones.coordinador = [ { toolCalls: [ { name: "delegate_to_datos", arguments: { task: "Descarga " & enlaceDrive[ 1 ] & " y dime qué tablas trae" } } ] },
+            '{"respuesta":"(Modo demo sin IA) Descargué los archivos del enlace de Google Drive y los cargué como tablas: están en la lista de la izquierda. Pídele al equipo que revise su calidad o que los analice.","hechos":[],"interpretaciones":["Los archivos deben estar compartidos como Cualquier persona con el enlace","Configura AI_PROVIDER para que los agentes razonen de verdad"],"siguientes_preguntas":["Revisa la calidad de las tablas descargadas y límpialas si hace falta","¿Las tablas están bien normalizadas?"]}' ]
+          guiones.datos = [ { toolCalls: [ { name: "descargar_url", arguments: { enlace: enlaceDrive[ 1 ] } } ] },
+            "Listo: archivos de Drive descargados y cargados como tablas." ]
+        }
         guiones.formateador = [ guiones.coordinador.last() ]
         // El modo completo usa otros nombres de agente: en demo usamos siempre el compacto
         modelo = ( nombre ) => new AiModel( aiService( "mock" ).setResponses( duplicate( guiones[ nombre ] ) ) )

@@ -91,7 +91,7 @@ con su SQL; nunca inventes montos. Si no se puede expresar en dólares, pon impa
     var t_adquisicion = [
           aiTool( "buscar_kaggle", "Busca datasets en Kaggle por tema", ( texto ) => fue.buscarKaggle( texto ) ).describeArg( "texto", "Tema a buscar" ),
           aiTool( "descargar_kaggle", "Descarga un dataset de Kaggle y carga sus CSV", ( ref ) => fue.descargarKaggle( ref ) ).describeArg( "ref", "Referencia owner/dataset" ),
-          aiTool( "descargar_url", "Descarga un CSV, TSV, Excel (todas sus hojas), JSON o ZIP desde Google Drive, Google Sheets o una URL pública", ( enlace ) => fue.descargarUrl( enlace ) ).describeArg( "enlace", "URL o link de compartir" ),
+          aiTool( "descargar_url", "Descarga un CSV, TSV, Excel (todas sus hojas), JSON o ZIP desde Google Drive (un archivo o una carpeta pública completa), Google Sheets o una URL pública", ( enlace ) => fue.descargarUrl( enlace ) ).describeArg( "enlace", "URL o link de compartir" ),
           listar
         ]
     var t_perfilador = [ listar, aiTool( "perfilar_tabla", "Perfil estadístico de una tabla", ( tabla ) => cat.perfilar( tabla ) ).describeArg( "tabla", "Nombre de la tabla" ) ]

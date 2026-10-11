@@ -61,6 +61,9 @@ class {
    * o cualquier URL a .csv/.zip
    */
   any function descargarUrl( required string enlace ) {
+    // Carpeta pública de Drive: se bajan todos los archivos de datos que tenga
+    var carpetaDrive = enlace.reFindNoCase( "drive\.google\.com/.*folders/([A-Za-z0-9_-]+)", 1, true )
+    if ( carpetaDrive.pos[ 1 ] ) return descargarCarpetaDrive( mid( enlace, carpetaDrive.pos[ 2 ], carpetaDrive.len[ 2 ] ) )
     var u = normalizarEnlace( enlace )
     var destino = variables.carpeta & "url_" & hash( u ).left( 8 ) & "/"
     if ( !directoryExists( destino ) ) directoryCreate( destino )
@@ -68,6 +71,42 @@ class {
     bx:http url=u.url method="GET" redirect=true path=destino file=nombre result="local.r" timeout=300;
     if ( !r.status_code.toString().startsWith( "2" ) ) return { error: "La descarga respondió #r.status_code#" }
     return registrarDescarga( destino & nombre, destino, u.fuente )
+  }
+
+  /**
+   * Carpeta pública de Google Drive ("Cualquier persona con el enlace"): lista sus archivos con la vista
+   * embebida de Drive (no necesita API key ni OAuth) y descarga los CSV, Excel, JSON, ZIP y Google Sheets.
+   * No entra a subcarpetas.
+   */
+  struct function descargarCarpetaDrive( required string id ) {
+    bx:http url="https://drive.google.com/embeddedfolderview?id=#id#" method="GET" redirect=true result="local.r" timeout=60;
+    if ( !r.status_code.toString().startsWith( "2" ) ) return { error: "Drive respondió #r.status_code#. ¿La carpeta está compartida como 'Cualquier persona con el enlace'?" }
+    var html = toString( r.fileContent )
+    // Cada entrada trae el enlace al archivo (o a la hoja de Sheets) y su nombre en flip-entry-title
+    var patron = createObject( "java", "java.util.regex.Pattern" ).compile( "(file|spreadsheets)/d/([A-Za-z0-9_-]+)[^""]*""[^>]*>.*?flip-entry-title"">([^<]+)<", 32 )
+    var m = patron.matcher( html )
+    var entradas = []
+    while ( m.find() ) entradas.append( { tipo: m.group( 1 ), id: m.group( 2 ), nombre: trim( m.group( 3 ) ) } )
+    if ( !entradas.len() ) return { error: "No encontré archivos en la carpeta de Drive (o no es pública)", fuente: "google-drive" }
+
+    var destino = variables.carpeta & "drive_" & id.left( 8 ) & "/"
+    if ( !directoryExists( destino ) ) directoryCreate( destino )
+    var formatos = variables.catalogo.formatos().append( "zip" )
+    var tablas = []; var errores = []; var omitidos = []
+    for ( var e in entradas ) {
+      var esSheet = e.tipo == "spreadsheets"
+      var ext = esSheet ? "xlsx" : listLast( e.nombre, "." ).lCase()
+      if ( !formatos.findNoCase( ext ) ) { omitidos.append( e.nombre ); continue; }
+      var archivo = e.nombre.reReplace( "[^A-Za-z0-9._-]", "_", "all" )
+      if ( esSheet ) archivo &= ".xlsx"
+      var direccion = esSheet ? "https://docs.google.com/spreadsheets/d/#e.id#/export?format=xlsx" : "https://drive.google.com/uc?export=download&confirm=t&id=#e.id#"
+      bx:http url=direccion method="GET" redirect=true path=destino file=archivo result="local.d" timeout=300;
+      if ( !d.status_code.toString().startsWith( "2" ) ) { errores.append( "#e.nombre#: la descarga respondió #d.status_code#" ); continue; }
+      var res = cargarArchivo( destino & archivo, "google-drive:#e.nombre#" )
+      if ( res.keyExists( "error" ) ) errores.append( "#e.nombre#: #res.error#" )
+      else { tablas.append( res.tablas, true ); errores.append( res.errores, true ) }
+    }
+    return { fuente: "google-drive (carpeta)", archivos: entradas.map( x => x.nombre ), omitidos: omitidos, tablas: tablas, errores: errores, catalogo: variables.catalogo.listar() }
   }
 
   struct function normalizarEnlace( required string enlace ) {
