@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hackathon AI</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;background:#0f172a;color:#e2e8f0}
+  #log{min-height:300px;border:1px solid #334155;border-radius:12px;padding:1rem;overflow:auto}
+  .u{color:#93c5fd}.a{color:#86efac;white-space:pre-wrap}
+  form{display:flex;gap:.5rem;margin-top:1rem} input{flex:1;padding:.7rem;border-radius:8px;border:0}
+  button{padding:.7rem 1.2rem;border:0;border-radius:8px;background:#6366f1;color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>🤖 Mi App con BoxLang AI</h1>
+<div id="log"></div>
+<form id="f"><input id="m" placeholder="Escribe tu pregunta..." autocomplete="off"><button>Enviar</button></form>
+<script>
+const log = document.getElementById('log');
+const add = (cls, txt) => { const p = document.createElement('p'); p.className = cls; p.textContent = txt; log.appendChild(p); log.scrollTop = log.scrollHeight; };
+document.getElementById('f').onsubmit = async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('m'); const message = input.value.trim(); if (!message) return;
+  add('u', 'Tú: ' + message); input.value = '';
+  const r = await fetch('/api/chat.bxm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) });
+  const data = await r.json();
+  add('a', 'IA: ' + (data.reply ?? data.error));
+};
+</script>
+</body>
+</html>

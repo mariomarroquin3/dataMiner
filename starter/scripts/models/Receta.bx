@@ -1,0 +1,5 @@
+class {
+  property name="nombre" type="string";
+  property name="minutos" type="numeric";
+  property name="ingredientes" type="array";
+}

@@ -1,0 +1,11 @@
+class {
+  this.name = "HackathonApp"
+  this.sessionManagement = true
+  this.sessionTimeout = createTimeSpan( 0, 2, 0, 0 )
+
+  function onApplicationStart() {
+    // Elige proveedor por variable de entorno: openai, claude, gemini, ollama, groq... (mock = offline)
+    application.provider = server.system.environment.AI_PROVIDER ?: "mock"
+    return true
+  }
+}

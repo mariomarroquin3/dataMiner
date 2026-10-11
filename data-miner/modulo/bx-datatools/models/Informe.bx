@@ -1,0 +1,99 @@
+/**
+ * Acumula gráficas y genera un informe HTML autocontenido (Chart.js por CDN).
+ */
+class {
+
+  property name="graficos";
+
+  function init() {
+    variables.graficos = []
+    return this
+  }
+
+  /** { tipo: bar|line|scatter|pie|heatmap, titulo, labels, series:[{nombre,datos}] | puntos:[{x,y}] | matriz } */
+  struct function agregarGrafico( required struct g ) {
+    g.id = "g" & ( variables.graficos.len() + 1 )
+    variables.graficos.append( g )
+    return { ok: true, id: g.id, titulo: g.titulo ?: "" }
+  }
+
+  void function limpiar() { variables.graficos = [] }
+
+  /** Gráfica a partir de un resultado SQL: x = columna de etiquetas, y = una o varias columnas numéricas */
+  struct function desdeFilas( required array filas, required string tipo, required string x, required any y, string titulo = "" ) {
+    if ( !filas.len() ) return { error: "La consulta no devolvió filas" }
+    var ys = isArray( y ) ? y : listToArray( y )
+    if ( tipo == "scatter" ) {
+      return agregarGrafico( { tipo: "scatter", titulo: titulo, ejes: [ x, ys[ 1 ] ], puntos: filas.slice( 1, min( 500, filas.len() ) ).map( f => { return { x: f[ x ], y: f[ ys[ 1 ] ] } } ) } )
+    }
+    return agregarGrafico( {
+      tipo  : tipo,
+      titulo: titulo,
+      labels: filas.map( f => f[ x ] ),
+      series: ys.map( c => { return { nombre: c, datos: filas.map( f => f[ c ] ) } } )
+    } )
+  }
+
+  /** Informe HTML completo */
+  string function html( required struct reporte, string titulo = "Informe de datos" ) {
+    var esc = ( s ) => encodeForHTML( toString( s ?: "" ) )
+    var hechos = ( reporte.hechos ?: [] ).map( h => '<li class="#( h.verificado ?: false ) ? "ok" : "bad"#"><b>#( h.verificado ?: false ) ? "✓" : "✗"#</b> #esc( h.afirmacion )#<code>#esc( h.sql )#</code></li>' ).toList( "" )
+    var interp = ( reporte.interpretaciones ?: [] ).map( i => "<li>#esc( i )#</li>" ).toList( "" )
+    var anon = ( reporte.anonimizacion ?: [] ).map( a => "<li><b>#esc( a.tabla )#.#esc( a.columna )#</b>: #esc( a.tipo )# → #esc( a.metodo )#</li>" ).toList( "" )
+    var tablas = ( reporte.tablas ?: [] ).map( t => "<li><b>#esc( t.tabla )#</b> · #t.filas# filas · #esc( t.fuente )#</li>" ).toList( "" )
+    var canvases = variables.graficos.map( g => g.tipo == "heatmap"
+      ? '<div class="g"><h3>#esc( g.titulo )#</h3>#heatmapHTML( g )#</div>'
+      : '<div class="g"><h3>#esc( g.titulo )#</h3><canvas id="#g.id#"></canvas></div>' ).toList( "" )
+    var datos = jsonSerialize( variables.graficos.filter( g => g.tipo != "heatmap" ) )
+    return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>#esc( titulo )#</title>
+#scriptChart()#
+<style>body{font-family:system-ui,sans-serif;max-width:1000px;margin:0 auto;padding:24px 16px;color:##1f2937;background:##fff}
+h1{margin:0}.mut{color:##6b7280}.g{border:1px solid ##e5e7eb;border-radius:12px;padding:12px;margin:16px 0}
+li{margin:6px 0}li.ok b{color:##059669}li.bad b{color:##dc2626}code{display:block;color:##6b7280;font-size:.8rem}
+table.hm{border-collapse:collapse;font-size:.75rem}table.hm td,table.hm th{padding:4px 6px;text-align:center;border:1px solid ##fff}
+@media print{.g{break-inside:avoid}}</style></head><body>
+<h1>#esc( titulo )#</h1><p class="mut">Generado por Data Miner (BoxLang AI) · #dateTimeFormat( now(), "yyyy-MM-dd HH:mm" )#</p>
+<h2>Resumen</h2><p>#esc( reporte.respuesta ?: "" )#</p>
+<h2>Hechos verificados</h2><ul>#hechos#</ul>
+<h2>Interpretaciones</h2><ul>#interp#</ul>
+<h2>Datos usados</h2><ul>#tablas#</ul>
+#len( anon ) ? "<h2>🔒 Privacidad</h2><p class=""mut"">Estos datos personales se anonimizaron antes de que los viera la IA. Los valores reales no salieron del servidor.</p><ul>#anon#</ul>" : ""#
+<h2>Visualizaciones</h2>#canvases#
+<script>
+const G = #datos#;
+const pal = ["##4f46e5","##059669","##d97706","##dc2626","##0891b2","##7c3aed"];
+G.forEach(g => {
+  const el = document.getElementById(g.id); if (!el) return;
+  if (g.tipo === "scatter") {
+    new Chart(el, { type: "scatter", data: { datasets: [{ label: (g.ejes||[]).join(" vs "), data: g.puntos, backgroundColor: pal[0] }] },
+      options: { scales: { x: { title: { display: true, text: (g.ejes||[])[0] } }, y: { title: { display: true, text: (g.ejes||[])[1] } } } } });
+  } else {
+    new Chart(el, { type: g.tipo, data: { labels: g.labels, datasets: (g.series||[]).map((s,i) => ({ label: s.nombre, data: s.datos, backgroundColor: g.tipo==="pie" ? pal : pal[i%6], borderColor: pal[i%6] })) } });
+  }
+});
+</script></body></html>'
+  }
+
+  /** Chart.js embebido (el informe funciona sin internet) o por CDN si no está el archivo local */
+  private string function scriptChart() {
+    var archivoJs = getDirectoryFromPath( getCurrentTemplatePath() ) & "../public/chart.umd.js"
+    return fileExists( archivoJs )
+      ? "<script>" & fileRead( archivoJs ) & "</script>"
+      : '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>'
+  }
+
+  private string function heatmapHTML( required struct g ) {
+    var h = '<table class="hm"><tr><th></th>' & g.labels.map( l => "<th>#encodeForHTML( l )#</th>" ).toList( "" ) & "</tr>"
+    g.matriz.each( ( fila, i ) => {
+      h &= "<tr><th>#encodeForHTML( g.labels[ i ] )#</th>"
+      fila.each( v => {
+        var a = numberFormat( min( 1, abs( v ) ), "0.00" )
+        var color = v >= 0 ? "rgba(79,70,229,#a#)" : "rgba(220,38,38,#a#)"
+        h &= '<td style="background:#color#;color:#abs( v ) > 0.5 ? "##fff" : "##111"#">#numberFormat( v, "0.00" )#</td>'
+      } )
+      h &= "</tr>"
+    } )
+    return h & "</table>"
+  }
+}

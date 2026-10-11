@@ -1,0 +1,268 @@
+/**
+ * Decisiones de operación con cálculo determinista (el LLM elige la tool y explica; no calcula).
+ * - quiebreStock: cuándo se acaba cada producto, punto de reorden y cuánto pedir.
+ * - priorizarVentas: qué oportunidades atender primero según ganancia esperada
+ *   (monto × margen × probabilidad de cierre aprendida de las oportunidades ya cerradas).
+ * Cada resultado se guarda como tabla (pronostico_stock, prioridad_ventas) para que los hechos
+ * se puedan citar y verificar con SQL.
+ */
+class {
+
+  property name="catalogo";
+  property name="informe";
+  property name="ml";
+
+  function init( required any catalogo, required any informe, any ml = "" ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe
+    variables.ml       = arguments.ml   // sin ML (p. ej. en el módulo) solo funciona quiebreStock
+    variables.Z = { "0.9": 1.2816, "0.95": 1.6449, "0.975": 1.96, "0.99": 2.3263 }
+    return this
+  }
+
+  // ============================================================== QUIEBRE DE STOCK
+
+  /**
+   * @tablaVentas     ventas por día y producto (fecha, producto/sku, unidades)
+   * @tablaInventario stock actual por producto (producto/sku, stock, días de entrega opcional)
+   * @diasHistoria    ventana de historia para estimar la demanda
+   * @nivelServicio   0.90, 0.95, 0.975 o 0.99: cuánta protección contra quiebres (stock de seguridad)
+   * @diasEntrega     días de entrega por defecto si el inventario no trae esa columna
+   * @diasCobertura   cuántos días debe cubrir un pedido nuevo
+   */
+  struct function quiebreStock( required string tablaVentas, required string tablaInventario, numeric diasHistoria = 56,
+    numeric nivelServicio = 0.95, numeric diasEntrega = 7, numeric diasCobertura = 30, struct columnas = {} ) {
+    try {
+      var qv = variables.catalogo.tabla( tablaVentas )
+      var qi = variables.catalogo.tabla( tablaInventario )
+    } catch ( any e ) { return { error: e.message } }
+    var cv = {
+      producto: columnas.producto ?: buscarColumna( qv, "^(sku|codigo|cod_producto|id_producto|producto_id|item|producto)$|sku|codigo" ),
+      fecha   : columnas.fecha ?: buscarColumna( qv, "fecha|date|dia" ),
+      cantidad: columnas.cantidad ?: buscarColumna( qv, "unidades|cantidad|qty|vendid" )
+    }
+    var ci = {
+      producto: columnas.productoInventario ?: ( columnas.producto ?: buscarColumna( qi, "^(sku|codigo|cod_producto|id_producto|producto_id|item)$|sku|codigo" ) ),
+      stock   : columnas.stock ?: buscarColumna( qi, "stock|existencia|inventario|disponible|en_mano" ),
+      entrega : columnas.entrega ?: buscarColumna( qi, "entrega|lead|reposicion|proveedor" ),
+      nombre  : buscarColumna( qi, "^(producto|descripcion|nombre|articulo)" )
+    }
+    if ( !len( ci.producto ) ) ci.producto = buscarColumna( qi, "producto|articulo|item" )
+    for ( var k in [ "producto", "fecha", "cantidad" ] ) if ( !len( cv[ k ] ) ) return { error: "No encontré la columna de #k# en #tablaVentas#. Columnas: #qv.columnList#" }
+    for ( var k in [ "producto", "stock" ] ) if ( !len( ci[ k ] ) ) return { error: "No encontré la columna de #k# en #tablaInventario#. Columnas: #qi.columnList#" }
+
+    // Serie diaria por producto (los días sin ventas cuentan como 0)
+    var LocalDate = createObject( "java", "java.time.LocalDate" )
+    var DIAS = createObject( "java", "java.time.temporal.ChronoUnit" ).DAYS
+    var fechas = []; var ventas = {}
+    for ( var i = 1; i <= qv.recordCount; i++ ) {
+      var f = toString( qv[ cv.fecha ][ i ] ?: "" ).left( 10 )
+      if ( !f.reFind( "^\d{4}-\d{2}-\d{2}$" ) ) continue;
+      fechas.append( f )
+    }
+    if ( !fechas.len() ) return { error: "La columna #cv.fecha# no tiene fechas aaaa-mm-dd" }
+    fechas.sort( "text" )
+    var fRef = LocalDate.parse( fechas.last() )
+    var fIni = fRef.minusDays( javaCast( "long", diasHistoria - 1 ) )
+    for ( var i = 1; i <= qv.recordCount; i++ ) {
+      var f = toString( qv[ cv.fecha ][ i ] ?: "" ).left( 10 )
+      if ( !f.reFind( "^\d{4}-\d{2}-\d{2}$" ) ) continue;
+      var d = DIAS.between( fIni, LocalDate.parse( f ) )
+      if ( d < 0 ) continue;
+      var p = toString( qv[ cv.producto ][ i ] )
+      if ( !ventas.keyExists( p ) ) { ventas[ p ] = []; for ( var j = 1; j <= diasHistoria; j++ ) ventas[ p ].append( 0 ) }
+      ventas[ p ][ d + 1 ] += val( qv[ cv.cantidad ][ i ] ?: 0 )
+    }
+
+    var z = variables.Z[ toString( nivelServicio ) ] ?: 1.6449
+    var filas = []
+    for ( var i = 1; i <= qi.recordCount; i++ ) {
+      var p = toString( qi[ ci.producto ][ i ] )
+      var serie = ventas[ p ] ?: []
+      var stock = val( qi[ ci.stock ][ i ] ?: 0 )
+      var lead  = len( ci.entrega ) && isNumeric( qi[ ci.entrega ][ i ] ?: "" ) ? val( qi[ ci.entrega ][ i ] ) : diasEntrega
+      if ( !serie.len() ) {
+        filas.append( [ p, len( ci.nombre ) ? qi[ ci.nombre ][ i ] : p, stock, 0, 0, 0, "", lead, 0, 0, 0, stock > 0 ? "sin ventas" : "agotado" ] )
+        continue
+      }
+      var n = serie.len()
+      var media = serie.sum() / n
+      var sd = sqr( serie.reduce( ( a, x ) => a + ( x - media ) ^ 2, 0 ) / max( 1, n - 1 ) )
+      // Tendencia: pendiente de una recta sobre la serie (unidades/día por cada día)
+      var mx = ( n + 1 ) / 2; var num = 0; var den = 0
+      for ( var k = 1; k <= n; k++ ) { num += ( k - mx ) * ( serie[ k ] - media ); den += ( k - mx ) ^ 2 }
+      var pendiente = den ? num / den : 0
+      var nivel = serie.slice( max( 1, n - 13 ), min( 14, n ) ).sum() / min( 14, n )   // promedio de los últimos 14 días
+      // Días hasta agotar: demanda diaria proyectada = nivel + pendiente × días
+      var restantes = 0; var acumulado = 0
+      if ( stock <= 0 ) restantes = 0
+      else {
+        restantes = 365
+        for ( var k = 1; k <= 365; k++ ) {
+          acumulado += max( 0, nivel + pendiente * k )
+          if ( acumulado >= stock ) { restantes = k - 1; break; }
+        }
+      }
+      var seguridad = z * sd * sqr( lead )
+      var reorden = nivel * lead + seguridad
+      var pedir = max( 0, ceiling( nivel * ( lead + diasCobertura ) + seguridad - stock ) )
+      var estado = stock <= 0 ? "agotado" : restantes <= lead ? "crítico" : restantes <= lead + 7 ? "pronto" : "ok"
+      filas.append( [ p, len( ci.nombre ) ? qi[ ci.nombre ][ i ] : p, stock, r2( nivel ), r2( pendiente ), restantes,
+        stock <= 0 ? fRef.toString() : fRef.plusDays( javaCast( "long", restantes ) ).toString(), lead, r2( seguridad ), r2( reorden ), stock <= reorden ? pedir : 0, estado ] )
+    }
+    var orden = { "agotado": 0, "crítico": 1, "pronto": 2, "ok": 3, "sin ventas": 4 }
+    filas.sort( ( a, b ) => orden[ a[ 12 ] ] != orden[ b[ 12 ] ] ? orden[ a[ 12 ] ] - orden[ b[ 12 ] ] : a[ 6 ] - b[ 6 ] )
+    var columnasRes = [ "producto", "descripcion", "stock", "demanda_diaria", "tendencia_diaria", "dias_restantes", "fecha_agotamiento",
+      "dias_entrega", "stock_seguridad", "punto_reorden", "pedir_unidades", "estado" ]
+    var tabla = variables.catalogo.registrarFilas( "pronostico_stock", columnasRes, filas, "cálculo de #tablaVentas# + #tablaInventario#" )
+
+    var urgentes = filas.filter( f => f[ 12 ] == "agotado" || f[ 12 ] == "crítico" )
+    var top = filas.filter( f => f[ 12 ] != "sin ventas" ).slice( 1, min( 15, filas.filter( f => f[ 12 ] != "sin ventas" ).len() ) )
+    if ( top.len() ) {
+      variables.informe.agregarGrafico( { tipo: "bar", titulo: "Días de inventario restantes (fecha de corte #fRef.toString()#)",
+        labels: top.map( f => f[ 2 ] ), series: [ { nombre: "días restantes", datos: top.map( f => f[ 6 ] ) }, { nombre: "días de entrega", datos: top.map( f => f[ 8 ] ) } ] } )
+    }
+    var res = {
+      fecha_corte: fRef.toString(), dias_historia: diasHistoria, nivel_servicio: nivelServicio,
+      columnas_usadas: { ventas: cv, inventario: ci },
+      resumen: { productos: filas.len(), agotados: filas.filter( f => f[ 12 ] == "agotado" ).len(), criticos: filas.filter( f => f[ 12 ] == "crítico" ).len(),
+                 pronto: filas.filter( f => f[ 12 ] == "pronto" ).len(), ok: filas.filter( f => f[ 12 ] == "ok" ).len() },
+      tabla_resultado: tabla,
+      sql_sugerido: "SELECT producto, descripcion, stock, dias_restantes, fecha_agotamiento, pedir_unidades FROM #tabla# WHERE estado IN ('agotado','crítico') ORDER BY dias_restantes",
+      urgentes: urgentes.slice( 1, min( 10, urgentes.len() ) ).map( f => aStruct( columnasRes, f ) ),
+      metodo: "Demanda = promedio de los últimos 14 días + tendencia lineal de los últimos #diasHistoria# días. Agotamiento = día en que la demanda acumulada supera el stock. Punto de reorden = demanda × días de entrega + stock de seguridad (z=#z# × desviación × √días de entrega)."
+    }
+    variables.catalogo.registrarEvidencia( { sql: "stock.quiebre(#tablaVentas#, #tablaInventario#)", filas: filas.len(), resultado: [ res.resumen ] } )
+    return res
+  }
+
+  // ============================================================== PRIORIZAR VENTAS
+
+  /**
+   * @tabla oportunidades con estado (ganada / perdida / abierta), monto y, si hay, margen
+   * Entrena una regresión logística con las cerradas y puntúa las abiertas.
+   */
+  struct function priorizarVentas( required string tabla, struct columnas = {}, numeric top = 10 ) {
+    if ( !isObject( variables.ml ) ) throw( type: "Operaciones.SinML", message: "priorizarVentas necesita el modelo de ML (Tribuo): úsalo desde la app Data Miner" )
+    try { var q = variables.catalogo.tabla( tabla ) } catch ( any e ) { return { error: e.message } }
+    var c = {
+      estado: columnas.estado ?: buscarColumna( q, "estado|status|etapa|resultado" ),
+      monto : columnas.monto ?: buscarColumna( q, "monto|valor|importe|amount|total" ),
+      margen: columnas.margen ?: buscarColumna( q, "margen|margin" ),
+      id    : columnas.id ?: buscarColumna( q, "^id|oportunidad|^codigo" ),
+      dias  : columnas.dias ?: buscarColumna( q, "dias_abierta|antiguedad|dias|edad" )
+    }
+    if ( !len( c.estado ) || !len( c.monto ) ) return { error: "Necesito una columna de estado (ganada/perdida/abierta) y una de monto. Columnas: #q.columnList#" }
+
+    var esGanada  = ( v ) => sinTildes( toString( v ) ).lCase().reFind( "ganad|won|cerrada_ganada|exito|vendid" ) > 0
+    var esPerdida = ( v ) => sinTildes( toString( v ) ).lCase().reFind( "perdid|lost|cancel|rechaz" ) > 0
+    // Features: todo menos id, estado y columnas de texto con demasiados valores distintos (nombres de empresa, notas)
+    var features = q.columnList.listToArray().filter( col => col != c.estado && col != c.id && ( esNumerica( q, col ) || distintos( q, col ) <= 15 ) )
+
+    var cerradas = []; var abiertas = []
+    for ( var i = 1; i <= q.recordCount; i++ ) {
+      var e = q[ c.estado ][ i ] ?: ""
+      if ( esGanada( e ) ) cerradas.append( { i: i, y: 1 } )
+      else if ( esPerdida( e ) ) cerradas.append( { i: i, y: 0 } )
+      else abiertas.append( i )
+    }
+    if ( !abiertas.len() ) return { error: "No hay oportunidades abiertas en #tabla# (estado distinto de ganada/perdida)" }
+    var tasaHistorica = cerradas.len() ? cerradas.reduce( ( a, x ) => a + x.y, 0 ) / cerradas.len() : 0.3
+
+    // Modelo: logística sobre las cerradas (si hay suficientes de las dos clases)
+    var modelo = {}
+    var ganadas = cerradas.filter( x => x.y == 1 ).len()
+    if ( cerradas.len() >= 30 && ganadas >= 5 && ganadas <= cerradas.len() - 5 ) {
+      var filasEnt = cerradas.map( x => features.map( col => q[ col ][ x.i ] ?: "" ).append( x.y ) )
+      var tEnt = variables.catalogo.registrarFilas( "entrenamiento_#tabla#", duplicate( features ).append( "ganada" ), filasEnt, "cerradas de #tabla#" )
+      var ent = variables.ml.entrenar( tEnt, "ganada", "logistica", features )
+      if ( !ent.keyExists( "error" ) ) modelo = ent
+    }
+
+    var filas = abiertas.map( i => {
+      var prob = tasaHistorica
+      if ( modelo.count() ) {
+        var valores = {}; features.each( col => valores[ col ] = q[ col ][ i ] ?: "" )
+        var pr = variables.ml.predecir( modelo.nombre_modelo, valores )
+        for ( var k in ( pr.probabilidades ?: {} ) ) if ( toString( k ).reFind( "^1" ) ) prob = pr.probabilidades[ k ]
+      }
+      var monto = val( q[ c.monto ][ i ] ?: 0 )
+      var m = len( c.margen ) ? val( q[ c.margen ][ i ] ?: 0 ) : 0
+      if ( m > 1 ) m = m / 100
+      var ganancia = len( c.margen ) ? monto * m * prob : monto * prob
+      return [ len( c.id ) ? q[ c.id ][ i ] : "fila #i#", r2( monto ), r2( m * 100 ), r2( prob ), r2( monto * prob ), r2( ganancia ), len( c.dias ) ? val( q[ c.dias ][ i ] ?: 0 ) : "" ]
+    } )
+    filas.sort( ( a, b ) => b[ 6 ] - a[ 6 ] > 0 ? 1 : -1 )
+    // Acción sugerida
+    var n = filas.len()
+    filas = filas.map( ( f, idx ) => f.append( idx ).append( accion( f, idx, n ) ) )
+    var columnasRes = [ "oportunidad", "monto", "margen_pct", "probabilidad_cierre", "venta_esperada", "ganancia_esperada", "dias_abierta", "prioridad", "accion" ]
+    var tRes = variables.catalogo.registrarFilas( "prioridad_ventas", columnasRes, filas, "cálculo de #tabla#" )
+
+    var primeros = filas.slice( 1, min( top, n ) )
+    variables.informe.agregarGrafico( { tipo: "bar", titulo: "Oportunidades a priorizar: ganancia esperada (US$)",
+      labels: primeros.map( f => f[ 1 ] ), series: [ { nombre: "ganancia esperada", datos: primeros.map( f => f[ 6 ] ) } ] } )
+    var total = filas.reduce( ( a, f ) => a + f[ 6 ], 0 )
+    var res = {
+      oportunidades_abiertas: n, cerradas_para_aprender: cerradas.len(), tasa_cierre_historica: r2( tasaHistorica ),
+      modelo: modelo.count() ? { tipo: "logistica", accuracy: modelo.metricas.accuracy, accuracy_linea_base: modelo.metricas.accuracy_linea_base,
+        variables_mas_importantes: ( modelo.importancia ?: [] ).slice( 1, min( 5, ( modelo.importancia ?: [] ).len() ) ),
+        nota: "Peso positivo = sube la probabilidad de ganar; negativo = la baja" }
+        : "Pocas oportunidades cerradas: se usó la tasa de cierre histórica para todas",
+      tasa_cierre_por_categoria: tasasPorCategoria( q, features, cerradas ),
+      ganancia_esperada_total: r2( total ),
+      ganancia_esperada_top: r2( primeros.reduce( ( a, f ) => a + f[ 6 ], 0 ) ),
+      prioridades: primeros.map( f => aStruct( columnasRes, f ) ),
+      tabla_resultado: tRes,
+      sql_sugerido: "SELECT oportunidad, monto, probabilidad_cierre, ganancia_esperada, accion FROM #tRes# WHERE prioridad <= #top# ORDER BY prioridad",
+      metodo: "Probabilidad de cierre = regresión logística entrenada con las oportunidades ya ganadas o perdidas. Ganancia esperada = monto × margen × probabilidad. Se ordena de mayor a menor."
+    }
+    variables.catalogo.registrarEvidencia( { sql: "ventas.priorizar(#tabla#)", filas: n, resultado: [ { abiertas: n, ganancia_esperada_total: res.ganancia_esperada_total } ] } )
+    return res
+  }
+
+  // ============================================================== utilidades
+
+  /** Tasa de cierre histórica por cada valor de las columnas de texto (ej: Origen = Referido → 0.62) */
+  private struct function tasasPorCategoria( required query q, required array features, required array cerradas ) {
+    var out = [:]
+    features.filter( col => !esNumerica( q, col ) ).each( col => {
+      var g = {}
+      cerradas.each( x => { var k = toString( q[ col ][ x.i ] ?: "" ); g[ k ] = g[ k ] ?: { n: 0, ganadas: 0 }; g[ k ].n++; g[ k ].ganadas += x.y } )
+      out[ col ] = g.map( ( k, v ) => r2( v.ganadas / v.n ) )
+    } )
+    return out
+  }
+
+  private string function accion( required array f, required numeric idx, required numeric n ) {
+    var prob = f[ 4 ]
+    if ( idx <= max( 3, ceiling( n * 0.1 ) ) ) return prob >= 0.5 ? "Cerrar esta semana" : "Alto valor: reunión con decisor"
+    if ( prob >= 0.6 ) return "Seguimiento rápido (probable)"
+    if ( prob < 0.2 ) return "Baja prioridad o descartar"
+    return "Seguimiento normal"
+  }
+
+  private string function buscarColumna( required query q, required string patron ) {
+    for ( var col in q.columnList.listToArray() ) if ( sinTildes( col ).lCase().reFind( patron ) ) return col
+    return ""
+  }
+
+  private boolean function esNumerica( required query q, required string col ) {
+    var t = getMetadata( q ).columnMetadata[ col ].type ?: ""
+    return t.reFindNoCase( "double|numeric|integer|decimal" ) > 0
+  }
+
+  private numeric function distintos( required query q, required string col ) {
+    return q.columnData( col ).map( v => toString( v ?: "" ) ).toList( char( 31 ) ).listRemoveDuplicates( char( 31 ) ).listLen( char( 31 ) )
+  }
+
+  private struct function aStruct( required array cols, required array fila ) {
+    var s = [:]; cols.each( ( c, i ) => s[ c ] = fila[ i ] ); return s
+  }
+
+  private numeric function r2( required numeric x ) { return round( x * 100 ) / 100 }
+
+  private string function sinTildes( required string s ) {
+    return createObject( "java", "java.text.Normalizer" ).normalize( s, createObject( "java", "java.text.Normalizer$Form" ).NFD ).reReplace( "[̀-ͯ]", "", "all" )
+  }
+}

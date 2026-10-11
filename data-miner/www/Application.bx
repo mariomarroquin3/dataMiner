@@ -1,0 +1,38 @@
+class {
+  this.name = "DataMinerEquipo"
+  this.sessionManagement = true
+  this.sessionTimeout = createTimeSpan( 0, 4, 0, 0 )
+  variables.raiz = getCanonicalPath( getDirectoryFromPath( getCurrentTemplatePath() ) & "../" )
+  this.mappings[ "/models" ] = variables.raiz & "models"
+  // Jars de Tribuo (ML) que usa models/ML.bx
+  this.javaSettings = { loadPaths: [ variables.raiz & "lib/" ], reloadOnChange: false }
+
+  function onApplicationStart() {
+    application.raiz     = variables.raiz
+    application.provider = getSystemSetting( "AI_PROVIDER", "mock" )
+    application.model    = getSystemSetting( "AI_MODEL", "" )
+    application.modelLigero = getSystemSetting( "AI_MODEL_LIGERO", "" )
+    application.equipoModo  = getSystemSetting( "EQUIPO_MODO", "compacto" )   // compacto (3 agentes) o completo (7)
+    application.mcpUrl   = getSystemSetting( "MCP_DB_URL", "" )      // ej: http://localhost:8766/mcp
+    // Anonimización de los datos entrantes (por defecto encendida). ANONIMIZAR=no la apaga
+    application.anonimizar = getSystemSetting( "ANONIMIZAR", "si" ).lCase() != "no"
+    return true
+  }
+
+  // Cada sesión arranca con su catálogo y los datasets de ejemplo (puedes quitarlos)
+  function onSessionStart() {
+    session.catalogo = new models.Catalogo( application.anonimizar )
+    session.catalogo.registrarCSV( application.raiz & "data/creditos.csv", "creditos", "local" )
+    session.catalogo.registrarCSV( application.raiz & "data/precios.csv", "precios", "local" )
+    // Clientes salvadoreños sintéticos con DUI, NIT, teléfonos...: entran anonimizados
+    session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/clientes_sv.xlsx", "clientes_sv", "local" )
+    // Inventario, ventas diarias y oportunidades de una distribuidora (sintéticos): para stock y priorización
+    session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/operaciones_sv.xlsx", "operaciones_sv", "local" )
+  }
+
+  function onRequestStart( string page ) {
+    if ( url.keyExists( "reload" ) ) { onApplicationStart(); session.clear() }
+    if ( !session.keyExists( "catalogo" ) ) onSessionStart()
+    return true
+  }
+}

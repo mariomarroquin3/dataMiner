@@ -1,0 +1,31 @@
+/**
+ * bx-datatools: herramientas seguras de datos para agentes de BoxLang AI.
+ * Anonimización de datos personales, lectura de CSV/TSV/Excel/JSON, SQL de solo lectura,
+ * diagnóstico de calidad, limpieza, esquema SQL, detección de fuga de datos, estadística y bases de datos vía MCP.
+ * Las librerías de libs/ (Apache POI para Excel) se cargan solas con el módulo.
+ */
+class {
+
+  property name="moduleRecord";
+  property name="boxRuntime";
+  property name="log";
+
+  this.version     = "0.1.0"
+  this.mapping     = "bxdatatools"
+  this.author      = "Mario (Hackathon ANIA BoxLang AI 2026)"
+  this.description = "Tools seguras de datos para agentes BoxLang AI: anonimización, SQL de solo lectura, calidad, limpieza y MCP"
+  this.webURL      = ""
+  this.enabled     = true
+
+  function configure() {
+    settings = {
+      // Anonimizar todo archivo que entra al catálogo (DUI, NIT, nombres, teléfonos, correos...)
+      anonimizar : true,
+      // Sal para los pseudónimos; vacío = ANON_SALT o una sal aleatoria por arranque
+      sal        : ""
+    }
+  }
+
+  function onLoad() {}
+  function onUnload() {}
+}

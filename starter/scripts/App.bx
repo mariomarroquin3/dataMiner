@@ -1,0 +1,5 @@
+class {
+  function main( args = [] ) {
+    println( "Args: " & args.toList() )
+  }
+}

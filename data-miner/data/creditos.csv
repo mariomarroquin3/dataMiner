@@ -1,0 +1,2001 @@
+id,edad,ingreso_mensual,monto_credito,plazo_meses,genero,tipo_empleo,departamento,dias_mora_max,impago
+1,39,1386.86,3644.28,60,F,formal,Sonsonate,160,1
+2,21,399.25,2047.6,60,F,formal,Sonsonate,88,1
+3,55,794.09,3870.45,60,F,independiente,Santa Ana,10,0
+4,55,300.84,1308.49,60,F,informal,La Libertad,10,0
+5,55,456.81,4954.2,48,M,independiente,San Miguel,5,0
+6,38,565.05,6858.46,12,M,informal,Sonsonate,118,1
+7,37,813.09,7037.4,24,F,independiente,La Libertad,5,0
+8,61,323.81,3969.34,36,M,formal,Santa Ana,10,0
+9,23,688.04,1918.74,36,M,informal,Usulutan,0,0
+10,61,534.51,4499.51,24,M,independiente,La Libertad,5,0
+11,50,382.55,3497.55,24,M,independiente,Sonsonate,137,1
+12,62,511.08,2563.29,24,F,formal,Sonsonate,103,1
+13,28,658.37,6163.95,24,F,informal,Sonsonate,15,0
+14,48,630.43,2109.41,48,F,formal,San Salvador,5,0
+15,26,635.99,1273.91,24,F,informal,Santa Ana,0,0
+16,58,549.83,7929.14,60,M,formal,San Salvador,155,1
+17,49,724.03,2409.89,36,F,informal,San Miguel,0,0
+18,32,1669.07,6519.11,60,F,independiente,Sonsonate,15,0
+19,63,1360.03,18778.43,36,M,independiente,Sonsonate,10,0
+20,59,208.44,3085.75,24,F,independiente,San Miguel,0,0
+21,52,718.37,10678.46,36,M,formal,La Libertad,0,0
+22,70,1358.68,6611.35,24,M,formal,Santa Ana,31,1
+23,60,505.25,6492.68,12,F,independiente,Usulutan,5,0
+24,46,1065.88,13228.32,48,F,formal,Usulutan,15,0
+25,29,850.39,8951.34,60,F,independiente,San Miguel,0,0
+26,54,766.87,9502.78,12,F,informal,La Libertad,80,1
+27,20,543.99,2789.04,60,F,formal,Sonsonate,0,0
+28,66,583.2,5589.12,60,F,formal,Sonsonate,69,1
+29,47,1347.36,16287.57,24,F,formal,San Miguel,0,0
+30,39,1025.85,8486.17,12,F,independiente,San Salvador,101,1
+31,68,391.57,924.99,12,F,formal,Sonsonate,10,0
+32,63,498.41,6227.99,60,F,independiente,Usulutan,0,0
+33,47,515.76,3995.87,12,F,informal,San Miguel,108,1
+34,68,258.76,2738.54,24,F,formal,La Libertad,0,0
+35,44,1090.49,11648.43,24,M,formal,San Miguel,5,0
+36,45,501.22,5707.87,12,M,formal,San Miguel,35,1
+37,40,750.86,10880.01,12,F,pensionado,La Libertad,0,0
+38,35,240.22,3040.49,36,M,formal,Sonsonate,10,0
+39,63,598.38,7416.7,24,F,formal,San Salvador,35,1
+40,70,435.2,2128.7,36,M,independiente,San Miguel,172,1
+41,36,819.84,9201.87,12,M,pensionado,Santa Ana,82,1
+42,59,366.7,2115.67,60,M,informal,Santa Ana,35,1
+43,21,775.9,6340.57,48,M,formal,Usulutan,5,0
+44,51,595.81,2969.73,24,M,independiente,Usulutan,0,0
+45,41,1302.93,3544.25,48,F,independiente,Usulutan,10,0
+46,63,529.33,2142.69,48,M,formal,Santa Ana,10,0
+47,34,546.65,3476.33,12,F,formal,Sonsonate,0,0
+48,24,588.61,4234.25,12,F,formal,Santa Ana,90,1
+49,56,1344.67,16050.04,48,F,formal,Usulutan,0,0
+50,64,1811.89,20909.35,60,F,formal,Sonsonate,10,0
+51,62,1440.59,15670.22,24,F,formal,San Salvador,123,1
+52,43,1411.61,14343.33,60,F,informal,San Miguel,147,1
+53,66,351.28,4108.03,48,F,formal,San Salvador,0,0
+54,33,728.94,5997.09,36,F,independiente,Sonsonate,0,0
+55,57,490.11,5715.58,36,M,informal,La Libertad,46,1
+56,36,457.4,5129.89,36,F,formal,San Miguel,10,0
+57,38,342.08,4330.28,48,F,pensionado,San Miguel,84,1
+58,56,534.31,5259.62,60,M,formal,San Salvador,0,0
+59,50,659.82,9468.07,48,M,formal,Usulutan,119,1
+60,39,452.01,2811.1,36,F,independiente,San Salvador,0,0
+61,66,551.61,3920.67,60,F,formal,San Miguel,30,0
+62,36,548.49,4740.34,24,M,independiente,San Miguel,30,0
+63,54,854.55,2258.74,48,M,formal,La Libertad,0,0
+64,22,1612.17,6803.22,48,M,formal,Santa Ana,15,0
+65,44,890.14,8229.51,48,M,formal,Usulutan,84,1
+66,54,501.3,1593.78,36,F,informal,Santa Ana,97,1
+67,20,1058.58,7812.84,60,M,formal,Santa Ana,0,0
+68,36,812.06,8874.02,60,M,informal,La Libertad,94,1
+69,44,916.08,5547.97,12,M,formal,San Miguel,30,0
+70,56,728.21,10262.74,60,F,independiente,San Miguel,0,0
+71,28,2260.36,30816.68,12,F,informal,San Salvador,63,1
+72,55,2030.57,12080.2,24,F,informal,Sonsonate,15,0
+73,25,338.68,3243.74,48,M,formal,Sonsonate,168,1
+74,48,556.8,7189.59,24,M,formal,La Libertad,0,0
+75,64,842.08,3809.15,48,F,formal,La Libertad,0,0
+76,50,401.93,3001.31,48,F,formal,Santa Ana,10,0
+77,32,731.71,8748.43,24,F,formal,La Libertad,106,1
+78,58,731.82,3588.27,48,M,independiente,San Salvador,0,0
+79,22,394.69,5397.85,36,F,informal,San Salvador,0,0
+80,30,967.98,7820.32,36,M,informal,San Miguel,0,0
+81,29,395.36,5340.22,60,M,pensionado,La Libertad,30,0
+82,70,691.63,5640.27,36,M,informal,San Miguel,124,1
+83,20,854.21,8653.41,48,F,formal,San Salvador,30,0
+84,35,847.43,5385.1,60,M,formal,Usulutan,0,0
+85,38,1950.75,27822.09,12,M,independiente,San Salvador,5,0
+86,69,505.43,4253.27,48,F,formal,Usulutan,15,0
+87,57,629.15,6130.64,60,F,formal,La Libertad,0,0
+88,49,785.96,11587.66,12,F,pensionado,Santa Ana,0,0
+89,45,731.79,5715.66,24,F,formal,San Miguel,15,0
+90,66,850.89,10103.78,36,M,formal,Sonsonate,96,1
+91,31,689.63,3490.6,36,M,independiente,Sonsonate,0,0
+92,35,220.78,2316.7,12,M,formal,San Miguel,0,0
+93,42,420.65,1493.23,24,M,informal,Sonsonate,50,1
+94,51,1299.95,6992.86,12,F,formal,Sonsonate,0,0
+95,21,644.74,2999.13,36,F,formal,Usulutan,0,0
+96,39,649.2,6539.51,12,M,formal,San Miguel,0,0
+97,25,1564.48,6272.28,60,M,formal,La Libertad,0,0
+98,37,941.3,2511.1,60,M,independiente,San Miguel,30,0
+99,60,282.87,1314.69,12,F,formal,La Libertad,30,0
+100,44,816.51,9838.71,24,F,formal,Sonsonate,132,1
+101,55,868.35,7431.36,24,F,formal,La Libertad,0,0
+102,43,705.07,10272.44,24,M,formal,San Salvador,5,0
+103,22,947.59,2958.21,60,F,informal,La Libertad,30,0
+104,58,431.29,5511.64,24,F,informal,San Salvador,163,1
+105,43,637.79,9323.85,24,F,formal,Sonsonate,15,0
+106,61,1021.28,10002.17,60,F,independiente,Santa Ana,0,0
+107,46,632.55,5406.1,24,F,formal,Sonsonate,5,0
+108,47,2053.92,16344.6,24,M,independiente,San Miguel,63,1
+109,46,409.84,3506.77,12,F,formal,La Libertad,111,1
+110,22,1349.18,3151.87,12,F,pensionado,Usulutan,0,0
+111,27,1657.71,23931.22,24,M,informal,Usulutan,0,0
+112,58,954.53,13034.09,36,M,independiente,San Miguel,159,1
+113,32,902.51,4590.34,36,M,formal,La Libertad,15,0
+114,62,579.99,7132.49,36,M,formal,Sonsonate,123,1
+115,54,779.86,10644.55,36,M,pensionado,Usulutan,15,0
+116,35,620.86,2421.69,36,F,independiente,San Miguel,10,0
+117,37,1061.64,10945.61,60,F,independiente,Santa Ana,15,0
+118,33,335.85,2558.85,60,F,formal,San Salvador,89,1
+119,20,304.0,1808.38,60,F,formal,La Libertad,0,0
+120,32,376.56,1529.63,12,F,independiente,La Libertad,5,0
+121,23,1846.49,22468.15,48,M,independiente,San Salvador,174,1
+122,57,920.14,13050.38,48,F,formal,San Salvador,167,1
+123,44,533.42,7389.28,12,F,formal,Sonsonate,0,0
+124,45,380.83,3271.45,48,M,independiente,La Libertad,0,0
+125,59,1724.79,3591.95,48,F,informal,San Miguel,146,1
+126,33,846.33,11498.71,36,M,informal,Santa Ana,15,0
+127,62,1235.18,6730.31,24,F,formal,Sonsonate,97,1
+128,66,542.82,7542.19,24,M,independiente,Santa Ana,5,0
+129,49,1926.88,25334.22,48,F,pensionado,La Libertad,0,0
+130,44,823.9,11403.0,24,M,formal,San Salvador,72,1
+131,28,307.93,786.58,12,M,informal,San Salvador,30,0
+132,31,553.22,1354.03,12,F,independiente,Usulutan,5,0
+133,27,506.92,3806.44,12,M,formal,Santa Ana,125,1
+134,68,1639.26,21421.69,60,F,informal,San Miguel,163,1
+135,41,714.81,6690.1,12,F,informal,Santa Ana,31,1
+136,37,709.14,3119.33,48,M,informal,Sonsonate,71,1
+137,32,1198.97,4982.06,12,M,formal,Usulutan,0,0
+138,41,608.74,4160.95,36,F,formal,Sonsonate,5,0
+139,48,334.13,3662.08,60,F,informal,Santa Ana,10,0
+140,47,1260.04,5297.41,48,M,informal,Santa Ana,0,0
+141,48,1100.36,9463.25,36,F,formal,Usulutan,10,0
+142,65,496.62,3101.55,60,M,formal,La Libertad,0,0
+143,65,869.87,3446.84,24,F,independiente,Usulutan,0,0
+144,25,839.26,3930.9,48,M,formal,San Salvador,30,0
+145,63,331.76,687.32,24,M,independiente,San Miguel,10,0
+146,33,1112.55,14918.06,60,M,independiente,Usulutan,62,1
+147,46,477.48,1562.44,48,F,formal,San Miguel,15,0
+148,35,1312.22,2959.77,48,M,informal,Usulutan,0,0
+149,68,559.57,6329.19,24,F,informal,San Salvador,5,0
+150,64,719.71,8854.86,36,F,informal,San Miguel,5,0
+151,62,420.8,5943.8,60,M,formal,San Salvador,5,0
+152,22,358.52,2677.11,36,F,informal,San Salvador,133,1
+153,70,1532.91,6344.61,12,F,independiente,Usulutan,174,1
+154,28,518.65,6557.61,48,F,formal,Santa Ana,15,0
+155,68,1145.57,14959.66,36,F,informal,Usulutan,140,1
+156,49,573.32,3396.15,48,M,formal,Sonsonate,15,0
+157,28,825.48,1774.14,12,F,informal,Santa Ana,10,0
+158,33,449.45,5484.87,24,M,independiente,Sonsonate,54,1
+159,31,730.67,2208.08,48,M,informal,San Salvador,0,0
+160,33,1252.09,11573.87,48,M,formal,La Libertad,0,0
+161,29,941.39,1963.63,36,M,formal,Sonsonate,0,0
+162,42,883.74,5907.69,12,F,formal,San Salvador,0,0
+163,51,695.12,2695.93,24,M,informal,Usulutan,55,1
+164,40,702.02,8436.5,24,F,formal,Santa Ana,172,1
+165,37,262.09,1899.76,60,M,pensionado,Sonsonate,0,0
+166,69,489.92,5522.06,24,M,informal,Usulutan,41,1
+167,65,795.05,7523.22,48,F,formal,San Salvador,152,1
+168,69,736.26,5071.78,24,F,informal,Usulutan,15,0
+169,32,837.21,8897.08,12,F,formal,San Salvador,15,0
+170,42,1064.64,6410.73,36,F,independiente,La Libertad,0,0
+171,46,841.27,11676.68,48,M,informal,San Salvador,30,0
+172,55,974.55,2800.71,48,M,informal,Usulutan,5,0
+173,54,281.4,1339.35,24,F,informal,San Miguel,62,1
+174,32,1057.77,2359.99,60,M,formal,Usulutan,0,0
+175,68,1472.87,5718.26,12,M,formal,Sonsonate,5,0
+176,22,403.83,1679.11,48,M,informal,Santa Ana,178,1
+177,49,877.81,10854.73,36,M,pensionado,La Libertad,5,0
+178,43,1136.71,6292.54,60,F,formal,Santa Ana,116,1
+179,28,833.37,6309.7,24,F,formal,Usulutan,30,0
+180,70,642.77,3972.21,36,F,formal,Sonsonate,30,0
+181,37,1534.2,8530.2,60,M,informal,San Miguel,52,1
+182,70,455.87,5191.67,24,F,formal,San Salvador,5,0
+183,35,792.19,5549.02,60,M,formal,Santa Ana,0,0
+184,56,753.23,9666.4,36,F,formal,Sonsonate,85,1
+185,24,294.06,1975.12,60,F,formal,Sonsonate,0,0
+186,50,651.4,6660.99,12,F,formal,Sonsonate,102,1
+187,25,1354.64,12697.57,36,F,independiente,Santa Ana,5,0
+188,35,1148.22,17142.91,48,M,formal,San Salvador,125,1
+189,50,290.01,2078.26,12,F,informal,San Salvador,175,1
+190,60,740.13,9655.76,36,M,pensionado,Usulutan,40,1
+191,41,315.64,745.29,12,M,formal,Sonsonate,15,0
+192,22,445.18,923.8,24,F,informal,Santa Ana,5,0
+193,49,599.87,2167.85,48,F,formal,San Miguel,0,0
+194,48,926.57,2286.93,24,F,formal,Sonsonate,15,0
+195,68,699.17,9840.2,12,F,informal,San Miguel,0,0
+196,49,436.99,2759.91,12,M,formal,San Miguel,0,0
+197,28,522.88,2104.03,36,M,informal,Santa Ana,73,1
+198,50,396.89,3282.94,24,F,pensionado,San Salvador,30,0
+199,54,715.45,3828.6,24,F,pensionado,San Miguel,0,0
+200,25,625.62,2570.37,36,M,formal,Usulutan,160,1
+201,51,1342.09,5926.22,48,F,formal,San Miguel,10,0
+202,27,1360.66,6797.13,24,M,formal,San Salvador,10,0
+203,67,575.78,5735.71,24,M,informal,La Libertad,164,1
+204,65,1542.96,10059.08,36,M,independiente,San Miguel,135,1
+205,27,1135.58,5017.76,36,F,formal,Usulutan,10,0
+206,41,758.0,6596.97,12,M,formal,La Libertad,30,0
+207,68,985.19,11592.84,12,M,formal,San Salvador,5,0
+208,51,485.61,1530.46,60,F,formal,San Salvador,10,0
+209,20,899.03,7909.53,48,M,formal,San Salvador,0,0
+210,26,683.47,8133.05,12,F,formal,San Miguel,10,0
+211,33,361.98,4237.16,24,M,independiente,San Salvador,5,0
+212,57,1358.69,9705.44,12,M,independiente,Santa Ana,116,1
+213,55,332.47,4804.92,36,M,formal,San Miguel,0,0
+214,25,756.26,5769.91,60,M,informal,La Libertad,132,1
+215,59,1681.25,23424.99,60,F,formal,Sonsonate,0,0
+216,35,441.98,1843.37,12,M,informal,Sonsonate,0,0
+217,56,760.58,2746.42,24,F,independiente,San Miguel,0,0
+218,66,337.23,4355.9,60,M,informal,La Libertad,0,0
+219,48,1191.14,9781.79,36,M,formal,Santa Ana,162,1
+220,56,227.78,936.14,24,F,formal,Santa Ana,0,0
+221,37,821.63,5360.26,12,F,informal,San Miguel,58,1
+222,62,936.46,5975.74,36,M,formal,La Libertad,30,0
+223,52,429.56,4389.13,24,F,formal,San Salvador,171,1
+224,50,445.86,1535.25,48,M,informal,Santa Ana,0,0
+225,44,776.95,8100.96,12,F,independiente,San Miguel,107,1
+226,53,603.9,5725.35,60,F,formal,Santa Ana,30,0
+227,39,472.38,6536.54,12,M,formal,Santa Ana,5,0
+228,53,1222.07,18304.48,60,M,independiente,Usulutan,5,0
+229,41,705.79,2037.97,24,F,formal,Santa Ana,15,0
+230,31,1597.49,12336.02,60,F,independiente,Sonsonate,10,0
+231,29,610.37,1816.54,36,M,informal,San Salvador,0,0
+232,51,1306.24,5268.32,36,M,independiente,La Libertad,0,0
+233,30,308.84,1045.75,60,M,pensionado,Usulutan,15,0
+234,19,1049.31,11520.45,12,F,independiente,San Miguel,10,0
+235,61,1252.44,16688.51,60,F,informal,La Libertad,5,0
+236,28,406.74,5165.94,60,M,formal,San Salvador,15,0
+237,28,978.5,4112.04,36,M,informal,Sonsonate,80,1
+238,58,662.65,8996.82,60,F,independiente,San Salvador,10,0
+239,34,554.04,5335.94,24,M,formal,San Miguel,95,1
+240,23,512.16,5807.92,24,F,formal,San Miguel,5,0
+241,69,465.95,978.13,36,M,formal,Santa Ana,10,0
+242,40,672.6,2423.22,36,M,informal,San Miguel,103,1
+243,34,680.85,1585.49,24,F,formal,La Libertad,100,1
+244,54,546.16,6807.46,24,F,formal,La Libertad,5,0
+245,38,1605.43,7954.18,48,M,informal,Usulutan,10,0
+246,56,621.51,2257.15,12,M,informal,San Salvador,0,0
+247,20,1004.79,6069.19,48,M,informal,Usulutan,90,1
+248,31,859.78,8001.01,36,F,independiente,Santa Ana,110,1
+249,33,273.11,1962.74,36,F,formal,San Miguel,15,0
+250,36,474.27,5877.19,36,M,independiente,San Salvador,15,0
+251,34,575.18,5703.44,24,M,informal,San Salvador,72,1
+252,31,954.52,11070.72,60,F,formal,Usulutan,10,0
+253,55,732.33,10277.52,60,F,formal,San Salvador,104,1
+254,56,809.72,4192.68,12,F,formal,Santa Ana,119,1
+255,45,968.15,11345.08,24,M,formal,San Salvador,139,1
+256,40,1378.59,17631.98,48,F,informal,Usulutan,5,0
+257,50,1799.34,9708.46,60,F,formal,Usulutan,0,0
+258,22,475.23,1522.17,36,M,formal,Usulutan,15,0
+259,34,888.48,9179.62,36,F,formal,Usulutan,175,1
+260,40,833.67,6269.41,24,M,informal,La Libertad,5,0
+261,32,461.59,3086.31,24,M,formal,Santa Ana,0,0
+262,47,658.94,3797.85,60,M,formal,San Salvador,30,0
+263,24,1009.7,11719.56,36,F,formal,San Miguel,5,0
+264,69,763.0,10647.08,36,F,informal,Usulutan,0,0
+265,24,593.14,6106.56,24,M,formal,Usulutan,15,0
+266,43,575.77,5276.79,36,F,independiente,Santa Ana,41,1
+267,55,449.43,3370.16,24,F,pensionado,Sonsonate,0,0
+268,63,560.45,5760.21,48,F,formal,San Salvador,5,0
+269,32,1128.16,6410.59,12,M,informal,San Miguel,0,0
+270,19,1667.66,22933.65,24,M,formal,San Salvador,175,1
+271,55,552.5,3429.94,48,F,formal,Sonsonate,30,0
+272,44,1082.72,6346.37,60,F,formal,Santa Ana,15,0
+273,38,1432.52,14667.15,24,F,formal,Usulutan,0,0
+274,61,856.09,12208.97,36,F,informal,Sonsonate,97,1
+275,33,770.08,10171.41,36,M,informal,La Libertad,95,1
+276,33,780.48,7371.78,12,F,informal,Sonsonate,135,1
+277,70,502.73,4603.66,12,M,informal,Usulutan,148,1
+278,53,934.75,3531.89,60,F,formal,La Libertad,41,1
+279,63,814.69,4805.93,24,F,formal,San Salvador,30,0
+280,55,603.69,7811.24,12,M,independiente,San Salvador,162,1
+281,65,698.2,4604.46,36,M,informal,Sonsonate,93,1
+282,41,456.8,5890.94,60,M,formal,San Salvador,0,0
+283,30,1939.51,24962.83,60,M,independiente,Sonsonate,30,0
+284,47,389.88,1544.76,60,F,formal,San Salvador,0,0
+285,30,983.1,9633.94,48,F,pensionado,Usulutan,5,0
+286,58,752.06,6668.8,36,F,independiente,Sonsonate,0,0
+287,42,983.9,7959.03,36,F,formal,Santa Ana,0,0
+288,20,946.25,10835.05,24,M,formal,Santa Ana,98,1
+289,55,855.56,3258.17,12,M,independiente,San Salvador,30,0
+290,59,787.08,9676.94,24,M,independiente,La Libertad,0,0
+291,66,329.46,1709.12,60,M,informal,Santa Ana,117,1
+292,69,716.86,3702.21,24,M,pensionado,La Libertad,32,1
+293,44,659.6,3912.31,24,M,informal,La Libertad,109,1
+294,65,880.76,12820.02,12,F,independiente,Sonsonate,10,0
+295,38,426.71,3229.13,12,M,independiente,Santa Ana,0,0
+296,53,375.01,1814.33,48,F,formal,Sonsonate,10,0
+297,31,581.22,2137.25,12,F,formal,Sonsonate,0,0
+298,31,423.98,930.67,36,F,independiente,La Libertad,30,0
+299,60,713.33,8848.83,24,M,formal,San Miguel,0,0
+300,68,726.31,3879.39,48,M,independiente,San Salvador,10,0
+301,22,571.84,7350.42,24,F,formal,La Libertad,166,1
+302,41,1172.63,10556.71,60,M,independiente,La Libertad,10,0
+303,33,971.3,10925.73,12,M,independiente,Santa Ana,10,0
+304,54,493.24,7019.9,24,M,formal,Sonsonate,15,0
+305,28,936.21,2212.61,24,F,formal,Sonsonate,10,0
+306,35,1332.2,5250.33,24,F,independiente,La Libertad,0,0
+307,47,1678.57,17238.3,36,F,independiente,San Miguel,0,0
+308,25,925.32,4594.69,48,F,formal,San Miguel,15,0
+309,20,550.9,4208.51,24,M,formal,Santa Ana,15,0
+310,38,1406.82,20761.12,24,M,formal,Santa Ana,0,0
+311,37,1124.86,6925.75,60,F,informal,San Miguel,44,1
+312,66,426.68,5642.21,24,F,formal,La Libertad,0,0
+313,70,236.36,772.45,24,M,formal,San Miguel,117,1
+314,40,245.92,2696.01,12,F,formal,Sonsonate,141,1
+315,65,201.08,717.06,48,F,pensionado,Sonsonate,0,0
+316,62,808.0,7346.15,12,M,informal,San Miguel,0,0
+317,32,569.49,6347.86,12,F,formal,San Salvador,0,0
+318,45,546.68,1387.64,48,M,informal,Sonsonate,136,1
+319,44,635.54,4435.23,24,F,formal,San Miguel,30,0
+320,59,1200.61,11936.22,48,F,pensionado,La Libertad,0,0
+321,64,480.19,4387.17,36,M,formal,Sonsonate,151,1
+322,56,783.58,9970.96,48,M,formal,San Salvador,10,0
+323,58,1615.95,4744.33,60,M,informal,Sonsonate,0,0
+324,65,534.82,5037.56,24,F,formal,Sonsonate,0,0
+325,42,560.67,7111.82,48,M,formal,Usulutan,0,0
+326,43,308.15,2331.09,48,M,formal,Santa Ana,0,0
+327,61,1265.69,9981.82,12,F,formal,Santa Ana,15,0
+328,47,1128.68,4817.97,60,F,formal,Usulutan,5,0
+329,58,621.43,4321.88,12,F,informal,San Salvador,45,1
+330,38,951.45,5910.58,24,F,formal,San Miguel,157,1
+331,31,323.45,4517.55,48,M,formal,San Salvador,0,0
+332,46,1439.3,9471.43,48,M,independiente,La Libertad,0,0
+333,23,908.54,2653.06,48,F,formal,Sonsonate,15,0
+334,25,852.41,6826.37,48,M,formal,San Miguel,47,1
+335,44,723.91,9208.65,24,M,informal,San Miguel,106,1
+336,68,614.81,1949.36,12,F,informal,San Salvador,53,1
+337,55,588.26,2704.74,36,M,formal,San Salvador,15,0
+338,56,436.87,1158.25,24,F,formal,La Libertad,0,0
+339,53,565.65,3433.23,36,M,informal,Santa Ana,10,0
+340,62,422.6,5607.09,48,F,independiente,Santa Ana,0,0
+341,32,773.15,6212.2,48,F,informal,La Libertad,118,1
+342,48,1653.14,4405.76,36,M,formal,San Salvador,10,0
+343,21,283.57,1641.85,24,M,independiente,Sonsonate,5,0
+344,32,627.91,1655.5,12,F,independiente,San Miguel,174,1
+345,50,312.12,3662.01,24,F,informal,La Libertad,83,1
+346,48,1423.32,15038.01,36,F,informal,San Miguel,0,0
+347,63,505.51,3944.02,24,F,independiente,Santa Ana,15,0
+348,38,1240.12,16043.39,24,F,independiente,Usulutan,5,0
+349,39,551.92,2706.47,60,F,informal,La Libertad,15,0
+350,46,578.81,1449.67,36,F,formal,La Libertad,10,0
+351,37,728.65,8859.62,12,F,formal,Santa Ana,10,0
+352,31,481.05,6547.01,24,F,informal,Santa Ana,56,1
+353,41,539.57,3183.63,24,M,formal,San Miguel,0,0
+354,30,1918.38,15183.55,60,F,formal,La Libertad,5,0
+355,21,574.87,4253.6,36,M,formal,Usulutan,0,0
+356,29,856.98,1769.13,48,F,formal,Santa Ana,0,0
+357,28,729.85,2575.33,48,M,formal,Sonsonate,10,0
+358,42,1258.89,11605.45,24,F,independiente,Usulutan,10,0
+359,25,700.91,6599.31,24,F,formal,La Libertad,98,1
+360,46,607.9,3523.05,12,F,formal,Sonsonate,93,1
+361,34,423.01,1385.35,24,M,informal,Usulutan,108,1
+362,24,1205.84,16846.79,12,F,formal,San Miguel,0,0
+363,69,323.09,3497.28,24,M,independiente,La Libertad,87,1
+364,64,1188.84,10063.85,36,F,independiente,Sonsonate,0,0
+365,42,963.79,10916.63,36,M,informal,San Miguel,15,0
+366,27,374.66,2224.94,12,M,informal,Usulutan,142,1
+367,59,1215.02,4259.73,36,M,independiente,La Libertad,10,0
+368,54,470.96,6501.86,12,M,formal,San Miguel,15,0
+369,43,673.11,7055.67,36,M,informal,San Miguel,0,0
+370,50,1364.27,10014.4,36,M,formal,Santa Ana,0,0
+371,44,1597.57,9262.25,12,M,pensionado,La Libertad,5,0
+372,61,767.54,3693.55,12,F,formal,La Libertad,0,0
+373,42,473.46,5968.47,48,F,formal,Santa Ana,10,0
+374,29,668.87,8759.12,12,M,independiente,San Miguel,15,0
+375,66,638.48,5864.31,60,M,informal,La Libertad,0,0
+376,23,748.68,4089.65,36,M,formal,Usulutan,15,0
+377,52,955.02,10496.22,12,M,formal,Usulutan,127,1
+378,38,1611.08,3957.45,36,F,formal,San Salvador,0,0
+379,31,877.81,2288.22,48,F,formal,Sonsonate,0,0
+380,37,788.24,2440.51,48,M,formal,Usulutan,0,0
+381,29,1296.36,3407.11,60,F,formal,La Libertad,30,0
+382,29,521.41,5661.63,12,F,informal,San Miguel,0,0
+383,36,501.56,3860.94,12,M,informal,Santa Ana,129,1
+384,36,907.85,6633.96,24,M,independiente,Santa Ana,102,1
+385,61,856.6,10094.36,36,M,formal,Usulutan,10,0
+386,59,407.26,876.71,60,M,independiente,Sonsonate,10,0
+387,35,1228.32,15780.47,12,F,independiente,La Libertad,15,0
+388,68,436.68,5356.62,36,F,formal,San Miguel,0,0
+389,64,1452.19,12743.72,36,F,formal,Santa Ana,5,0
+390,51,492.87,2356.5,36,F,independiente,Usulutan,30,0
+391,28,569.0,3228.43,12,F,informal,Usulutan,104,1
+392,60,1327.48,13222.47,36,M,informal,Sonsonate,10,0
+393,57,535.34,1723.75,60,F,pensionado,San Salvador,15,0
+394,26,1130.44,2311.28,24,F,formal,Sonsonate,145,1
+395,21,781.33,6476.0,36,F,informal,Santa Ana,10,0
+396,32,963.37,5454.8,60,F,informal,San Salvador,75,1
+397,70,740.22,2087.22,36,M,informal,Sonsonate,130,1
+398,33,2464.29,6681.73,36,F,pensionado,Santa Ana,0,0
+399,60,719.17,5682.59,60,M,formal,Santa Ana,0,0
+400,29,583.22,6746.64,60,F,formal,La Libertad,15,0
+401,68,465.35,5172.81,36,F,informal,San Salvador,15,0
+402,23,592.72,7622.98,60,M,formal,Santa Ana,10,0
+403,41,617.49,2641.16,36,F,formal,San Salvador,5,0
+404,40,493.38,5973.41,48,M,formal,San Salvador,30,0
+405,49,1389.09,7315.08,48,M,formal,Santa Ana,0,0
+406,52,600.19,4197.71,48,M,formal,San Salvador,180,1
+407,20,1161.55,2976.19,60,M,informal,San Salvador,0,0
+408,50,258.64,846.99,24,M,independiente,San Miguel,10,0
+409,67,356.7,2569.24,24,F,informal,San Miguel,5,0
+410,26,1763.56,4965.55,24,F,independiente,La Libertad,175,1
+411,59,1313.95,6772.21,24,F,independiente,San Salvador,5,0
+412,33,824.04,6080.27,12,F,formal,San Salvador,0,0
+413,30,383.82,3840.78,36,F,formal,San Miguel,0,0
+414,20,961.38,8202.66,60,M,informal,Sonsonate,44,1
+415,48,705.53,7373.32,24,M,informal,San Salvador,53,1
+416,62,428.11,2541.0,36,F,formal,Sonsonate,0,0
+417,19,1442.74,6896.97,48,F,formal,San Miguel,10,0
+418,67,1960.68,27189.38,12,M,informal,San Salvador,65,1
+419,70,1091.67,15562.52,48,M,formal,La Libertad,107,1
+420,20,622.43,4828.46,48,F,independiente,Santa Ana,94,1
+421,45,772.19,7005.03,36,M,independiente,Santa Ana,92,1
+422,69,667.12,1891.51,12,F,pensionado,La Libertad,44,1
+423,45,1586.09,19180.28,12,M,informal,La Libertad,34,1
+424,46,448.51,4901.96,36,F,independiente,La Libertad,0,0
+425,63,1764.11,17707.55,60,M,formal,San Salvador,15,0
+426,38,759.78,2255.24,60,M,formal,San Miguel,10,0
+427,68,479.06,2545.82,48,F,formal,Usulutan,15,0
+428,48,328.22,787.42,24,M,formal,La Libertad,15,0
+429,36,1471.52,4332.79,12,M,formal,Usulutan,0,0
+430,30,346.72,4465.51,12,F,formal,Usulutan,180,1
+431,22,1040.67,15110.55,36,M,informal,La Libertad,95,1
+432,42,314.19,4191.71,24,F,formal,San Miguel,0,0
+433,60,525.23,3673.64,36,F,formal,San Miguel,0,0
+434,25,1733.82,8760.25,12,M,formal,San Miguel,148,1
+435,24,627.2,8780.86,24,M,formal,San Salvador,48,1
+436,42,690.06,4417.15,12,M,formal,La Libertad,0,0
+437,26,378.25,1031.72,60,M,formal,Santa Ana,0,0
+438,35,444.76,5428.65,24,F,formal,San Miguel,0,0
+439,36,914.88,3253.49,48,F,formal,La Libertad,15,0
+440,60,666.38,5985.86,24,M,independiente,Usulutan,15,0
+441,28,312.67,1934.21,12,F,independiente,Santa Ana,15,0
+442,63,410.48,5632.05,12,F,formal,San Salvador,66,1
+443,38,1227.11,17440.6,48,F,formal,La Libertad,154,1
+444,23,706.05,10116.33,48,F,informal,La Libertad,86,1
+445,49,700.55,10155.0,36,M,formal,La Libertad,36,1
+446,68,502.44,4674.88,48,M,formal,La Libertad,0,0
+447,28,463.63,5467.43,24,M,formal,La Libertad,146,1
+448,35,1967.94,25943.09,36,M,pensionado,Usulutan,0,0
+449,25,531.99,1571.21,48,F,independiente,Usulutan,10,0
+450,47,386.47,3718.54,36,M,independiente,Sonsonate,50,1
+451,55,357.75,5164.34,24,F,formal,Sonsonate,49,1
+452,58,896.61,5617.67,12,F,formal,Santa Ana,15,0
+453,48,491.57,7104.55,24,F,informal,San Miguel,15,0
+454,42,1007.43,10702.3,36,F,formal,La Libertad,0,0
+455,21,791.11,7917.25,12,M,formal,San Miguel,10,0
+456,41,1003.84,4296.88,48,M,informal,Usulutan,0,0
+457,42,303.07,1757.33,60,M,informal,Usulutan,81,1
+458,68,1729.07,7131.2,12,F,informal,Usulutan,10,0
+459,31,1706.28,12557.11,60,F,formal,San Salvador,30,0
+460,24,536.36,6030.99,24,F,formal,San Salvador,53,1
+461,28,714.88,4672.57,36,F,formal,San Miguel,0,0
+462,24,558.0,1575.92,12,M,informal,Santa Ana,115,1
+463,51,728.75,10258.33,60,M,independiente,La Libertad,5,0
+464,37,935.95,11571.12,48,M,formal,Sonsonate,146,1
+465,69,1502.45,19115.84,48,F,informal,La Libertad,180,1
+466,25,1258.04,14795.74,60,F,formal,Sonsonate,0,0
+467,33,941.09,5439.95,48,M,informal,La Libertad,110,1
+468,27,502.76,6046.8,36,M,formal,Sonsonate,0,0
+469,24,565.4,2867.98,24,M,independiente,La Libertad,0,0
+470,26,1751.19,23306.25,48,M,informal,San Salvador,48,1
+471,46,721.33,7711.67,24,M,formal,San Miguel,5,0
+472,53,391.7,5539.01,60,F,formal,San Miguel,102,1
+473,21,774.87,8440.48,12,M,formal,San Salvador,15,0
+474,46,749.84,8298.34,12,F,formal,Usulutan,58,1
+475,39,397.16,5095.64,24,M,formal,San Miguel,5,0
+476,42,479.73,7019.77,12,M,formal,Usulutan,15,0
+477,49,551.22,6913.04,48,F,formal,La Libertad,0,0
+478,50,611.68,3252.33,48,M,independiente,Usulutan,30,0
+479,39,244.82,1576.84,24,F,informal,San Salvador,30,0
+480,55,391.37,2076.74,12,M,independiente,Santa Ana,112,1
+481,42,470.89,3356.2,36,F,formal,La Libertad,136,1
+482,60,1632.62,20520.72,36,F,informal,Santa Ana,109,1
+483,34,773.23,9795.22,36,F,independiente,La Libertad,30,0
+484,66,1479.93,20488.19,60,F,pensionado,Santa Ana,5,0
+485,65,612.58,2024.68,36,F,independiente,San Salvador,0,0
+486,50,951.47,7618.31,48,M,formal,San Miguel,0,0
+487,39,203.87,1927.08,12,M,informal,Sonsonate,145,1
+488,19,1950.28,9172.44,36,F,informal,Usulutan,0,0
+489,48,843.29,9552.11,48,M,pensionado,La Libertad,30,0
+490,25,289.06,3590.82,24,F,formal,Usulutan,128,1
+491,45,509.57,3198.81,24,M,formal,Sonsonate,67,1
+492,54,1108.17,2469.14,60,F,independiente,San Salvador,0,0
+493,22,750.2,10282.15,24,F,informal,La Libertad,67,1
+494,59,696.02,2624.88,36,M,informal,La Libertad,10,0
+495,22,452.97,5312.72,24,F,informal,La Libertad,75,1
+496,57,394.45,3835.74,24,M,formal,San Miguel,0,0
+497,19,696.55,2023.66,60,F,informal,La Libertad,74,1
+498,53,402.42,2087.16,24,M,formal,San Miguel,5,0
+499,38,507.21,1574.78,24,M,informal,San Salvador,0,0
+500,49,853.93,4783.87,60,F,formal,Sonsonate,10,0
+501,33,1438.59,9499.29,48,F,formal,Usulutan,5,0
+502,48,1527.15,3181.6,48,M,formal,Usulutan,15,0
+503,46,830.29,8702.39,12,M,independiente,La Libertad,15,0
+504,69,519.56,2522.88,24,F,informal,San Miguel,0,0
+505,27,403.51,3322.93,48,M,formal,Sonsonate,0,0
+506,59,428.61,4007.03,36,F,formal,San Miguel,168,1
+507,36,1177.71,9934.5,48,F,formal,La Libertad,15,0
+508,28,597.34,4585.25,12,F,informal,Usulutan,0,0
+509,54,3820.18,46024.21,24,M,formal,La Libertad,158,1
+510,46,1260.96,18533.95,12,M,formal,La Libertad,36,1
+511,64,898.36,7208.21,12,M,formal,Sonsonate,81,1
+512,26,1520.08,10764.74,36,F,formal,San Miguel,15,0
+513,29,531.72,3489.79,12,M,formal,Sonsonate,0,0
+514,54,1323.58,10417.4,12,F,informal,Santa Ana,161,1
+515,22,1652.77,6366.65,24,F,informal,La Libertad,0,0
+516,70,491.69,2191.8,48,F,informal,San Miguel,153,1
+517,39,1117.42,16667.04,24,M,independiente,Sonsonate,10,0
+518,39,970.37,12045.99,36,F,formal,Sonsonate,0,0
+519,50,1447.9,13935.73,48,F,informal,San Salvador,65,1
+520,43,592.19,7891.8,48,M,independiente,Santa Ana,145,1
+521,25,611.48,3275.0,36,M,formal,Sonsonate,10,0
+522,68,1013.73,12023.74,48,F,informal,Santa Ana,152,1
+523,21,943.77,10224.91,12,M,informal,Sonsonate,64,1
+524,59,484.18,3768.23,12,F,formal,San Salvador,151,1
+525,65,239.93,2378.64,24,M,informal,San Salvador,30,0
+526,40,533.83,1490.49,24,F,independiente,Sonsonate,30,0
+527,59,562.81,8206.7,24,F,formal,San Miguel,15,0
+528,66,551.4,4549.78,60,F,pensionado,Santa Ana,15,0
+529,54,179.47,2493.58,48,M,formal,Santa Ana,0,0
+530,67,1346.97,8696.66,12,M,formal,San Salvador,0,0
+531,56,556.45,5292.27,24,F,formal,San Salvador,148,1
+532,37,691.68,8378.77,36,M,formal,Usulutan,75,1
+533,31,835.88,12203.96,24,F,informal,Sonsonate,33,1
+534,54,344.21,3653.29,24,F,informal,Usulutan,56,1
+535,62,905.08,4946.59,48,F,formal,Santa Ana,10,0
+536,51,350.2,3384.18,24,F,formal,La Libertad,30,0
+537,25,554.11,5325.64,60,F,pensionado,Usulutan,5,0
+538,23,966.78,7268.2,36,F,informal,San Miguel,36,1
+539,22,859.97,9837.09,60,F,formal,Santa Ana,67,1
+540,29,525.39,6493.34,12,M,formal,Sonsonate,0,0
+541,45,648.17,7426.0,24,F,formal,La Libertad,0,0
+542,41,575.72,4724.83,48,F,formal,San Miguel,0,0
+543,47,518.16,6249.92,12,F,formal,San Salvador,109,1
+544,51,1133.03,12372.21,24,M,formal,Santa Ana,0,0
+545,29,852.93,12681.28,24,M,independiente,San Salvador,41,1
+546,22,1074.88,4498.61,24,M,formal,Usulutan,0,0
+547,19,1225.96,4061.17,48,M,formal,Usulutan,0,0
+548,34,399.85,1956.74,48,F,formal,San Miguel,52,1
+549,22,737.94,3337.14,48,F,informal,San Miguel,152,1
+550,28,379.97,4020.02,12,F,informal,Sonsonate,15,0
+551,69,1858.14,6443.14,36,M,formal,La Libertad,15,0
+552,41,462.12,1896.27,48,M,formal,San Salvador,10,0
+553,34,844.6,11264.19,12,F,formal,San Miguel,87,1
+554,28,400.47,5354.48,60,M,formal,Usulutan,30,0
+555,60,766.11,3565.63,36,F,formal,Santa Ana,10,0
+556,58,500.66,4280.93,48,M,formal,Sonsonate,167,1
+557,36,305.01,2377.96,36,M,informal,La Libertad,30,0
+558,53,544.21,6102.12,36,M,formal,Usulutan,15,0
+559,41,1021.82,3188.66,36,M,informal,La Libertad,30,0
+560,60,963.85,6519.32,12,F,formal,San Salvador,135,1
+561,46,1692.32,18129.24,36,F,independiente,La Libertad,5,0
+562,65,1928.86,16085.95,36,M,formal,San Miguel,64,1
+563,45,1290.0,9643.99,36,M,formal,Usulutan,71,1
+564,36,680.7,8300.86,60,M,formal,Santa Ana,5,0
+565,20,656.0,7981.59,36,F,formal,Santa Ana,39,1
+566,32,841.18,3871.51,24,F,formal,Sonsonate,0,0
+567,21,834.6,10895.92,12,M,informal,San Salvador,143,1
+568,45,518.57,3729.96,48,F,formal,Sonsonate,15,0
+569,52,303.52,2497.65,12,F,formal,San Miguel,10,0
+570,68,862.98,12453.83,24,M,independiente,San Salvador,30,0
+571,24,208.36,2294.26,12,M,formal,San Salvador,32,1
+572,45,742.04,8255.71,60,M,formal,Usulutan,161,1
+573,26,332.9,1572.53,48,M,formal,Santa Ana,10,0
+574,37,1322.56,14965.73,12,M,formal,Sonsonate,0,0
+575,62,1149.93,8539.76,36,M,formal,San Salvador,81,1
+576,42,661.69,8118.62,48,F,formal,Santa Ana,0,0
+577,43,1190.61,10074.06,48,F,independiente,Sonsonate,75,1
+578,35,1256.22,13978.94,24,F,informal,Santa Ana,167,1
+579,64,708.26,2657.25,36,F,formal,La Libertad,10,0
+580,61,549.9,5150.86,36,F,formal,Sonsonate,30,0
+581,60,955.35,10466.53,60,F,informal,Santa Ana,0,0
+582,52,570.29,7264.81,48,F,informal,La Libertad,117,1
+583,27,632.64,1858.61,60,M,informal,San Salvador,105,1
+584,38,571.78,3231.79,12,F,independiente,Usulutan,109,1
+585,61,825.03,10895.13,24,M,formal,Sonsonate,30,0
+586,31,1192.11,6580.17,60,F,formal,Usulutan,0,0
+587,25,583.69,4971.01,12,M,informal,Usulutan,15,0
+588,44,501.93,5781.48,48,M,formal,La Libertad,0,0
+589,51,876.09,8256.38,12,M,formal,Santa Ana,5,0
+590,43,1218.64,7438.96,12,F,independiente,Santa Ana,66,1
+591,63,1028.54,13593.19,48,M,independiente,San Miguel,15,0
+592,31,1046.76,4438.19,24,M,formal,Usulutan,5,0
+593,28,1041.6,10023.34,24,F,formal,Sonsonate,0,0
+594,31,477.01,4960.17,12,F,informal,La Libertad,0,0
+595,55,477.83,1603.58,12,M,pensionado,La Libertad,0,0
+596,54,303.95,4154.71,24,M,formal,San Salvador,53,1
+597,50,1166.16,6010.89,48,M,formal,La Libertad,0,0
+598,66,1069.16,15079.5,48,M,formal,San Miguel,162,1
+599,62,582.19,7452.43,48,M,formal,San Miguel,30,0
+600,32,1005.75,8043.56,60,F,independiente,Sonsonate,0,0
+601,62,286.66,4218.84,12,F,formal,San Miguel,30,0
+602,49,629.38,8896.19,24,F,informal,Usulutan,106,1
+603,43,682.54,6664.1,36,F,formal,San Salvador,0,0
+604,69,311.5,3410.8,24,F,formal,Usulutan,0,0
+605,68,996.67,4321.45,48,F,informal,Usulutan,0,0
+606,52,692.11,5378.46,12,M,formal,La Libertad,82,1
+607,49,1555.07,11058.74,60,M,formal,San Salvador,15,0
+608,35,1099.34,8493.78,60,M,formal,La Libertad,0,0
+609,28,440.7,3266.03,12,M,informal,Usulutan,0,0
+610,64,944.97,11720.54,48,M,formal,Usulutan,30,0
+611,42,400.17,882.55,24,F,informal,Usulutan,54,1
+612,57,748.11,9482.1,48,F,formal,Sonsonate,43,1
+613,53,1400.2,13679.03,12,M,formal,San Salvador,0,0
+614,62,732.69,5628.69,36,F,formal,Santa Ana,0,0
+615,25,1227.0,6104.77,12,M,formal,Sonsonate,109,1
+616,34,364.76,2027.89,60,F,independiente,San Miguel,0,0
+617,27,1340.82,4067.84,24,M,formal,Usulutan,0,0
+618,48,330.14,1949.37,12,M,formal,Usulutan,15,0
+619,21,547.83,2489.33,60,M,informal,Usulutan,176,1
+620,51,634.75,2431.89,60,F,independiente,Sonsonate,30,0
+621,34,871.24,8067.7,24,M,independiente,Santa Ana,5,0
+622,40,569.82,7057.52,24,F,independiente,Usulutan,53,1
+623,55,772.39,10228.57,60,M,formal,Usulutan,30,0
+624,37,583.4,4161.22,12,M,independiente,La Libertad,34,1
+625,59,847.1,4405.15,36,F,formal,San Salvador,0,0
+626,67,1901.88,20999.61,60,M,formal,San Miguel,169,1
+627,36,627.86,1990.22,60,M,independiente,Usulutan,10,0
+628,31,1364.62,8514.67,60,M,formal,San Salvador,96,1
+629,61,523.22,4609.54,48,F,formal,Sonsonate,0,0
+630,70,1234.46,5831.15,24,M,formal,Santa Ana,116,1
+631,49,1454.89,6190.13,12,F,formal,San Salvador,38,1
+632,49,1119.73,3493.85,24,M,independiente,San Salvador,0,0
+633,38,890.2,2443.16,60,F,formal,San Salvador,5,0
+634,33,490.47,5429.64,36,F,independiente,Sonsonate,0,0
+635,43,885.36,12805.51,48,M,informal,San Miguel,56,1
+636,61,1395.72,4892.48,60,M,formal,Santa Ana,138,1
+637,61,1153.33,10957.33,48,F,formal,Usulutan,10,0
+638,40,592.02,7539.69,48,F,independiente,Sonsonate,15,0
+639,46,680.83,7794.52,24,F,informal,San Miguel,167,1
+640,64,427.97,1678.28,12,M,independiente,La Libertad,73,1
+641,34,2506.57,29310.02,60,F,pensionado,Santa Ana,0,0
+642,34,465.16,6685.62,24,M,independiente,La Libertad,30,0
+643,42,669.41,2758.79,12,F,formal,Sonsonate,15,0
+644,39,618.18,2311.58,36,M,informal,San Salvador,0,0
+645,51,1118.44,14407.79,12,F,formal,La Libertad,0,0
+646,22,1393.68,17870.62,36,M,pensionado,La Libertad,0,0
+647,62,287.0,2245.53,36,F,informal,La Libertad,126,1
+648,34,1097.61,6565.31,12,M,formal,San Salvador,30,0
+649,70,1014.19,3432.71,36,F,formal,La Libertad,0,0
+650,24,1320.47,4798.74,48,F,informal,San Miguel,0,0
+651,44,613.8,7520.83,36,F,independiente,Sonsonate,30,0
+652,43,388.07,2249.13,12,M,formal,Santa Ana,0,0
+653,38,197.4,2805.47,48,M,formal,San Miguel,0,0
+654,35,653.83,7265.28,24,M,informal,La Libertad,5,0
+655,40,651.16,6690.8,12,F,independiente,Usulutan,136,1
+656,37,302.49,1736.47,60,F,formal,Sonsonate,0,0
+657,45,1789.24,9966.49,60,F,independiente,Santa Ana,30,0
+658,46,1104.86,8114.5,24,F,informal,Usulutan,0,0
+659,38,612.26,5813.12,48,F,informal,Santa Ana,88,1
+660,38,764.17,5971.16,48,F,informal,Sonsonate,74,1
+661,59,871.89,6570.38,36,M,formal,San Miguel,0,0
+662,55,756.0,9504.24,12,M,formal,San Salvador,0,0
+663,68,675.71,7781.15,24,M,informal,Usulutan,70,1
+664,42,320.01,3362.14,24,M,formal,San Salvador,0,0
+665,59,1001.79,14825.67,36,M,formal,La Libertad,147,1
+666,67,1409.82,14806.71,48,M,independiente,San Salvador,123,1
+667,53,224.69,2070.27,48,M,formal,Santa Ana,144,1
+668,69,880.81,7477.11,60,M,informal,Santa Ana,120,1
+669,55,489.32,6834.02,12,F,pensionado,San Salvador,30,0
+670,56,783.27,9405.74,36,F,formal,San Miguel,10,0
+671,50,1604.36,21746.05,36,F,formal,San Salvador,0,0
+672,59,2244.16,22697.3,24,F,formal,San Miguel,15,0
+673,38,672.26,3938.28,24,F,informal,La Libertad,104,1
+674,42,946.56,3079.75,36,M,independiente,San Miguel,5,0
+675,67,1486.49,13816.83,36,F,informal,Usulutan,115,1
+676,39,2401.46,13012.3,36,M,formal,Usulutan,0,0
+677,27,555.81,3765.0,12,M,informal,San Miguel,179,1
+678,50,516.57,6231.75,12,F,formal,Sonsonate,10,0
+679,49,726.79,3761.24,36,F,informal,San Salvador,94,1
+680,21,426.11,1576.46,48,F,formal,San Miguel,0,0
+681,61,887.8,13115.19,24,M,formal,Santa Ana,101,1
+682,26,716.43,9702.79,12,M,informal,La Libertad,0,0
+683,32,817.72,2475.27,48,M,formal,San Miguel,30,0
+684,20,417.38,5941.78,12,F,informal,San Miguel,88,1
+685,40,1770.13,10844.14,12,M,formal,Sonsonate,129,1
+686,49,544.62,6859.57,12,M,formal,La Libertad,119,1
+687,31,1397.69,13805.07,12,M,informal,San Miguel,95,1
+688,20,616.01,5461.93,36,F,formal,La Libertad,0,0
+689,28,902.5,7515.47,36,F,independiente,San Salvador,15,0
+690,51,904.63,9987.35,48,M,independiente,La Libertad,162,1
+691,70,1408.13,19861.61,36,F,formal,La Libertad,124,1
+692,51,762.51,6657.43,24,F,formal,Santa Ana,89,1
+693,22,683.54,9549.56,48,F,independiente,Usulutan,15,0
+694,67,535.66,5479.31,24,F,informal,Sonsonate,151,1
+695,21,343.42,4278.74,12,F,informal,San Miguel,116,1
+696,62,1063.94,10271.47,48,M,informal,San Miguel,0,0
+697,46,827.1,4236.45,60,M,formal,San Miguel,0,0
+698,38,624.47,6053.33,36,M,formal,Sonsonate,44,1
+699,48,1162.36,12437.27,48,M,formal,Usulutan,5,0
+700,43,490.78,6136.15,36,M,formal,Sonsonate,15,0
+701,28,1477.14,7097.0,48,F,informal,San Miguel,30,0
+702,25,628.1,7119.75,12,M,informal,San Miguel,177,1
+703,24,556.9,2429.84,60,F,formal,Usulutan,0,0
+704,26,420.95,5455.13,48,F,formal,Sonsonate,109,1
+705,51,977.47,11177.35,36,F,formal,San Miguel,73,1
+706,47,491.87,3108.22,48,M,independiente,Santa Ana,5,0
+707,28,326.41,1716.4,60,F,formal,La Libertad,0,0
+708,27,1231.64,13649.09,48,M,informal,Sonsonate,76,1
+709,62,1007.29,10836.09,48,M,formal,Santa Ana,58,1
+710,54,734.1,10875.37,36,F,independiente,Usulutan,30,0
+711,63,1192.98,12593.78,60,F,formal,La Libertad,30,0
+712,59,836.28,4305.04,60,M,independiente,Santa Ana,30,0
+713,35,493.38,6004.82,60,M,formal,San Salvador,30,0
+714,37,447.24,2255.54,12,M,formal,San Miguel,78,1
+715,40,1201.32,4973.33,60,F,informal,La Libertad,0,0
+716,20,466.11,3818.67,60,F,pensionado,San Miguel,5,0
+717,21,652.11,6816.58,24,M,formal,San Salvador,0,0
+718,37,1650.85,6690.59,48,F,informal,Sonsonate,0,0
+719,27,679.43,2952.06,36,M,formal,Sonsonate,0,0
+720,42,974.83,6129.1,48,F,independiente,San Salvador,10,0
+721,55,582.61,7793.36,36,F,independiente,San Salvador,0,0
+722,64,1405.42,20120.82,36,F,formal,La Libertad,0,0
+723,42,504.99,7075.69,48,F,formal,San Salvador,0,0
+724,66,621.15,6985.42,60,M,formal,Santa Ana,10,0
+725,47,1065.78,3305.16,24,M,informal,San Miguel,166,1
+726,54,1137.38,15782.11,60,M,formal,La Libertad,66,1
+727,60,1366.38,2753.88,24,F,formal,San Salvador,30,0
+728,43,826.13,3330.42,60,M,independiente,Usulutan,5,0
+729,19,918.19,10571.81,48,M,independiente,San Salvador,0,0
+730,27,968.53,8599.38,12,F,informal,Usulutan,10,0
+731,19,451.8,5739.66,36,F,informal,San Salvador,42,1
+732,49,315.76,1952.85,36,M,informal,Usulutan,168,1
+733,56,486.04,3163.34,24,M,independiente,San Salvador,10,0
+734,64,421.87,6251.66,24,F,pensionado,La Libertad,118,1
+735,44,598.39,5305.25,36,M,independiente,Sonsonate,15,0
+736,67,1405.33,15860.02,48,M,formal,Santa Ana,0,0
+737,58,483.87,4156.36,12,M,independiente,San Miguel,0,0
+738,42,605.84,5918.89,12,M,independiente,Santa Ana,115,1
+739,28,1141.42,3218.35,60,F,pensionado,Santa Ana,10,0
+740,19,1472.61,7797.75,12,M,formal,Sonsonate,174,1
+741,23,2008.73,28744.07,60,M,formal,San Salvador,0,0
+742,35,315.93,2804.95,48,M,formal,Santa Ana,96,1
+743,25,618.95,9041.23,60,M,independiente,Sonsonate,30,0
+744,61,1013.26,10184.08,60,F,independiente,La Libertad,37,1
+745,28,585.97,7621.59,36,F,formal,San Salvador,30,0
+746,27,247.19,3263.17,24,M,informal,San Salvador,124,1
+747,20,440.49,2264.75,12,F,pensionado,La Libertad,15,0
+748,25,568.62,5459.44,12,M,formal,Santa Ana,0,0
+749,49,947.81,11708.09,24,M,informal,Usulutan,146,1
+750,25,454.01,5605.25,24,M,formal,Usulutan,5,0
+751,43,1105.22,8292.67,24,F,independiente,Santa Ana,10,0
+752,40,560.68,7060.43,24,M,formal,Usulutan,30,0
+753,51,1433.82,15024.2,24,F,formal,Santa Ana,0,0
+754,23,535.09,6251.46,48,M,formal,San Salvador,10,0
+755,31,312.35,3193.34,24,M,independiente,Santa Ana,0,0
+756,60,920.22,4986.76,12,F,independiente,Santa Ana,30,0
+757,21,1020.37,13163.15,12,F,independiente,Usulutan,5,0
+758,56,1098.68,6663.98,36,M,independiente,Sonsonate,0,0
+759,41,381.15,4655.07,60,F,formal,San Salvador,5,0
+760,69,1153.21,8145.08,60,F,independiente,Sonsonate,5,0
+761,26,1104.57,12093.8,60,F,formal,Sonsonate,10,0
+762,24,511.82,2182.91,36,F,formal,San Salvador,15,0
+763,51,1054.56,12626.8,36,F,pensionado,La Libertad,15,0
+764,38,405.29,2853.81,24,F,formal,Sonsonate,0,0
+765,25,611.18,1609.55,12,F,informal,Sonsonate,40,1
+766,58,785.4,5867.56,24,M,formal,La Libertad,0,0
+767,30,227.77,1836.53,36,M,formal,La Libertad,10,0
+768,60,979.67,3384.16,24,F,informal,Usulutan,36,1
+769,50,388.98,2626.81,24,M,formal,Santa Ana,30,0
+770,27,655.51,4072.65,12,F,informal,Santa Ana,5,0
+771,60,701.93,8885.96,24,F,formal,Sonsonate,0,0
+772,39,407.31,1819.35,60,F,informal,San Miguel,15,0
+773,31,971.63,6316.87,24,M,informal,San Miguel,81,1
+774,44,893.16,4499.43,48,F,formal,San Miguel,0,0
+775,27,1061.29,11254.98,24,M,informal,Usulutan,0,0
+776,53,471.7,3819.2,36,F,informal,San Salvador,0,0
+777,20,1044.08,15101.27,12,M,formal,Santa Ana,138,1
+778,42,1384.98,10389.3,60,F,pensionado,Usulutan,30,0
+779,38,977.12,9175.62,48,F,independiente,San Miguel,0,0
+780,50,1116.8,6129.51,36,M,pensionado,San Miguel,0,0
+781,63,1455.69,9675.8,12,M,informal,La Libertad,109,1
+782,25,727.93,9800.16,48,M,formal,Santa Ana,0,0
+783,43,887.4,8996.39,12,M,pensionado,Santa Ana,112,1
+784,66,607.4,7693.41,24,M,formal,La Libertad,0,0
+785,40,650.12,9442.88,60,F,informal,La Libertad,40,1
+786,53,1207.29,8951.37,48,F,formal,Sonsonate,0,0
+787,33,723.3,8430.29,60,F,formal,La Libertad,30,0
+788,45,746.42,3974.08,12,M,formal,San Salvador,88,1
+789,24,1398.32,7483.1,24,F,independiente,La Libertad,72,1
+790,55,730.9,3594.9,36,F,formal,San Salvador,15,0
+791,51,1115.84,3773.2,36,F,informal,San Salvador,73,1
+792,60,388.3,3717.34,48,M,formal,San Salvador,168,1
+793,38,418.42,3359.85,24,F,formal,San Miguel,60,1
+794,34,864.86,11722.08,48,M,formal,Santa Ana,10,0
+795,69,532.4,7670.88,48,F,formal,Sonsonate,0,0
+796,46,925.4,4681.51,36,M,formal,San Salvador,10,0
+797,25,757.1,2478.69,60,F,informal,Santa Ana,114,1
+798,26,646.14,3269.28,60,M,informal,San Salvador,30,0
+799,26,1272.83,16172.03,24,F,informal,San Salvador,64,1
+800,58,796.37,11086.69,12,F,independiente,La Libertad,10,0
+801,30,931.49,11199.46,60,F,formal,San Salvador,15,0
+802,24,982.41,11315.46,48,F,informal,Santa Ana,39,1
+803,23,1084.05,7361.46,48,M,formal,San Miguel,15,0
+804,30,789.85,3123.84,60,M,formal,Sonsonate,30,0
+805,59,1226.39,15419.21,24,M,formal,Santa Ana,108,1
+806,34,494.94,4994.47,12,M,independiente,Usulutan,144,1
+807,62,556.43,2773.7,12,F,informal,Sonsonate,0,0
+808,52,973.58,13645.25,60,M,informal,San Miguel,163,1
+809,37,1381.65,8541.54,24,M,formal,San Salvador,5,0
+810,34,940.72,2256.19,48,F,informal,Usulutan,0,0
+811,43,571.46,5614.42,12,F,formal,Usulutan,10,0
+812,31,1777.63,22209.09,12,F,formal,San Miguel,67,1
+813,56,315.63,4545.43,60,F,formal,San Salvador,0,0
+814,67,620.52,4982.58,12,F,independiente,Usulutan,67,1
+815,23,1322.11,9151.89,36,F,formal,San Salvador,0,0
+816,50,770.17,4535.62,24,F,formal,Santa Ana,0,0
+817,29,416.23,4392.87,12,M,independiente,San Miguel,0,0
+818,25,368.15,4897.8,36,M,formal,Usulutan,5,0
+819,70,987.81,4325.73,48,M,formal,Santa Ana,0,0
+820,50,1110.49,7745.06,36,M,pensionado,San Salvador,0,0
+821,34,283.36,2965.11,60,F,pensionado,Usulutan,30,0
+822,35,378.23,3485.42,60,M,informal,San Miguel,10,0
+823,23,1845.65,22954.04,12,M,formal,Sonsonate,0,0
+824,57,745.34,4971.72,12,F,informal,San Salvador,30,0
+825,42,2255.53,22134.55,24,M,formal,Usulutan,5,0
+826,38,894.91,11886.26,60,F,formal,San Salvador,10,0
+827,50,589.08,8631.89,24,F,informal,La Libertad,174,1
+828,27,927.18,11573.4,60,F,formal,Santa Ana,154,1
+829,37,710.13,1905.56,48,M,formal,San Salvador,0,0
+830,43,649.33,3076.6,48,M,informal,Sonsonate,165,1
+831,28,429.94,1336.93,48,F,formal,San Salvador,0,0
+832,60,986.95,8420.79,12,M,independiente,San Miguel,0,0
+833,70,753.51,10843.13,24,M,informal,Sonsonate,0,0
+834,21,343.87,1499.02,36,F,independiente,La Libertad,10,0
+835,36,1433.6,14713.46,36,M,formal,San Miguel,0,0
+836,45,507.09,2223.21,36,F,formal,La Libertad,30,0
+837,48,281.58,2680.49,36,M,formal,San Salvador,5,0
+838,66,423.61,6057.24,36,M,formal,San Salvador,47,1
+839,38,586.78,3098.39,24,F,independiente,San Salvador,10,0
+840,42,954.44,7322.6,48,F,informal,Usulutan,0,0
+841,26,529.17,5062.83,36,F,independiente,Usulutan,30,0
+842,32,1031.64,12389.41,12,F,formal,San Miguel,30,0
+843,43,498.42,6196.55,24,M,formal,La Libertad,52,1
+844,41,391.37,5567.9,48,F,informal,San Salvador,160,1
+845,43,1605.66,10456.69,36,F,independiente,Usulutan,5,0
+846,54,1004.24,3760.67,24,F,pensionado,Sonsonate,36,1
+847,33,1033.0,15375.58,48,F,informal,San Salvador,156,1
+848,32,1272.21,6129.69,48,F,independiente,Sonsonate,0,0
+849,63,690.39,5703.13,12,M,informal,Sonsonate,42,1
+850,42,1293.76,6986.24,12,M,pensionado,La Libertad,34,1
+851,58,1182.13,8437.38,48,F,informal,Sonsonate,0,0
+852,19,418.48,3721.42,24,M,formal,Sonsonate,65,1
+853,67,468.42,1610.74,48,F,formal,San Miguel,15,0
+854,68,1200.07,7914.13,12,M,informal,Sonsonate,77,1
+855,66,709.41,2753.63,48,F,formal,Santa Ana,15,0
+856,47,479.89,4065.13,12,M,formal,La Libertad,5,0
+857,42,988.26,6453.3,60,F,formal,La Libertad,0,0
+858,32,468.97,2084.76,48,F,informal,Sonsonate,164,1
+859,60,1133.73,8831.27,60,F,informal,Sonsonate,166,1
+860,45,295.74,3707.01,12,F,informal,San Salvador,150,1
+861,67,754.36,9423.08,36,F,formal,Sonsonate,0,0
+862,49,1038.91,6305.83,36,F,independiente,Sonsonate,64,1
+863,23,227.73,476.25,12,F,formal,Santa Ana,151,1
+864,41,696.15,8452.02,60,F,independiente,La Libertad,0,0
+865,55,870.52,4196.39,12,M,formal,La Libertad,37,1
+866,23,1258.79,16054.98,12,M,formal,Santa Ana,92,1
+867,56,1160.88,4436.64,36,M,independiente,San Salvador,30,0
+868,64,755.98,9116.64,60,F,formal,Sonsonate,5,0
+869,29,276.85,3200.41,36,F,formal,San Salvador,15,0
+870,64,759.1,8137.01,36,F,informal,Sonsonate,0,0
+871,50,1181.1,13285.14,48,F,independiente,San Salvador,0,0
+872,21,1679.41,13525.15,36,M,informal,Usulutan,133,1
+873,52,741.41,3999.06,24,F,independiente,Usulutan,0,0
+874,61,890.15,5206.14,48,M,formal,San Miguel,104,1
+875,48,1124.44,15865.83,36,M,informal,Usulutan,10,0
+876,62,1021.16,3078.87,24,M,informal,Usulutan,0,0
+877,52,1171.29,5041.66,12,F,formal,San Miguel,173,1
+878,26,699.47,9481.8,24,F,formal,Usulutan,0,0
+879,58,783.01,7698.38,36,M,pensionado,Santa Ana,30,0
+880,60,259.57,3643.35,60,M,informal,San Salvador,125,1
+881,62,952.42,12803.6,60,M,informal,San Miguel,64,1
+882,37,947.81,2238.76,24,M,formal,Santa Ana,168,1
+883,37,613.77,3219.49,60,F,pensionado,Sonsonate,5,0
+884,26,808.95,3061.48,12,F,independiente,Sonsonate,157,1
+885,60,818.44,5903.68,48,F,formal,Santa Ana,30,0
+886,56,274.89,1071.54,36,M,informal,La Libertad,0,0
+887,59,1511.11,6407.41,36,M,independiente,Sonsonate,10,0
+888,66,1175.29,6593.77,60,F,independiente,San Miguel,164,1
+889,32,798.1,8953.25,12,F,formal,Sonsonate,5,0
+890,52,578.76,4244.72,36,F,formal,San Miguel,5,0
+891,65,518.53,4410.88,36,M,formal,Usulutan,30,0
+892,52,613.72,7661.29,48,M,formal,Santa Ana,15,0
+893,44,473.01,988.49,24,F,formal,La Libertad,5,0
+894,64,918.63,4786.48,12,M,formal,San Salvador,0,0
+895,35,512.51,1036.09,12,F,informal,San Salvador,139,1
+896,58,800.6,11709.68,24,F,formal,La Libertad,172,1
+897,32,531.83,7425.04,12,F,formal,San Salvador,66,1
+898,43,853.48,11087.86,12,F,informal,Santa Ana,0,0
+899,54,1083.96,12930.73,24,F,formal,Usulutan,60,1
+900,27,707.17,8443.56,12,M,formal,San Salvador,0,0
+901,19,1169.44,4302.75,48,M,independiente,Usulutan,5,0
+902,21,432.22,2031.12,48,M,formal,Santa Ana,0,0
+903,33,1031.71,8981.03,12,M,independiente,San Miguel,15,0
+904,60,1125.93,4388.45,60,F,informal,Sonsonate,68,1
+905,31,1217.52,14740.01,60,M,formal,San Miguel,0,0
+906,24,612.1,8851.69,36,F,informal,San Salvador,52,1
+907,51,1718.74,17641.28,60,F,formal,La Libertad,0,0
+908,45,458.61,6745.98,24,F,pensionado,San Miguel,30,0
+909,24,684.43,2544.87,24,F,formal,Santa Ana,0,0
+910,20,750.87,3390.48,12,F,formal,San Miguel,30,0
+911,57,2239.59,27119.96,12,F,formal,Sonsonate,95,1
+912,57,669.95,3947.8,60,M,formal,Sonsonate,30,0
+913,27,1472.97,12634.14,36,F,independiente,Usulutan,45,1
+914,34,814.06,3665.72,24,F,formal,Usulutan,54,1
+915,41,539.05,1322.19,36,M,independiente,La Libertad,34,1
+916,57,761.89,11264.64,36,M,pensionado,Santa Ana,116,1
+917,45,432.7,5262.59,48,M,formal,San Miguel,30,0
+918,50,443.91,2686.64,12,F,formal,Santa Ana,169,1
+919,52,1677.37,15644.52,24,M,pensionado,San Miguel,136,1
+920,63,921.06,2929.31,48,M,informal,San Miguel,30,0
+921,33,814.02,5064.77,12,M,informal,Sonsonate,138,1
+922,19,979.84,8194.74,24,F,pensionado,Santa Ana,0,0
+923,69,577.47,8485.46,12,M,formal,San Salvador,0,0
+924,59,626.33,2107.62,36,M,informal,La Libertad,0,0
+925,31,540.49,2321.41,36,F,independiente,Santa Ana,0,0
+926,34,610.9,5763.92,24,F,independiente,San Salvador,5,0
+927,30,478.93,5534.68,60,M,informal,San Salvador,47,1
+928,20,524.57,2353.94,48,F,informal,Sonsonate,0,0
+929,39,303.65,1307.53,12,M,independiente,Usulutan,80,1
+930,70,1278.64,7119.21,36,F,formal,Usulutan,15,0
+931,66,408.74,1623.64,60,F,informal,San Miguel,0,0
+932,35,689.33,4585.69,60,M,formal,San Miguel,0,0
+933,40,403.35,1935.93,12,M,formal,Santa Ana,0,0
+934,23,969.44,11519.25,24,M,formal,La Libertad,101,1
+935,61,774.19,4510.71,12,F,independiente,Sonsonate,15,0
+936,44,1340.46,5135.27,12,M,formal,Santa Ana,0,0
+937,19,719.64,7132.28,12,F,formal,Sonsonate,168,1
+938,70,1053.08,9276.54,12,M,formal,Usulutan,15,0
+939,55,1037.89,7224.63,12,M,formal,Sonsonate,5,0
+940,67,543.47,5695.56,24,F,formal,La Libertad,15,0
+941,45,1230.55,12645.99,12,M,formal,La Libertad,5,0
+942,20,561.0,7819.82,36,F,informal,Sonsonate,101,1
+943,45,953.7,11318.44,48,M,formal,San Salvador,32,1
+944,29,675.32,5719.52,36,M,formal,San Miguel,15,0
+945,22,549.6,5530.82,48,M,formal,Sonsonate,71,1
+946,27,610.6,5215.15,36,F,informal,Sonsonate,0,0
+947,20,453.89,1697.49,48,F,formal,San Miguel,15,0
+948,45,714.5,1623.35,36,F,formal,La Libertad,15,0
+949,67,603.7,3563.27,36,M,formal,Santa Ana,15,0
+950,42,809.45,10128.45,48,M,formal,La Libertad,140,1
+951,49,407.58,6021.0,48,M,formal,San Salvador,5,0
+952,67,388.9,1493.11,60,M,pensionado,La Libertad,165,1
+953,41,973.88,2419.02,48,F,independiente,San Salvador,30,0
+954,62,1076.98,13383.87,24,F,independiente,Usulutan,10,0
+955,70,668.77,6290.76,48,M,formal,La Libertad,15,0
+956,19,1080.2,7093.64,48,M,independiente,Sonsonate,170,1
+957,52,1451.16,17108.02,48,F,informal,La Libertad,0,0
+958,57,734.31,4943.71,48,F,independiente,San Miguel,15,0
+959,65,1125.35,13534.08,48,M,informal,Sonsonate,0,0
+960,57,936.42,11397.39,48,F,informal,Usulutan,0,0
+961,19,460.23,5508.61,48,F,formal,San Miguel,15,0
+962,42,1064.04,14877.42,24,M,formal,Usulutan,51,1
+963,67,952.07,8466.78,60,M,formal,Usulutan,0,0
+964,64,795.63,7195.05,36,F,informal,Sonsonate,0,0
+965,66,856.9,8237.23,12,M,informal,Sonsonate,171,1
+966,19,765.26,7236.29,36,F,independiente,San Miguel,0,0
+967,45,1296.44,6199.02,24,M,formal,San Salvador,0,0
+968,39,1111.2,4706.17,36,F,formal,San Salvador,0,0
+969,37,917.48,2408.14,36,M,formal,La Libertad,0,0
+970,45,1539.07,9392.93,60,M,informal,San Miguel,30,0
+971,44,826.02,5355.56,36,M,formal,San Miguel,0,0
+972,69,1275.14,6207.5,12,F,informal,La Libertad,155,1
+973,34,1085.55,5293.0,24,M,informal,Santa Ana,30,0
+974,44,1238.18,10363.45,48,F,informal,Usulutan,155,1
+975,31,1029.05,12772.2,48,F,informal,Santa Ana,103,1
+976,65,305.74,1429.19,60,M,formal,Usulutan,95,1
+977,51,1087.68,4845.49,24,F,formal,San Salvador,15,0
+978,66,310.07,3007.54,12,F,formal,La Libertad,5,0
+979,67,400.43,3171.21,48,F,informal,Sonsonate,0,0
+980,22,989.86,8602.14,36,F,informal,San Salvador,154,1
+981,57,657.4,8567.9,48,F,formal,San Salvador,83,1
+982,29,570.85,8373.87,12,M,formal,San Salvador,0,0
+983,67,1428.19,20918.16,36,F,informal,Usulutan,0,0
+984,57,402.77,4838.57,12,M,pensionado,Sonsonate,58,1
+985,54,1344.34,14137.33,12,F,independiente,San Miguel,0,0
+986,44,325.73,1101.09,48,F,formal,Usulutan,0,0
+987,46,1669.92,10855.6,60,F,formal,San Salvador,0,0
+988,60,490.85,5460.07,12,M,formal,Usulutan,102,1
+989,50,853.37,2307.9,48,F,informal,Santa Ana,15,0
+990,33,365.43,1446.06,36,F,formal,San Salvador,30,0
+991,47,739.07,8044.17,60,F,independiente,Sonsonate,0,0
+992,64,871.01,10274.0,12,M,formal,Usulutan,30,0
+993,49,1033.65,7786.96,12,F,informal,San Miguel,0,0
+994,29,806.58,5112.05,12,F,formal,Usulutan,166,1
+995,31,1173.64,8307.84,24,F,informal,San Miguel,10,0
+996,70,226.4,608.97,48,M,informal,San Miguel,0,0
+997,64,530.74,1422.85,12,M,independiente,San Miguel,0,0
+998,28,431.68,3787.36,60,F,informal,Santa Ana,10,0
+999,56,282.08,1042.07,12,M,informal,Santa Ana,173,1
+1000,26,660.76,4175.78,12,F,formal,San Miguel,0,0
+1001,28,524.62,7836.91,12,F,formal,Sonsonate,10,0
+1002,57,658.8,6275.42,48,F,formal,La Libertad,15,0
+1003,66,807.06,9311.51,24,M,independiente,Santa Ana,30,0
+1004,62,1079.45,8589.15,60,F,formal,San Miguel,77,1
+1005,46,750.61,3168.17,36,M,formal,Sonsonate,5,0
+1006,60,1289.74,14036.84,12,M,formal,San Salvador,10,0
+1007,27,495.29,3210.18,48,M,independiente,San Salvador,0,0
+1008,41,553.6,4875.17,36,F,formal,Sonsonate,10,0
+1009,45,1084.96,15749.51,48,F,formal,Usulutan,10,0
+1010,20,601.4,2327.99,12,M,formal,La Libertad,0,0
+1011,32,804.77,1729.31,36,M,formal,Santa Ana,0,0
+1012,56,944.08,6246.65,60,F,informal,San Miguel,160,1
+1013,22,715.09,2540.09,24,F,formal,La Libertad,172,1
+1014,45,1028.34,12027.28,12,M,formal,San Salvador,10,0
+1015,43,684.76,7841.44,24,M,independiente,La Libertad,150,1
+1016,26,2109.59,17249.07,12,M,formal,La Libertad,165,1
+1017,64,713.08,7735.9,36,M,independiente,Santa Ana,5,0
+1018,47,699.65,3462.63,48,F,formal,Sonsonate,10,0
+1019,38,612.62,1654.42,24,M,formal,Sonsonate,10,0
+1020,66,705.05,2979.74,12,F,formal,San Miguel,88,1
+1021,37,1241.38,4141.1,12,M,informal,Santa Ana,0,0
+1022,43,721.54,4799.37,36,F,formal,San Miguel,0,0
+1023,60,347.95,2168.98,12,M,informal,Santa Ana,135,1
+1024,42,563.57,3805.31,36,M,informal,Usulutan,169,1
+1025,36,741.85,5125.31,24,M,informal,Usulutan,88,1
+1026,58,1047.9,2711.96,48,F,independiente,Sonsonate,0,0
+1027,68,966.23,13932.76,48,F,informal,San Miguel,0,0
+1028,42,855.79,10652.59,12,M,formal,Santa Ana,121,1
+1029,57,945.0,1917.89,24,M,formal,San Miguel,5,0
+1030,20,683.88,5724.14,48,F,formal,Sonsonate,107,1
+1031,46,448.06,1494.79,36,M,formal,San Salvador,0,0
+1032,66,712.43,8425.17,60,M,formal,San Miguel,10,0
+1033,25,1330.55,8747.32,48,F,independiente,Sonsonate,15,0
+1034,48,518.77,1921.56,60,F,formal,Sonsonate,0,0
+1035,64,423.06,4314.33,60,M,pensionado,Usulutan,0,0
+1036,29,1298.59,9498.81,48,M,formal,San Salvador,0,0
+1037,40,934.34,5090.39,60,F,formal,La Libertad,0,0
+1038,27,559.62,5710.91,24,M,informal,Sonsonate,46,1
+1039,60,443.39,3500.69,60,F,formal,Santa Ana,5,0
+1040,27,960.8,8733.74,60,M,formal,San Miguel,30,0
+1041,69,532.35,7267.66,24,M,formal,Usulutan,101,1
+1042,41,710.12,9019.97,36,M,independiente,La Libertad,15,0
+1043,52,1158.7,16788.47,24,F,informal,Santa Ana,92,1
+1044,44,655.05,9188.59,60,M,formal,Usulutan,10,0
+1045,36,213.62,1588.91,48,F,independiente,La Libertad,5,0
+1046,38,749.62,8793.26,24,M,informal,San Miguel,173,1
+1047,65,1195.05,15862.57,24,M,formal,Santa Ana,34,1
+1048,68,348.03,1597.09,12,F,formal,La Libertad,10,0
+1049,65,1398.75,20380.69,24,F,formal,Santa Ana,0,0
+1050,48,921.38,2127.34,36,F,informal,Usulutan,10,0
+1051,45,334.43,4272.74,60,F,informal,Usulutan,0,0
+1052,35,2125.98,11984.37,60,F,independiente,San Salvador,93,1
+1053,38,507.2,5900.93,24,M,formal,La Libertad,120,1
+1054,24,1679.52,11389.32,60,M,formal,San Miguel,15,0
+1055,34,995.71,2167.79,60,F,informal,Sonsonate,0,0
+1056,65,845.6,9550.27,36,M,formal,La Libertad,0,0
+1057,31,759.59,5884.61,36,F,formal,Usulutan,5,0
+1058,45,1480.19,10663.53,48,M,formal,San Salvador,113,1
+1059,67,576.64,2207.17,48,M,independiente,Usulutan,30,0
+1060,33,522.98,3765.71,60,M,informal,La Libertad,0,0
+1061,45,321.54,1357.01,60,M,formal,San Miguel,66,1
+1062,63,707.85,1810.35,36,F,formal,San Salvador,5,0
+1063,20,1073.28,5344.64,24,F,independiente,San Miguel,0,0
+1064,64,2055.13,15380.83,48,F,formal,La Libertad,30,0
+1065,37,600.03,6152.92,24,M,independiente,La Libertad,0,0
+1066,34,735.39,8432.48,12,F,formal,Santa Ana,0,0
+1067,22,679.43,6399.84,36,M,informal,San Salvador,10,0
+1068,36,668.59,4949.34,12,F,formal,Sonsonate,5,0
+1069,38,872.46,9874.68,12,M,formal,La Libertad,5,0
+1070,39,1103.56,3863.24,60,M,independiente,Sonsonate,0,0
+1071,46,1348.8,4620.23,48,M,independiente,Sonsonate,0,0
+1072,63,358.0,3233.18,24,F,informal,San Miguel,0,0
+1073,55,591.64,5333.32,24,F,independiente,San Miguel,69,1
+1074,57,1043.16,4520.4,24,M,informal,Santa Ana,0,0
+1075,56,343.49,1960.84,60,M,informal,Santa Ana,5,0
+1076,49,594.75,6608.58,12,M,formal,San Salvador,166,1
+1077,65,833.75,1682.33,12,F,formal,Santa Ana,0,0
+1078,59,503.67,3030.41,48,M,formal,San Salvador,145,1
+1079,41,433.51,1523.15,24,M,independiente,La Libertad,5,0
+1080,46,609.59,4161.56,60,F,independiente,Santa Ana,30,0
+1081,55,675.68,6083.38,60,M,independiente,Santa Ana,0,0
+1082,52,212.21,2685.41,36,M,formal,San Salvador,0,0
+1083,64,397.1,2418.3,24,F,independiente,Santa Ana,30,0
+1084,58,769.44,7113.49,12,M,formal,Santa Ana,10,0
+1085,32,725.37,2992.7,12,F,independiente,San Miguel,10,0
+1086,45,935.12,10171.34,36,M,formal,Sonsonate,116,1
+1087,19,1562.62,7437.22,36,M,formal,Sonsonate,0,0
+1088,40,1074.96,7174.64,48,M,informal,San Miguel,139,1
+1089,42,569.73,5237.76,24,M,formal,Santa Ana,126,1
+1090,68,1736.66,15871.32,48,M,formal,San Miguel,10,0
+1091,25,521.62,1648.72,36,F,formal,Sonsonate,10,0
+1092,34,1096.89,11087.78,48,M,independiente,Santa Ana,0,0
+1093,27,1028.84,5054.28,12,M,informal,San Miguel,95,1
+1094,22,1132.29,6937.83,24,F,pensionado,Santa Ana,0,0
+1095,39,1949.78,6416.85,36,F,formal,Sonsonate,10,0
+1096,29,451.99,4525.28,12,M,independiente,Sonsonate,0,0
+1097,37,411.79,3424.99,24,F,formal,Usulutan,172,1
+1098,56,714.92,10692.33,60,F,formal,Santa Ana,15,0
+1099,54,1261.81,13107.83,48,F,formal,La Libertad,5,0
+1100,25,1946.31,5342.82,24,F,formal,Usulutan,0,0
+1101,57,1343.2,8848.85,60,M,formal,Santa Ana,10,0
+1102,40,449.43,5030.78,12,F,formal,Santa Ana,37,1
+1103,32,599.89,2985.27,48,F,formal,San Miguel,0,0
+1104,21,1590.3,8637.38,12,F,formal,Usulutan,15,0
+1105,30,498.92,3696.49,24,M,formal,La Libertad,15,0
+1106,35,600.99,2327.8,12,F,formal,San Salvador,5,0
+1107,39,440.77,3805.38,60,M,formal,Usulutan,30,0
+1108,26,550.44,6042.09,24,M,formal,La Libertad,106,1
+1109,51,338.02,4383.19,48,F,informal,La Libertad,119,1
+1110,41,1176.44,4855.24,48,F,independiente,San Salvador,30,0
+1111,32,690.5,8619.04,24,F,pensionado,Usulutan,0,0
+1112,44,1368.63,10692.61,60,M,formal,Santa Ana,0,0
+1113,68,516.54,1879.45,48,F,informal,La Libertad,0,0
+1114,70,611.43,7081.41,12,M,independiente,San Salvador,0,0
+1115,34,635.42,7959.14,36,F,formal,Usulutan,30,0
+1116,68,578.43,4574.39,60,M,formal,Sonsonate,30,0
+1117,27,321.71,4064.31,36,F,informal,Sonsonate,89,1
+1118,66,441.75,6032.47,36,M,formal,San Miguel,166,1
+1119,20,349.15,4143.08,48,M,informal,La Libertad,180,1
+1120,41,554.0,1750.24,12,F,informal,La Libertad,149,1
+1121,59,711.29,8840.52,60,M,independiente,Usulutan,0,0
+1122,32,588.27,2946.43,60,M,formal,San Miguel,5,0
+1123,57,1043.55,7487.3,24,F,informal,San Miguel,161,1
+1124,49,349.29,2984.12,36,F,informal,Sonsonate,128,1
+1125,47,382.46,4776.73,24,M,informal,San Miguel,0,0
+1126,53,997.78,10676.3,48,F,formal,San Miguel,5,0
+1127,19,709.27,2960.61,60,M,informal,Sonsonate,5,0
+1128,61,1156.0,16867.49,24,M,formal,Sonsonate,10,0
+1129,42,644.38,3324.82,36,M,independiente,Santa Ana,5,0
+1130,19,584.37,7322.77,12,F,independiente,Sonsonate,107,1
+1131,51,753.05,11022.66,60,M,formal,Usulutan,53,1
+1132,52,597.33,3545.38,36,F,independiente,Santa Ana,5,0
+1133,70,1870.09,27012.73,60,F,independiente,San Miguel,30,0
+1134,60,844.87,9111.0,12,F,independiente,Santa Ana,31,1
+1135,24,669.03,1776.44,60,M,independiente,Sonsonate,15,0
+1136,33,1243.54,7162.47,48,M,informal,Usulutan,5,0
+1137,61,803.63,10581.95,48,F,formal,San Salvador,15,0
+1138,37,443.35,4222.92,36,M,formal,Sonsonate,0,0
+1139,25,643.02,5610.28,12,F,formal,Usulutan,62,1
+1140,48,1199.25,10389.24,60,M,formal,San Salvador,5,0
+1141,27,823.91,9347.21,48,F,pensionado,La Libertad,0,0
+1142,24,563.43,1392.56,24,F,formal,San Miguel,5,0
+1143,24,432.36,4169.37,24,F,formal,La Libertad,0,0
+1144,68,432.72,4648.59,12,M,informal,Usulutan,175,1
+1145,48,402.32,1949.68,60,M,informal,Usulutan,0,0
+1146,29,667.17,7700.37,24,F,formal,La Libertad,118,1
+1147,24,299.85,2860.52,24,F,formal,San Miguel,140,1
+1148,32,603.45,4119.21,36,M,informal,Usulutan,0,0
+1149,37,284.4,4238.72,12,F,formal,San Salvador,83,1
+1150,55,717.79,10447.39,36,M,formal,Usulutan,0,0
+1151,69,1486.33,12928.8,24,M,formal,Sonsonate,10,0
+1152,53,534.26,2452.69,48,M,informal,San Salvador,149,1
+1153,59,526.65,6848.62,24,M,formal,San Salvador,137,1
+1154,34,654.88,1443.57,24,M,independiente,Usulutan,15,0
+1155,35,626.98,2645.64,36,M,informal,San Miguel,86,1
+1156,48,538.08,4746.79,36,F,formal,Santa Ana,121,1
+1157,24,371.75,2573.62,24,F,informal,San Miguel,67,1
+1158,38,758.81,4267.09,12,M,independiente,La Libertad,72,1
+1159,34,817.49,10334.55,12,M,formal,Usulutan,154,1
+1160,30,1147.6,11928.99,36,M,formal,San Salvador,0,0
+1161,68,544.25,4592.61,24,M,formal,Usulutan,10,0
+1162,29,788.15,9374.39,24,F,informal,San Salvador,38,1
+1163,38,965.87,13085.75,12,M,formal,San Salvador,172,1
+1164,21,471.38,6097.97,36,M,formal,La Libertad,5,0
+1165,35,1042.02,6914.29,60,F,formal,La Libertad,10,0
+1166,54,655.24,1637.7,24,F,informal,Usulutan,5,0
+1167,70,1150.74,9953.57,12,M,informal,Sonsonate,83,1
+1168,31,1116.95,7915.68,60,F,formal,La Libertad,5,0
+1169,38,343.12,2143.29,12,F,informal,Usulutan,30,0
+1170,67,1458.81,20859.99,12,M,formal,San Salvador,77,1
+1171,68,552.66,6580.31,36,M,formal,Sonsonate,0,0
+1172,23,894.2,4515.13,60,M,informal,Usulutan,10,0
+1173,43,432.76,2461.19,24,M,formal,Sonsonate,0,0
+1174,41,1943.53,20147.47,60,F,formal,Sonsonate,10,0
+1175,35,456.13,6675.68,36,M,informal,Sonsonate,15,0
+1176,38,697.89,4959.93,48,F,formal,San Salvador,0,0
+1177,63,783.18,11568.18,12,F,formal,La Libertad,157,1
+1178,31,856.29,11197.27,60,F,independiente,San Miguel,172,1
+1179,31,1645.03,6569.89,12,F,formal,Usulutan,36,1
+1180,37,1358.26,4568.26,24,F,informal,La Libertad,10,0
+1181,33,1154.0,15995.61,36,F,formal,San Miguel,32,1
+1182,58,928.98,2443.05,12,F,formal,San Salvador,15,0
+1183,61,1255.28,17870.5,36,M,formal,San Salvador,10,0
+1184,55,489.03,6243.78,36,F,independiente,Usulutan,0,0
+1185,31,708.12,8909.88,12,F,formal,Sonsonate,30,0
+1186,22,623.78,6929.57,60,F,formal,San Salvador,60,1
+1187,21,357.59,2241.88,12,M,formal,Sonsonate,60,1
+1188,30,1001.91,9010.72,60,M,informal,San Salvador,30,0
+1189,38,1498.52,13315.36,36,M,informal,Sonsonate,0,0
+1190,48,500.7,2588.15,12,M,informal,San Miguel,128,1
+1191,52,319.13,1152.57,60,F,formal,Usulutan,30,0
+1192,49,1412.07,12493.89,24,F,formal,San Salvador,96,1
+1193,68,816.76,9429.04,12,F,formal,La Libertad,15,0
+1194,58,1066.13,2329.38,36,M,independiente,Sonsonate,0,0
+1195,22,576.9,7500.29,36,F,independiente,San Salvador,94,1
+1196,44,624.79,9056.4,60,F,formal,La Libertad,106,1
+1197,32,983.25,5425.42,24,M,formal,Santa Ana,10,0
+1198,64,1324.23,5771.77,48,F,independiente,Santa Ana,10,0
+1199,65,997.88,3409.5,12,M,independiente,Sonsonate,5,0
+1200,29,487.64,1763.5,60,F,formal,San Salvador,0,0
+1201,44,1058.22,3394.06,24,M,formal,Usulutan,30,0
+1202,64,1120.98,9856.59,48,M,pensionado,Usulutan,0,0
+1203,38,710.85,10478.7,12,F,formal,San Miguel,30,0
+1204,28,520.3,3087.79,48,M,informal,San Miguel,30,0
+1205,39,740.55,6116.24,48,F,informal,San Miguel,0,0
+1206,62,1113.69,7029.39,24,F,formal,Usulutan,5,0
+1207,57,819.19,9205.23,60,M,formal,Santa Ana,30,0
+1208,70,513.79,6187.8,12,M,formal,San Salvador,10,0
+1209,25,4860.97,43996.49,36,F,informal,San Miguel,0,0
+1210,69,834.0,3879.55,48,F,informal,La Libertad,167,1
+1211,32,1739.86,17820.22,24,F,formal,San Miguel,144,1
+1212,34,712.0,3446.44,36,M,formal,San Salvador,0,0
+1213,22,598.94,7099.27,36,F,independiente,Sonsonate,0,0
+1214,41,521.15,2450.81,36,M,formal,Sonsonate,0,0
+1215,63,1441.42,13832.15,36,M,formal,La Libertad,0,0
+1216,42,937.31,4295.49,60,M,independiente,San Miguel,0,0
+1217,34,526.65,6443.4,12,M,informal,San Miguel,53,1
+1218,60,924.11,2425.51,12,F,formal,Sonsonate,0,0
+1219,62,1280.96,5545.15,36,M,formal,Usulutan,0,0
+1220,47,1254.75,6298.68,60,F,informal,La Libertad,30,0
+1221,65,792.56,7465.74,36,M,independiente,San Miguel,5,0
+1222,47,743.0,8323.03,48,F,pensionado,Santa Ana,30,0
+1223,43,707.57,8803.33,60,M,formal,San Salvador,30,0
+1224,68,1155.52,7988.4,48,M,informal,San Miguel,0,0
+1225,33,1361.01,9798.2,60,M,informal,La Libertad,33,1
+1226,55,492.41,1619.56,24,F,formal,Usulutan,5,0
+1227,43,1933.7,29000.73,48,F,formal,Santa Ana,116,1
+1228,35,830.43,2025.69,12,M,formal,San Miguel,30,0
+1229,37,1298.74,13903.31,48,F,informal,Sonsonate,15,0
+1230,69,1277.55,6584.21,12,M,formal,San Salvador,0,0
+1231,37,540.85,5355.74,24,F,independiente,San Salvador,0,0
+1232,67,609.84,8031.14,48,F,independiente,Sonsonate,0,0
+1233,40,600.96,1438.46,60,F,independiente,San Salvador,0,0
+1234,30,459.66,1422.16,24,F,informal,San Salvador,82,1
+1235,31,334.9,1413.89,48,M,informal,Santa Ana,155,1
+1236,53,483.53,2839.73,12,M,formal,La Libertad,115,1
+1237,60,894.51,5638.78,12,F,informal,San Salvador,82,1
+1238,60,536.18,4708.7,12,F,informal,La Libertad,34,1
+1239,55,680.18,2833.11,60,M,independiente,San Miguel,0,0
+1240,31,1587.61,6203.44,12,M,formal,La Libertad,92,1
+1241,39,594.57,8437.25,48,M,formal,Santa Ana,5,0
+1242,34,1902.5,20772.51,48,M,formal,Usulutan,93,1
+1243,43,780.05,4540.84,48,M,formal,Sonsonate,5,0
+1244,48,557.2,7808.92,48,M,formal,San Salvador,15,0
+1245,19,547.28,6480.36,36,F,formal,Santa Ana,57,1
+1246,57,494.22,2740.53,12,F,formal,San Miguel,133,1
+1247,61,707.06,8880.08,12,F,independiente,La Libertad,169,1
+1248,50,315.88,2482.44,60,M,formal,Sonsonate,0,0
+1249,50,704.95,6813.84,48,F,informal,Sonsonate,10,0
+1250,58,311.07,4556.55,24,F,formal,Sonsonate,10,0
+1251,60,555.0,4698.14,36,M,independiente,San Miguel,15,0
+1252,29,1480.09,21088.53,48,M,informal,Sonsonate,35,1
+1253,48,649.62,8429.8,48,M,informal,Sonsonate,30,0
+1254,55,736.33,4536.99,12,M,formal,San Miguel,30,0
+1255,28,1565.23,8294.15,36,M,formal,Santa Ana,5,0
+1256,34,517.05,6111.11,48,M,independiente,Santa Ana,0,0
+1257,57,229.52,3100.12,48,F,formal,La Libertad,0,0
+1258,40,545.06,3167.47,12,M,formal,San Salvador,74,1
+1259,29,420.35,3623.72,24,F,formal,San Salvador,5,0
+1260,19,590.65,2671.1,36,M,informal,La Libertad,5,0
+1261,21,476.41,6931.05,36,F,informal,Sonsonate,47,1
+1262,52,686.53,5203.58,60,M,formal,Usulutan,5,0
+1263,33,763.68,4070.3,12,M,independiente,La Libertad,15,0
+1264,48,750.38,2208.48,48,M,formal,San Salvador,0,0
+1265,68,662.36,5694.65,36,M,formal,San Miguel,15,0
+1266,37,924.05,5991.56,24,F,informal,Usulutan,15,0
+1267,57,1891.06,21737.64,60,M,formal,Sonsonate,0,0
+1268,40,434.07,2959.34,36,M,pensionado,Sonsonate,0,0
+1269,25,380.89,3375.07,36,M,formal,San Miguel,97,1
+1270,20,757.43,6273.15,12,F,informal,Sonsonate,141,1
+1271,43,1691.73,11845.11,36,F,formal,Santa Ana,10,0
+1272,45,792.14,3516.32,60,F,formal,Santa Ana,0,0
+1273,59,752.0,10126.88,24,F,formal,La Libertad,121,1
+1274,59,872.37,3314.39,12,F,informal,San Miguel,0,0
+1275,70,285.6,3644.88,60,M,formal,Usulutan,15,0
+1276,27,346.11,1720.5,60,F,formal,Santa Ana,15,0
+1277,36,546.66,1478.13,12,F,informal,Sonsonate,128,1
+1278,67,510.68,2505.95,36,F,formal,San Miguel,0,0
+1279,49,637.1,7662.05,12,M,formal,San Miguel,0,0
+1280,34,724.19,5586.52,12,F,formal,Sonsonate,10,0
+1281,33,851.24,2295.81,36,M,independiente,La Libertad,10,0
+1282,23,1213.33,15492.17,48,M,informal,San Miguel,10,0
+1283,66,967.92,10681.83,24,M,informal,Usulutan,10,0
+1284,41,1754.37,9883.08,24,M,independiente,La Libertad,125,1
+1285,59,1070.87,11625.99,36,F,informal,San Salvador,15,0
+1286,60,757.67,4054.18,12,F,formal,Usulutan,161,1
+1287,67,291.9,1442.16,24,M,independiente,San Miguel,0,0
+1288,42,1172.82,13612.6,48,F,pensionado,Usulutan,0,0
+1289,51,671.48,1415.91,60,F,informal,Sonsonate,0,0
+1290,40,327.88,3807.49,60,F,formal,Santa Ana,0,0
+1291,20,571.14,7252.07,12,F,formal,Sonsonate,0,0
+1292,49,944.93,12681.61,36,F,informal,La Libertad,83,1
+1293,64,615.65,7257.62,12,M,formal,San Salvador,0,0
+1294,30,798.28,6255.18,48,M,formal,San Miguel,0,0
+1295,38,611.53,7532.16,12,F,formal,Santa Ana,0,0
+1296,32,608.93,2466.62,48,F,independiente,La Libertad,0,0
+1297,34,593.16,5142.22,12,F,informal,Santa Ana,127,1
+1298,29,851.62,11867.19,24,M,independiente,Usulutan,168,1
+1299,53,693.12,5180.81,48,M,formal,Usulutan,30,0
+1300,45,459.6,3905.81,12,M,informal,San Miguel,45,1
+1301,49,485.45,4519.06,60,F,informal,San Miguel,165,1
+1302,22,783.17,2858.48,60,F,informal,La Libertad,70,1
+1303,31,933.53,2321.25,24,M,formal,Santa Ana,98,1
+1304,64,734.56,5544.39,60,F,formal,San Miguel,42,1
+1305,63,923.5,4796.13,12,F,formal,La Libertad,0,0
+1306,54,780.37,6777.6,24,F,independiente,Usulutan,5,0
+1307,26,1193.71,7200.37,48,M,formal,San Miguel,10,0
+1308,28,1386.39,11892.48,12,M,formal,San Salvador,0,0
+1309,45,249.83,1453.45,12,M,formal,La Libertad,0,0
+1310,48,790.49,11088.5,24,M,formal,Sonsonate,149,1
+1311,22,712.29,9561.35,60,F,formal,Santa Ana,15,0
+1312,65,763.71,5080.97,36,F,independiente,Santa Ana,0,0
+1313,28,723.15,8742.27,60,M,informal,Sonsonate,0,0
+1314,39,495.82,2076.68,36,M,independiente,San Salvador,30,0
+1315,70,1686.06,3714.25,24,F,formal,La Libertad,5,0
+1316,39,452.9,3073.61,60,M,formal,Santa Ana,30,0
+1317,59,816.31,6592.92,36,F,formal,Santa Ana,0,0
+1318,40,739.48,1664.83,24,F,independiente,San Salvador,45,1
+1319,54,833.43,7464.4,48,M,pensionado,San Miguel,0,0
+1320,60,822.22,7356.32,24,M,pensionado,Santa Ana,15,0
+1321,48,474.42,4660.06,60,M,formal,San Salvador,5,0
+1322,21,638.03,3556.79,24,F,formal,Santa Ana,5,0
+1323,67,867.69,12465.0,12,M,informal,Usulutan,5,0
+1324,41,707.02,9997.79,60,F,formal,Usulutan,154,1
+1325,25,814.21,4765.17,36,F,formal,Sonsonate,0,0
+1326,23,961.16,3950.82,24,F,formal,Usulutan,30,0
+1327,66,1754.37,15366.12,12,M,informal,Sonsonate,149,1
+1328,54,623.12,3134.04,60,M,informal,Sonsonate,30,0
+1329,41,1577.27,6468.06,36,F,formal,Usulutan,15,0
+1330,34,1175.2,15508.13,12,F,formal,Usulutan,0,0
+1331,28,1026.05,10012.76,60,F,informal,San Salvador,69,1
+1332,22,809.25,5437.23,12,M,formal,La Libertad,10,0
+1333,47,1503.29,18281.78,48,M,informal,San Miguel,47,1
+1334,53,1152.81,13343.01,24,F,formal,Sonsonate,5,0
+1335,23,1006.77,8220.12,24,F,informal,Usulutan,0,0
+1336,55,439.56,5710.38,36,F,formal,San Salvador,0,0
+1337,30,608.34,8252.94,60,F,independiente,Usulutan,10,0
+1338,46,833.4,7666.39,24,M,independiente,San Salvador,5,0
+1339,55,1433.14,16726.89,12,F,formal,San Salvador,158,1
+1340,59,653.15,9238.9,36,M,informal,San Salvador,15,0
+1341,53,387.72,1812.62,48,F,independiente,San Salvador,0,0
+1342,45,352.51,3832.14,48,F,formal,San Miguel,72,1
+1343,65,810.65,8189.19,24,F,formal,San Miguel,0,0
+1344,33,1011.91,11528.19,36,F,informal,San Miguel,64,1
+1345,44,480.85,6272.99,48,F,formal,San Miguel,5,0
+1346,38,822.93,5550.53,12,F,independiente,Usulutan,5,0
+1347,49,709.1,6355.04,60,F,formal,Usulutan,5,0
+1348,69,977.34,2432.51,24,M,formal,Usulutan,0,0
+1349,37,1120.11,16739.76,48,F,formal,Sonsonate,172,1
+1350,57,602.7,8239.28,12,M,informal,Usulutan,0,0
+1351,55,1449.67,19571.37,60,M,informal,La Libertad,0,0
+1352,48,1344.99,19588.37,12,F,formal,La Libertad,5,0
+1353,58,573.4,2310.2,12,F,formal,Santa Ana,161,1
+1354,31,1765.97,22687.71,60,F,formal,San Miguel,169,1
+1355,36,502.84,7456.87,60,F,independiente,San Salvador,0,0
+1356,39,1764.06,9081.63,24,F,independiente,Usulutan,124,1
+1357,69,614.15,6296.5,24,M,independiente,San Salvador,30,0
+1358,64,507.21,1098.34,24,F,formal,Sonsonate,5,0
+1359,56,1805.02,22368.18,36,F,formal,San Miguel,15,0
+1360,59,785.16,5394.61,36,F,informal,San Miguel,179,1
+1361,31,996.04,14136.17,36,M,formal,San Miguel,5,0
+1362,61,1628.17,12549.55,48,M,formal,La Libertad,30,0
+1363,22,795.1,9020.76,60,F,informal,Santa Ana,172,1
+1364,57,1744.32,16461.24,24,F,formal,Santa Ana,131,1
+1365,39,1382.82,7548.05,12,M,informal,La Libertad,5,0
+1366,42,1288.6,3516.73,24,F,independiente,San Salvador,65,1
+1367,39,1362.18,13913.83,12,M,independiente,San Salvador,15,0
+1368,20,725.44,2544.84,24,F,pensionado,Sonsonate,30,0
+1369,37,919.17,2245.2,60,M,informal,San Salvador,30,0
+1370,55,1123.86,14818.12,60,F,informal,La Libertad,72,1
+1371,39,576.03,4369.94,60,M,informal,Usulutan,133,1
+1372,34,792.25,4970.78,60,F,informal,San Miguel,30,0
+1373,59,396.44,3615.29,24,M,formal,San Salvador,30,0
+1374,49,1185.08,6953.76,36,M,formal,Usulutan,10,0
+1375,67,1455.07,15263.98,60,M,formal,San Salvador,15,0
+1376,62,752.89,5111.22,48,M,informal,Sonsonate,81,1
+1377,21,548.87,6485.22,36,F,informal,San Salvador,32,1
+1378,48,507.87,4699.06,12,F,informal,Santa Ana,5,0
+1379,46,1102.6,6386.6,24,M,informal,Sonsonate,114,1
+1380,25,827.74,3714.75,36,M,formal,Usulutan,5,0
+1381,63,506.48,3119.97,12,F,informal,San Miguel,122,1
+1382,49,1188.66,9775.81,12,M,formal,Sonsonate,82,1
+1383,26,1065.22,10176.22,24,M,pensionado,San Miguel,10,0
+1384,52,681.94,1904.34,24,F,informal,Santa Ana,0,0
+1385,29,795.58,3530.01,60,F,informal,Sonsonate,5,0
+1386,70,470.95,1897.27,60,M,informal,Usulutan,92,1
+1387,67,1377.71,19970.17,36,M,independiente,Usulutan,30,0
+1388,28,389.66,5671.82,12,M,informal,Santa Ana,80,1
+1389,54,1063.74,3505.51,24,M,informal,Sonsonate,0,0
+1390,42,722.34,6223.55,48,F,pensionado,San Miguel,0,0
+1391,66,468.3,969.68,12,F,formal,San Miguel,0,0
+1392,48,1060.67,11806.25,48,M,informal,Santa Ana,53,1
+1393,32,993.85,6978.83,60,M,formal,San Miguel,0,0
+1394,42,3202.32,31424.89,24,F,formal,Sonsonate,0,0
+1395,42,1110.99,5189.68,36,F,independiente,Usulutan,30,0
+1396,34,508.93,3226.71,24,F,formal,San Miguel,0,0
+1397,46,824.4,3280.56,24,F,informal,San Salvador,177,1
+1398,45,193.09,836.62,12,F,formal,San Miguel,120,1
+1399,58,403.23,2448.44,36,F,formal,Sonsonate,5,0
+1400,27,350.83,2674.72,12,M,informal,San Salvador,120,1
+1401,29,1238.72,3196.95,24,F,formal,Usulutan,0,0
+1402,60,891.67,11517.98,36,F,formal,Usulutan,131,1
+1403,41,596.91,5820.5,60,M,formal,San Salvador,15,0
+1404,46,497.64,4166.97,24,M,independiente,Sonsonate,0,0
+1405,44,357.83,2367.31,12,M,formal,Usulutan,0,0
+1406,30,534.21,3189.3,24,M,independiente,San Miguel,173,1
+1407,58,1154.26,12284.16,12,M,independiente,San Salvador,0,0
+1408,50,593.09,5763.92,36,M,formal,San Miguel,30,0
+1409,65,882.62,3012.74,24,F,independiente,La Libertad,0,0
+1410,63,558.86,7483.52,12,F,independiente,Usulutan,130,1
+1411,39,386.83,4131.04,48,M,formal,San Salvador,0,0
+1412,33,1198.62,8428.21,36,M,formal,San Salvador,0,0
+1413,40,251.19,1356.77,12,M,formal,Santa Ana,137,1
+1414,54,991.73,14799.67,36,F,formal,Sonsonate,169,1
+1415,58,921.23,9160.44,60,M,formal,San Miguel,5,0
+1416,44,623.66,2929.22,36,F,formal,Santa Ana,0,0
+1417,23,316.01,2374.47,12,F,formal,Usulutan,82,1
+1418,21,1494.21,18674.46,36,F,formal,La Libertad,30,0
+1419,23,1261.21,6129.68,60,M,pensionado,San Miguel,0,0
+1420,39,340.48,2241.12,60,F,informal,San Miguel,129,1
+1421,20,360.9,1829.41,12,M,formal,Santa Ana,0,0
+1422,43,840.5,3035.6,60,F,formal,Santa Ana,0,0
+1423,52,2276.75,4828.82,60,F,formal,La Libertad,0,0
+1424,33,530.51,2869.48,12,M,independiente,Sonsonate,96,1
+1425,22,620.71,4913.42,12,F,independiente,La Libertad,178,1
+1426,32,460.85,6301.8,48,F,formal,Usulutan,34,1
+1427,69,1115.98,12390.62,48,F,formal,La Libertad,15,0
+1428,21,1658.89,18607.7,12,F,informal,La Libertad,0,0
+1429,24,664.68,6617.34,60,M,formal,San Miguel,150,1
+1430,44,1092.52,9987.94,24,F,formal,La Libertad,5,0
+1431,47,538.18,5234.19,60,M,formal,Sonsonate,0,0
+1432,23,496.79,2300.28,12,M,informal,Sonsonate,82,1
+1433,24,1874.23,25463.61,12,M,formal,San Salvador,30,0
+1434,21,503.84,3468.58,36,M,informal,San Salvador,5,0
+1435,19,418.59,4254.26,60,F,formal,San Miguel,0,0
+1436,23,609.81,7320.03,60,M,informal,La Libertad,15,0
+1437,49,697.82,9751.24,48,M,formal,La Libertad,5,0
+1438,26,1328.32,19059.42,12,M,formal,San Miguel,0,0
+1439,43,2209.51,17655.83,48,F,formal,San Miguel,0,0
+1440,50,1126.13,3140.4,36,M,independiente,San Salvador,5,0
+1441,19,1029.57,12496.41,12,M,independiente,San Miguel,164,1
+1442,63,865.99,12195.2,24,F,formal,La Libertad,93,1
+1443,45,951.35,12493.64,24,M,independiente,San Salvador,110,1
+1444,41,1396.53,5619.74,24,F,informal,Sonsonate,0,0
+1445,41,530.57,2384.34,24,F,informal,San Miguel,0,0
+1446,66,914.15,13661.4,36,F,independiente,San Salvador,31,1
+1447,63,995.53,3126.25,36,M,formal,Usulutan,0,0
+1448,51,1033.03,6349.64,12,F,informal,Santa Ana,98,1
+1449,51,673.85,9946.98,48,M,formal,Santa Ana,0,0
+1450,32,600.34,1886.43,60,M,formal,La Libertad,30,0
+1451,32,945.22,7269.67,12,F,formal,San Miguel,15,0
+1452,39,487.95,5570.48,36,M,formal,San Salvador,35,1
+1453,48,1158.71,3192.83,36,F,formal,Usulutan,0,0
+1454,50,580.8,4433.7,36,F,formal,San Salvador,15,0
+1455,43,297.52,2701.89,60,F,formal,Santa Ana,10,0
+1456,33,2471.79,37025.31,12,F,formal,Sonsonate,108,1
+1457,27,1771.74,20013.34,60,M,formal,Usulutan,0,0
+1458,28,659.42,6671.11,24,F,informal,Sonsonate,0,0
+1459,37,373.04,1904.17,36,M,independiente,San Miguel,101,1
+1460,21,714.12,8446.25,36,M,formal,La Libertad,145,1
+1461,25,502.99,2631.35,48,M,informal,Sonsonate,149,1
+1462,19,176.47,526.96,36,F,formal,Sonsonate,108,1
+1463,39,349.22,4842.41,36,M,formal,San Salvador,30,0
+1464,42,594.19,5844.29,48,M,informal,Santa Ana,15,0
+1465,43,728.04,3366.25,60,F,independiente,San Miguel,5,0
+1466,30,559.61,4444.32,36,M,formal,Santa Ana,0,0
+1467,42,292.23,1509.57,36,F,formal,Santa Ana,164,1
+1468,35,1072.84,9743.99,12,M,informal,Usulutan,151,1
+1469,28,1174.64,8140.47,48,F,independiente,San Miguel,0,0
+1470,59,601.47,4453.68,48,M,formal,Sonsonate,129,1
+1471,49,524.02,7157.62,48,F,independiente,Usulutan,30,0
+1472,60,430.16,4600.29,36,F,formal,Santa Ana,136,1
+1473,42,708.33,8720.7,48,F,formal,Santa Ana,111,1
+1474,64,764.13,5459.92,48,F,independiente,Usulutan,5,0
+1475,44,636.34,8139.88,24,F,informal,Sonsonate,69,1
+1476,49,596.72,6108.89,60,F,informal,San Salvador,5,0
+1477,50,934.62,2250.85,12,M,informal,Usulutan,5,0
+1478,69,3194.88,26647.41,60,M,formal,La Libertad,30,0
+1479,46,570.2,5054.9,60,M,informal,San Salvador,167,1
+1480,44,1505.75,18036.47,12,F,formal,San Miguel,15,0
+1481,20,776.65,8025.63,36,F,formal,San Salvador,140,1
+1482,64,592.62,2058.88,12,M,independiente,Sonsonate,5,0
+1483,40,521.56,4617.81,48,F,informal,Santa Ana,155,1
+1484,41,964.75,2610.33,24,F,informal,San Miguel,5,0
+1485,65,829.94,8446.46,12,F,independiente,Santa Ana,169,1
+1486,60,597.64,2236.98,36,M,pensionado,Santa Ana,0,0
+1487,52,256.42,1480.99,36,M,formal,San Salvador,15,0
+1488,43,409.06,2967.35,36,F,independiente,Sonsonate,0,0
+1489,64,668.56,1475.61,48,M,formal,Sonsonate,10,0
+1490,60,599.53,4800.64,24,F,formal,San Salvador,144,1
+1491,27,588.04,6025.9,12,M,informal,Usulutan,5,0
+1492,34,392.31,3957.98,36,M,informal,Sonsonate,46,1
+1493,44,768.81,3393.66,60,M,formal,La Libertad,5,0
+1494,19,1118.74,15527.54,60,F,independiente,La Libertad,30,0
+1495,63,687.57,8909.65,24,M,formal,San Miguel,10,0
+1496,70,1040.56,9025.67,24,M,formal,Santa Ana,97,1
+1497,55,889.16,3556.6,24,F,informal,San Salvador,10,0
+1498,58,513.62,3511.39,12,F,pensionado,Usulutan,10,0
+1499,32,426.22,6038.74,60,F,formal,Sonsonate,0,0
+1500,39,2541.35,15155.52,36,M,formal,Sonsonate,0,0
+1501,41,599.92,4390.04,60,M,informal,Sonsonate,170,1
+1502,63,549.88,6371.73,12,M,formal,San Salvador,10,0
+1503,66,409.93,4393.83,60,F,formal,Santa Ana,30,0
+1504,37,440.95,5245.01,48,F,pensionado,Santa Ana,0,0
+1505,33,912.71,1941.82,24,M,formal,Santa Ana,10,0
+1506,55,793.63,8490.99,60,F,independiente,San Miguel,0,0
+1507,31,731.18,1687.18,60,M,formal,Sonsonate,30,0
+1508,20,477.43,2275.78,24,M,formal,Sonsonate,0,0
+1509,42,612.39,3451.79,36,F,informal,La Libertad,83,1
+1510,22,689.32,3840.08,36,M,formal,La Libertad,128,1
+1511,64,431.04,5042.85,36,M,pensionado,Sonsonate,136,1
+1512,31,1255.2,13437.89,12,F,informal,La Libertad,123,1
+1513,64,922.34,11336.92,36,M,formal,La Libertad,10,0
+1514,59,1114.42,15802.81,48,F,formal,San Salvador,151,1
+1515,68,565.3,5344.61,12,M,independiente,La Libertad,107,1
+1516,31,539.56,7798.55,36,M,informal,San Miguel,15,0
+1517,31,1062.58,5530.97,36,M,informal,La Libertad,0,0
+1518,70,542.86,7352.01,36,M,informal,Usulutan,154,1
+1519,48,1445.73,6465.63,60,F,formal,Santa Ana,0,0
+1520,69,664.67,4859.95,60,M,formal,Usulutan,5,0
+1521,59,1265.32,5489.79,12,M,formal,Usulutan,10,0
+1522,36,867.92,3244.68,48,M,formal,Santa Ana,0,0
+1523,26,823.73,4585.52,36,F,formal,San Salvador,0,0
+1524,51,370.4,1306.77,24,F,formal,Usulutan,10,0
+1525,56,1203.6,5456.8,24,F,informal,Sonsonate,158,1
+1526,61,897.66,7531.47,48,F,independiente,San Miguel,5,0
+1527,67,493.32,1367.33,36,M,formal,Sonsonate,30,0
+1528,23,751.31,3508.51,12,M,formal,Usulutan,10,0
+1529,37,315.12,875.7,12,M,formal,La Libertad,90,1
+1530,64,1103.91,13397.8,60,F,informal,Santa Ana,93,1
+1531,66,937.96,13930.99,24,F,formal,Usulutan,10,0
+1532,26,784.78,6638.96,24,M,formal,La Libertad,0,0
+1533,27,396.33,5485.3,36,M,formal,San Salvador,15,0
+1534,43,640.78,8274.41,60,M,informal,Usulutan,10,0
+1535,55,608.21,3290.62,48,F,formal,Santa Ana,0,0
+1536,51,1288.18,9588.34,60,M,formal,La Libertad,0,0
+1537,29,352.58,1292.57,24,M,formal,Santa Ana,10,0
+1538,69,935.77,1895.57,48,F,formal,Santa Ana,0,0
+1539,57,749.36,5835.03,48,F,informal,Usulutan,30,0
+1540,25,684.72,1601.34,12,M,informal,La Libertad,10,0
+1541,43,1614.46,3666.36,12,M,independiente,San Salvador,123,1
+1542,57,591.62,3183.54,24,M,informal,San Salvador,147,1
+1543,44,1257.48,17760.28,12,M,formal,Usulutan,98,1
+1544,29,298.32,3012.77,48,F,formal,Santa Ana,0,0
+1545,49,838.51,11071.4,60,M,informal,San Salvador,161,1
+1546,33,1158.94,5946.72,36,M,independiente,Usulutan,5,0
+1547,30,378.54,4168.12,60,M,independiente,Sonsonate,115,1
+1548,51,1188.15,16599.12,12,M,informal,La Libertad,10,0
+1549,40,1417.13,11558.97,48,M,formal,San Salvador,0,0
+1550,38,444.81,3655.61,48,M,independiente,Santa Ana,65,1
+1551,22,317.52,3686.28,36,F,independiente,San Miguel,115,1
+1552,61,1021.51,14582.5,60,F,independiente,San Miguel,15,0
+1553,42,510.27,2437.68,24,M,informal,Usulutan,158,1
+1554,54,603.12,3811.39,60,M,independiente,Usulutan,15,0
+1555,51,918.66,7221.95,48,M,independiente,Sonsonate,0,0
+1556,49,607.73,8689.48,36,M,formal,Sonsonate,15,0
+1557,25,991.93,9838.72,24,M,informal,Santa Ana,71,1
+1558,40,598.12,8582.68,48,F,pensionado,Sonsonate,121,1
+1559,57,1551.33,8609.94,48,M,informal,Santa Ana,111,1
+1560,41,435.35,4574.45,60,M,formal,Usulutan,10,0
+1561,41,1567.78,8688.44,12,F,pensionado,La Libertad,125,1
+1562,29,291.59,2653.9,60,M,formal,San Miguel,131,1
+1563,38,991.96,14526.05,48,F,informal,Santa Ana,150,1
+1564,37,685.88,6589.86,48,F,pensionado,Santa Ana,5,0
+1565,66,1094.51,5960.86,60,M,formal,Usulutan,80,1
+1566,51,575.26,4465.03,36,M,independiente,Santa Ana,55,1
+1567,63,654.94,7284.59,12,M,pensionado,San Salvador,0,0
+1568,44,1015.2,9178.19,60,F,informal,San Salvador,0,0
+1569,58,1381.72,13930.72,24,M,independiente,Usulutan,0,0
+1570,45,926.36,4974.76,48,F,formal,San Salvador,10,0
+1571,65,755.95,2550.49,60,M,independiente,San Miguel,0,0
+1572,47,758.27,5451.09,12,F,pensionado,San Salvador,100,1
+1573,24,736.49,4934.17,12,F,formal,San Salvador,94,1
+1574,22,794.22,8954.27,60,M,informal,Sonsonate,35,1
+1575,22,530.16,7249.69,12,M,formal,Santa Ana,30,0
+1576,36,976.57,8086.93,60,M,informal,San Miguel,0,0
+1577,31,289.11,1479.03,48,F,informal,San Miguel,0,0
+1578,25,890.79,6720.73,12,F,formal,San Salvador,149,1
+1579,36,317.85,3929.28,24,M,formal,San Miguel,10,0
+1580,27,608.65,8325.07,36,M,formal,Sonsonate,15,0
+1581,35,482.33,1892.58,60,M,informal,La Libertad,0,0
+1582,27,742.32,8976.81,24,F,formal,La Libertad,15,0
+1583,54,753.44,7678.37,48,F,formal,La Libertad,10,0
+1584,50,1870.67,12230.78,12,F,formal,San Miguel,118,1
+1585,27,354.48,2276.86,36,F,formal,La Libertad,5,0
+1586,54,916.06,9830.0,36,M,formal,Sonsonate,37,1
+1587,70,1355.55,9310.54,60,M,formal,La Libertad,0,0
+1588,64,620.8,7209.85,36,M,informal,San Miguel,52,1
+1589,26,273.54,1730.33,36,M,formal,Usulutan,0,0
+1590,68,674.95,4149.68,48,F,informal,La Libertad,0,0
+1591,67,478.0,6607.46,36,F,independiente,Sonsonate,77,1
+1592,23,329.73,4591.56,36,M,pensionado,Usulutan,69,1
+1593,38,828.86,4244.37,24,F,independiente,San Salvador,10,0
+1594,46,2145.02,10679.73,36,M,informal,Sonsonate,169,1
+1595,40,641.32,6542.95,60,F,formal,Sonsonate,10,0
+1596,20,935.77,5300.05,60,F,formal,San Miguel,5,0
+1597,62,851.86,10486.09,12,F,independiente,Sonsonate,5,0
+1598,27,550.72,1429.54,12,F,informal,San Miguel,174,1
+1599,52,528.12,5859.12,36,F,formal,San Miguel,0,0
+1600,66,785.07,7146.52,24,M,independiente,Sonsonate,130,1
+1601,52,364.06,5115.82,48,M,independiente,San Salvador,15,0
+1602,32,560.29,6118.23,48,F,formal,San Miguel,158,1
+1603,23,402.57,1090.39,48,M,formal,Santa Ana,5,0
+1604,20,353.98,2494.74,60,M,pensionado,La Libertad,30,0
+1605,60,2187.45,4967.86,48,M,formal,San Miguel,0,0
+1606,48,389.65,5342.69,12,M,formal,San Miguel,10,0
+1607,35,842.9,7142.37,48,M,informal,La Libertad,10,0
+1608,67,385.42,1369.36,24,F,informal,Sonsonate,0,0
+1609,64,1269.26,4939.53,12,F,independiente,Sonsonate,0,0
+1610,52,553.33,5695.23,24,M,formal,La Libertad,30,0
+1611,20,1123.33,7859.7,36,F,independiente,San Salvador,0,0
+1612,38,619.38,5353.67,24,M,formal,San Salvador,30,0
+1613,26,539.56,7729.46,24,M,formal,Sonsonate,0,0
+1614,68,1231.95,4192.47,36,F,formal,Usulutan,0,0
+1615,38,731.6,5146.22,12,F,formal,San Miguel,99,1
+1616,19,939.74,4624.77,48,M,formal,San Salvador,0,0
+1617,70,413.51,3979.16,24,M,independiente,San Miguel,0,0
+1618,54,377.69,3826.25,24,M,independiente,San Miguel,89,1
+1619,53,1350.3,6343.19,60,M,formal,Sonsonate,51,1
+1620,22,1020.68,6523.37,12,F,formal,Sonsonate,72,1
+1621,51,676.09,7542.39,24,M,formal,Sonsonate,162,1
+1622,35,637.41,1599.45,48,F,pensionado,Sonsonate,15,0
+1623,29,626.39,4037.11,36,M,formal,Usulutan,0,0
+1624,52,2142.75,14645.42,48,M,formal,Usulutan,5,0
+1625,46,1114.34,11054.43,36,F,formal,Sonsonate,74,1
+1626,19,490.05,5379.77,60,M,informal,San Miguel,10,0
+1627,39,894.32,12814.37,24,M,independiente,Usulutan,30,0
+1628,67,895.43,4907.51,12,M,independiente,Sonsonate,15,0
+1629,24,218.42,2553.02,60,M,formal,San Miguel,10,0
+1630,67,902.49,7180.75,12,M,informal,San Miguel,135,1
+1631,61,907.63,10890.81,36,F,informal,Sonsonate,95,1
+1632,39,1552.03,16186.64,36,F,informal,San Miguel,0,0
+1633,56,500.22,5946.09,24,M,formal,Usulutan,0,0
+1634,53,627.51,8846.0,12,F,informal,Usulutan,69,1
+1635,50,337.15,4320.66,24,F,formal,Sonsonate,5,0
+1636,28,617.64,7278.68,12,M,formal,La Libertad,5,0
+1637,20,958.22,5693.85,24,M,formal,Usulutan,0,0
+1638,68,765.26,5240.55,48,M,informal,La Libertad,5,0
+1639,37,731.15,10956.18,60,F,independiente,San Salvador,15,0
+1640,40,1306.18,17108.41,24,F,formal,Sonsonate,104,1
+1641,69,701.88,9186.67,36,M,informal,Usulutan,10,0
+1642,49,500.15,5346.97,60,F,independiente,San Miguel,0,0
+1643,45,1456.75,7103.18,12,F,formal,La Libertad,39,1
+1644,31,531.94,2971.19,48,F,formal,San Salvador,30,0
+1645,31,1293.31,13866.41,36,F,formal,Sonsonate,10,0
+1646,65,1033.53,12237.97,60,M,formal,San Salvador,0,0
+1647,31,1997.43,17295.15,12,M,formal,Santa Ana,142,1
+1648,41,1548.56,3215.59,24,F,formal,La Libertad,0,0
+1649,22,2231.44,13790.68,24,M,pensionado,La Libertad,105,1
+1650,26,769.42,5636.22,60,F,formal,Usulutan,5,0
+1651,49,352.49,2187.02,36,M,formal,San Miguel,0,0
+1652,51,805.53,7013.51,36,F,formal,San Miguel,30,0
+1653,54,1318.0,19434.35,36,M,pensionado,La Libertad,99,1
+1654,37,1220.33,12041.09,60,F,independiente,San Miguel,10,0
+1655,23,973.39,7183.35,36,F,formal,Santa Ana,83,1
+1656,27,574.2,6595.67,36,F,informal,Sonsonate,0,0
+1657,37,495.77,2331.02,60,F,formal,Usulutan,0,0
+1658,40,933.69,11227.44,12,F,pensionado,San Salvador,166,1
+1659,21,567.1,2579.86,24,M,independiente,San Salvador,0,0
+1660,39,542.35,1377.34,48,F,independiente,Sonsonate,0,0
+1661,46,1053.8,12129.42,48,F,informal,Usulutan,30,0
+1662,19,351.19,3183.03,48,F,formal,La Libertad,5,0
+1663,53,452.08,1060.27,24,M,informal,San Miguel,86,1
+1664,64,485.13,1745.83,12,M,informal,La Libertad,88,1
+1665,40,687.38,10038.53,36,F,formal,La Libertad,112,1
+1666,31,325.0,3218.85,36,F,independiente,Santa Ana,30,0
+1667,19,480.83,2465.86,36,M,formal,Santa Ana,174,1
+1668,55,701.05,10006.58,24,F,formal,Usulutan,30,0
+1669,27,641.88,6993.51,36,F,independiente,Sonsonate,30,0
+1670,51,840.24,6857.28,12,F,formal,Santa Ana,5,0
+1671,29,527.43,6393.78,36,F,formal,San Miguel,157,1
+1672,21,766.88,10133.89,60,F,informal,Sonsonate,0,0
+1673,63,629.16,2720.74,24,F,formal,Usulutan,5,0
+1674,48,547.17,2283.07,60,M,formal,Sonsonate,30,0
+1675,46,441.96,6533.61,12,F,formal,San Miguel,152,1
+1676,56,421.11,5847.32,60,M,pensionado,Sonsonate,5,0
+1677,30,1213.02,15925.48,12,M,informal,La Libertad,54,1
+1678,19,711.83,6285.87,48,M,independiente,Santa Ana,5,0
+1679,62,562.85,7350.54,12,F,formal,Santa Ana,10,0
+1680,52,374.43,4053.82,12,F,informal,San Miguel,15,0
+1681,38,606.69,2374.0,36,F,independiente,San Salvador,152,1
+1682,20,431.84,4766.12,60,M,formal,Usulutan,10,0
+1683,63,1166.22,14305.25,12,M,independiente,Usulutan,161,1
+1684,52,381.69,5020.2,60,M,informal,Usulutan,0,0
+1685,48,810.74,10773.98,48,F,independiente,Usulutan,101,1
+1686,45,2032.93,26918.81,36,F,formal,Usulutan,160,1
+1687,66,502.89,5332.99,60,M,formal,San Miguel,130,1
+1688,36,763.28,5355.83,12,M,formal,San Salvador,112,1
+1689,39,536.0,2015.22,36,M,informal,La Libertad,30,0
+1690,30,394.69,2919.79,12,F,formal,Usulutan,0,0
+1691,63,1091.07,6748.08,48,M,pensionado,San Miguel,0,0
+1692,41,1501.15,20056.51,36,M,formal,Usulutan,0,0
+1693,69,1284.63,14075.36,12,F,independiente,Usulutan,30,0
+1694,38,1123.32,10048.94,36,M,formal,San Miguel,52,1
+1695,42,988.43,12346.29,12,F,formal,Santa Ana,139,1
+1696,50,1974.66,10750.48,12,F,formal,La Libertad,172,1
+1697,39,1707.87,23620.34,60,M,formal,San Miguel,10,0
+1698,33,651.72,8799.38,36,F,formal,La Libertad,5,0
+1699,41,1302.25,14139.42,36,M,formal,Santa Ana,104,1
+1700,43,1465.1,13511.99,60,F,formal,Sonsonate,10,0
+1701,31,1284.24,11427.44,36,F,informal,La Libertad,85,1
+1702,43,1005.46,14727.42,24,M,independiente,Santa Ana,0,0
+1703,56,191.76,790.93,36,M,informal,San Miguel,30,0
+1704,63,1024.13,4874.42,36,F,informal,Usulutan,5,0
+1705,44,1366.59,8702.4,60,F,formal,San Miguel,15,0
+1706,26,351.29,3809.9,60,M,formal,Usulutan,0,0
+1707,43,662.78,3207.34,36,F,pensionado,San Miguel,15,0
+1708,35,490.84,7060.4,60,M,formal,Sonsonate,15,0
+1709,56,488.57,1340.72,36,M,formal,La Libertad,15,0
+1710,66,457.38,2948.67,24,M,formal,Sonsonate,15,0
+1711,34,1395.76,3565.5,36,F,formal,Usulutan,10,0
+1712,59,1632.7,4173.95,36,F,formal,San Miguel,0,0
+1713,38,1319.12,13633.46,36,F,pensionado,San Miguel,103,1
+1714,52,1485.96,18618.49,12,M,informal,San Miguel,42,1
+1715,54,450.75,3178.35,12,M,independiente,Sonsonate,5,0
+1716,44,559.76,6768.21,48,F,independiente,San Salvador,79,1
+1717,50,988.71,9212.05,60,F,formal,San Salvador,0,0
+1718,49,697.68,10431.23,12,M,formal,San Salvador,167,1
+1719,42,585.74,8764.41,24,F,informal,San Miguel,97,1
+1720,23,469.56,5651.63,48,F,independiente,Sonsonate,0,0
+1721,52,638.17,5761.88,60,M,formal,Sonsonate,15,0
+1722,70,595.8,8220.64,60,F,informal,Usulutan,127,1
+1723,33,1080.42,4541.75,36,M,informal,San Miguel,31,1
+1724,66,487.98,6704.95,48,M,formal,San Miguel,40,1
+1725,47,715.34,1921.79,36,M,formal,San Salvador,0,0
+1726,35,833.92,6317.94,12,M,informal,Usulutan,169,1
+1727,20,1118.55,2777.22,48,M,informal,Usulutan,0,0
+1728,22,1017.36,11992.33,60,M,formal,San Salvador,63,1
+1729,25,778.84,3233.02,12,F,formal,Sonsonate,5,0
+1730,56,489.52,4536.02,48,M,independiente,Usulutan,5,0
+1731,56,1452.7,13347.82,12,F,informal,San Miguel,55,1
+1732,31,1515.16,5748.27,24,F,informal,San Miguel,0,0
+1733,37,552.41,2505.47,48,F,formal,Usulutan,15,0
+1734,50,496.27,5300.09,24,M,informal,Usulutan,10,0
+1735,29,453.18,1441.32,12,F,independiente,Usulutan,0,0
+1736,39,511.29,6922.42,24,M,informal,Santa Ana,39,1
+1737,63,992.08,11902.47,24,M,formal,Sonsonate,5,0
+1738,52,520.61,1115.19,36,M,formal,San Miguel,0,0
+1739,35,344.18,5132.89,36,F,informal,San Salvador,94,1
+1740,42,817.64,4787.27,36,M,formal,La Libertad,15,0
+1741,34,627.8,5917.79,12,M,independiente,Usulutan,10,0
+1742,24,928.92,9546.75,48,M,informal,La Libertad,10,0
+1743,53,485.31,3199.54,48,M,formal,La Libertad,10,0
+1744,36,1577.14,23409.87,36,F,independiente,La Libertad,30,0
+1745,32,1244.59,8845.71,12,M,formal,Usulutan,5,0
+1746,20,445.73,2286.56,12,F,informal,Usulutan,15,0
+1747,45,989.44,13890.31,24,F,formal,Usulutan,15,0
+1748,54,677.86,4927.57,48,M,formal,Santa Ana,0,0
+1749,26,1434.06,4732.57,48,F,informal,Sonsonate,30,0
+1750,43,1037.72,14040.01,24,M,formal,San Miguel,10,0
+1751,29,793.94,11076.54,24,F,formal,Santa Ana,10,0
+1752,21,572.87,4814.53,60,F,independiente,Usulutan,15,0
+1753,20,539.65,7172.39,60,M,formal,Usulutan,30,0
+1754,48,555.58,1893.86,24,M,formal,San Miguel,30,0
+1755,29,403.63,5960.07,24,F,formal,Sonsonate,170,1
+1756,65,1209.73,5220.74,12,M,informal,Usulutan,5,0
+1757,41,1207.38,6242.34,60,F,formal,San Salvador,30,0
+1758,69,1012.84,7142.04,48,F,formal,Santa Ana,15,0
+1759,46,390.58,4150.44,12,F,informal,Sonsonate,108,1
+1760,50,787.49,9235.23,48,F,informal,San Miguel,0,0
+1761,55,2064.86,16434.8,36,M,formal,San Miguel,76,1
+1762,44,1590.37,11464.68,24,F,formal,Usulutan,140,1
+1763,29,207.51,1131.93,48,M,formal,Sonsonate,15,0
+1764,19,1170.75,9933.93,48,M,formal,San Miguel,0,0
+1765,47,782.49,10708.33,24,M,formal,Santa Ana,0,0
+1766,41,543.14,3064.7,12,M,formal,Santa Ana,106,1
+1767,65,484.12,4129.19,12,F,formal,La Libertad,78,1
+1768,61,1258.58,12905.56,12,M,formal,Santa Ana,144,1
+1769,52,347.93,4151.63,12,F,informal,San Salvador,173,1
+1770,41,189.51,1663.7,48,M,formal,Sonsonate,30,0
+1771,42,299.8,1474.43,48,F,formal,Usulutan,15,0
+1772,43,373.26,3304.62,48,F,informal,Sonsonate,123,1
+1773,27,446.45,2909.05,48,M,informal,Usulutan,0,0
+1774,27,2067.16,5689.84,24,F,independiente,La Libertad,15,0
+1775,34,289.44,3533.36,36,M,formal,Santa Ana,0,0
+1776,69,580.33,4009.71,48,M,formal,San Miguel,30,0
+1777,29,535.4,7476.0,12,M,formal,San Salvador,10,0
+1778,38,1093.61,6908.5,48,F,informal,La Libertad,0,0
+1779,53,438.56,2227.54,48,F,formal,Sonsonate,163,1
+1780,46,1251.52,6289.69,24,M,formal,San Salvador,15,0
+1781,37,299.77,2754.36,60,F,formal,Sonsonate,30,0
+1782,66,654.51,5878.2,48,F,formal,La Libertad,30,0
+1783,32,587.48,7823.76,24,M,pensionado,Usulutan,110,1
+1784,59,1226.35,10379.27,36,F,informal,San Salvador,133,1
+1785,37,896.9,10915.8,36,M,formal,San Miguel,0,0
+1786,57,487.86,5839.01,60,F,formal,Santa Ana,10,0
+1787,31,779.24,4416.45,60,F,formal,Usulutan,15,0
+1788,27,1268.5,3262.95,36,M,independiente,Usulutan,0,0
+1789,35,1211.63,9552.47,12,M,informal,San Miguel,163,1
+1790,70,1530.86,16210.62,36,F,independiente,La Libertad,10,0
+1791,43,492.21,1445.75,60,F,informal,San Salvador,0,0
+1792,41,529.43,6113.01,36,M,informal,San Salvador,153,1
+1793,36,1299.68,18048.07,12,M,independiente,Santa Ana,57,1
+1794,68,504.51,6081.52,36,F,formal,La Libertad,10,0
+1795,58,325.65,3592.66,24,M,formal,La Libertad,90,1
+1796,36,1137.22,8478.21,60,M,informal,La Libertad,168,1
+1797,37,293.29,1901.7,48,M,informal,La Libertad,10,0
+1798,34,661.51,2163.45,48,M,informal,San Salvador,0,0
+1799,50,1048.88,14360.1,36,F,informal,San Miguel,33,1
+1800,33,629.76,5183.67,60,M,formal,San Salvador,5,0
+1801,53,510.9,7395.67,36,F,informal,Usulutan,159,1
+1802,22,369.63,4290.62,24,F,formal,San Miguel,0,0
+1803,68,217.94,3054.22,36,F,independiente,Santa Ana,15,0
+1804,58,734.91,2867.75,48,M,formal,San Salvador,10,0
+1805,40,884.5,12922.47,48,M,formal,Sonsonate,0,0
+1806,46,947.24,12835.94,12,M,formal,La Libertad,30,0
+1807,41,1373.16,18933.43,36,F,informal,Sonsonate,57,1
+1808,61,396.49,3904.21,36,M,informal,Usulutan,38,1
+1809,39,362.33,751.47,48,M,formal,Sonsonate,5,0
+1810,42,671.65,5411.39,36,F,formal,Usulutan,5,0
+1811,61,1648.11,15268.21,48,F,formal,San Salvador,5,0
+1812,61,1214.92,15376.11,24,F,informal,Santa Ana,0,0
+1813,48,1568.68,8844.24,60,F,independiente,San Miguel,0,0
+1814,53,944.79,13166.48,48,F,informal,San Salvador,180,1
+1815,32,183.5,2035.25,12,F,pensionado,Usulutan,61,1
+1816,60,1010.91,4104.27,36,F,formal,Sonsonate,0,0
+1817,65,878.82,2201.07,12,F,informal,La Libertad,0,0
+1818,46,430.44,6204.2,12,M,informal,San Salvador,31,1
+1819,30,522.23,2718.89,48,F,formal,La Libertad,0,0
+1820,21,751.84,3666.76,60,M,formal,San Salvador,10,0
+1821,48,361.63,5100.65,48,F,independiente,San Salvador,0,0
+1822,27,1491.49,13717.75,24,F,formal,La Libertad,15,0
+1823,37,710.46,9402.17,24,F,formal,San Miguel,124,1
+1824,42,1154.93,11408.14,24,M,formal,La Libertad,0,0
+1825,58,1276.33,5077.08,48,M,formal,Sonsonate,118,1
+1826,63,655.27,5974.13,24,M,formal,San Miguel,10,0
+1827,29,526.79,1686.19,60,F,formal,Sonsonate,0,0
+1828,61,942.13,2752.76,12,F,informal,Sonsonate,123,1
+1829,54,615.79,7551.86,36,F,informal,Sonsonate,15,0
+1830,47,744.59,9872.06,60,F,independiente,La Libertad,111,1
+1831,67,833.96,4976.95,36,F,formal,San Salvador,0,0
+1832,41,507.37,5674.22,48,F,informal,Usulutan,5,0
+1833,70,953.55,13963.66,24,M,informal,Usulutan,15,0
+1834,54,925.58,7868.09,24,M,formal,Sonsonate,157,1
+1835,32,1752.35,13497.87,48,F,formal,San Miguel,116,1
+1836,64,671.03,9091.57,48,M,informal,Sonsonate,5,0
+1837,46,653.52,4229.67,48,F,formal,San Miguel,30,0
+1838,63,482.08,5929.24,24,F,pensionado,Santa Ana,140,1
+1839,36,922.23,9016.76,36,F,informal,Usulutan,15,0
+1840,68,293.48,681.72,48,M,informal,Santa Ana,10,0
+1841,51,459.6,4960.09,60,M,independiente,Usulutan,15,0
+1842,52,367.68,3786.58,36,M,informal,Usulutan,44,1
+1843,25,618.51,4477.6,12,F,informal,Usulutan,15,0
+1844,55,883.42,11661.63,48,F,pensionado,San Salvador,0,0
+1845,27,575.45,4031.01,12,M,informal,La Libertad,54,1
+1846,29,1025.95,3311.97,60,M,formal,Usulutan,10,0
+1847,26,440.68,2139.72,60,M,informal,La Libertad,30,0
+1848,37,1875.37,12020.52,12,M,pensionado,San Salvador,0,0
+1849,38,366.91,4454.92,12,F,pensionado,San Miguel,180,1
+1850,55,1440.86,18450.69,36,M,independiente,San Miguel,10,0
+1851,28,1014.06,2988.31,36,M,informal,Sonsonate,0,0
+1852,63,872.44,9031.17,60,M,formal,San Salvador,90,1
+1853,68,751.92,5171.28,48,F,independiente,Santa Ana,150,1
+1854,66,584.02,1851.71,12,M,informal,Usulutan,15,0
+1855,41,813.29,5151.29,24,F,pensionado,San Miguel,10,0
+1856,23,980.17,12172.81,36,F,formal,San Miguel,5,0
+1857,20,1469.79,17835.34,12,F,independiente,Santa Ana,163,1
+1858,22,521.76,6302.07,60,F,informal,San Miguel,0,0
+1859,48,682.77,3288.85,60,M,informal,Sonsonate,39,1
+1860,57,1345.2,4145.94,36,M,informal,La Libertad,156,1
+1861,49,2558.2,29444.52,48,M,formal,La Libertad,5,0
+1862,70,1063.51,9445.77,36,F,formal,La Libertad,0,0
+1863,62,573.68,7071.52,12,F,formal,San Miguel,104,1
+1864,32,728.61,2674.19,24,M,independiente,Sonsonate,106,1
+1865,34,1389.62,18040.01,24,M,independiente,San Salvador,0,0
+1866,65,1009.55,12089.0,48,M,pensionado,La Libertad,10,0
+1867,58,2041.19,16130.41,48,M,independiente,San Salvador,0,0
+1868,30,974.57,3001.13,24,M,informal,San Miguel,141,1
+1869,55,2365.5,10194.57,60,M,formal,San Miguel,0,0
+1870,44,2709.59,15972.02,60,F,formal,San Miguel,0,0
+1871,67,833.62,3389.47,12,M,formal,San Miguel,0,0
+1872,32,585.0,3998.62,48,M,informal,Sonsonate,136,1
+1873,54,1062.05,6457.53,48,M,formal,San Miguel,133,1
+1874,46,1567.89,12556.94,48,M,independiente,La Libertad,47,1
+1875,27,480.39,2230.06,24,M,formal,La Libertad,0,0
+1876,63,322.64,1864.75,24,M,formal,San Salvador,0,0
+1877,54,2350.86,17738.64,36,M,formal,Sonsonate,30,0
+1878,66,245.81,2060.36,12,F,formal,Santa Ana,39,1
+1879,38,1132.22,12797.28,60,M,pensionado,La Libertad,30,0
+1880,36,480.72,4089.04,48,F,independiente,San Miguel,5,0
+1881,56,854.0,3339.65,36,M,informal,San Miguel,172,1
+1882,66,1323.31,4896.05,48,M,formal,La Libertad,10,0
+1883,42,827.31,7601.84,36,F,formal,San Salvador,15,0
+1884,38,522.67,3628.81,12,M,formal,San Miguel,0,0
+1885,35,1276.2,15753.88,36,F,formal,La Libertad,0,0
+1886,69,840.56,10843.33,12,F,formal,San Salvador,106,1
+1887,51,232.43,2376.58,60,F,formal,San Miguel,10,0
+1888,48,950.06,6846.51,48,M,informal,San Miguel,0,0
+1889,37,616.75,5008.7,60,F,pensionado,San Miguel,15,0
+1890,50,1488.64,14333.31,48,F,formal,Sonsonate,30,0
+1891,38,893.27,12732.55,36,F,independiente,San Salvador,58,1
+1892,67,513.03,7231.94,36,F,independiente,Sonsonate,15,0
+1893,40,954.3,8783.14,24,F,informal,Usulutan,136,1
+1894,68,1012.15,7711.87,24,F,formal,San Miguel,30,0
+1895,28,467.39,4466.83,12,M,formal,La Libertad,0,0
+1896,30,672.43,4733.51,24,M,informal,San Miguel,59,1
+1897,41,1460.11,4735.91,60,M,formal,San Salvador,0,0
+1898,63,523.36,1448.1,48,M,formal,San Salvador,15,0
+1899,19,1058.65,8404.53,24,F,informal,San Salvador,30,0
+1900,41,402.55,4742.3,48,F,informal,San Salvador,70,1
+1901,53,770.96,2207.11,48,M,informal,Usulutan,41,1
+1902,60,951.69,4900.83,12,M,independiente,San Miguel,15,0
+1903,35,1300.06,3860.26,12,M,independiente,Santa Ana,137,1
+1904,40,2195.74,21842.15,12,F,informal,La Libertad,171,1
+1905,27,1060.18,12779.47,24,F,formal,Usulutan,10,0
+1906,46,589.36,1425.27,36,F,formal,Sonsonate,0,0
+1907,23,304.6,1058.56,36,F,informal,San Miguel,30,0
+1908,21,657.02,6023.27,12,M,independiente,San Miguel,15,0
+1909,22,185.74,2023.58,60,F,formal,Usulutan,31,1
+1910,33,460.61,6408.16,24,M,formal,San Salvador,0,0
+1911,66,690.02,3391.11,12,M,informal,Santa Ana,15,0
+1912,26,1499.5,16330.08,36,M,independiente,La Libertad,113,1
+1913,30,819.39,8510.22,60,F,formal,Usulutan,15,0
+1914,59,701.73,8105.76,60,F,formal,Santa Ana,15,0
+1915,57,869.89,8819.32,24,M,independiente,San Miguel,0,0
+1916,65,957.77,12462.84,36,F,independiente,Usulutan,0,0
+1917,69,755.36,10860.51,24,F,formal,Santa Ana,178,1
+1918,58,775.21,4224.22,24,M,independiente,Usulutan,0,0
+1919,42,1657.02,11849.64,12,M,formal,La Libertad,5,0
+1920,62,516.51,7375.01,12,F,formal,San Miguel,0,0
+1921,61,884.74,13150.9,48,M,informal,San Salvador,15,0
+1922,24,617.31,5434.07,12,F,formal,La Libertad,30,0
+1923,35,1368.59,6252.61,60,F,independiente,Sonsonate,10,0
+1924,19,340.78,4394.49,24,M,formal,San Salvador,5,0
+1925,58,310.25,965.9,48,M,informal,San Miguel,159,1
+1926,58,393.05,4879.36,24,F,informal,Sonsonate,39,1
+1927,51,877.12,4402.79,48,F,formal,San Salvador,0,0
+1928,24,1154.97,14145.03,12,F,formal,San Salvador,0,0
+1929,53,1749.14,19404.62,24,F,formal,Sonsonate,30,0
+1930,50,1141.09,16617.36,60,F,formal,Santa Ana,111,1
+1931,37,1152.46,11451.66,60,M,formal,La Libertad,0,0
+1932,69,774.54,4487.89,36,F,formal,San Salvador,30,0
+1933,55,423.8,3552.49,36,M,independiente,La Libertad,5,0
+1934,57,1236.43,8676.6,48,F,formal,La Libertad,10,0
+1935,19,409.31,4695.84,60,F,informal,Santa Ana,10,0
+1936,43,513.46,5048.37,48,M,informal,La Libertad,40,1
+1937,32,1558.03,12283.02,24,F,formal,Santa Ana,15,0
+1938,48,1028.52,3055.91,36,M,formal,La Libertad,5,0
+1939,56,2334.31,32289.05,48,F,independiente,San Miguel,10,0
+1940,62,1124.74,15022.37,12,F,independiente,San Salvador,0,0
+1941,44,595.43,7265.24,48,M,formal,Usulutan,10,0
+1942,61,480.31,2155.34,60,M,formal,San Miguel,0,0
+1943,49,477.68,3702.15,48,M,formal,San Miguel,0,0
+1944,68,755.93,11237.98,48,F,formal,Usulutan,15,0
+1945,48,528.09,3557.23,48,F,formal,Usulutan,30,0
+1946,37,608.91,5993.98,48,F,formal,San Salvador,15,0
+1947,60,817.36,6462.36,24,F,independiente,Usulutan,10,0
+1948,43,614.24,5298.34,12,M,pensionado,Usulutan,30,0
+1949,27,633.67,9243.7,12,M,informal,Sonsonate,169,1
+1950,59,964.72,10726.16,48,M,informal,La Libertad,10,0
+1951,27,626.3,2677.0,12,M,informal,San Salvador,149,1
+1952,36,1146.02,2943.34,60,M,formal,La Libertad,0,0
+1953,37,1303.66,5665.14,60,F,formal,Sonsonate,30,0
+1954,33,791.57,3982.78,36,M,informal,Usulutan,10,0
+1955,30,999.89,8364.15,12,F,informal,Santa Ana,70,1
+1956,31,771.94,10623.87,36,F,formal,San Miguel,5,0
+1957,23,1645.61,18585.71,36,M,informal,San Miguel,60,1
+1958,62,579.05,7997.42,48,M,informal,San Miguel,73,1
+1959,26,777.11,8694.48,24,M,independiente,Sonsonate,78,1
+1960,39,515.49,4200.0,36,M,informal,La Libertad,40,1
+1961,25,642.32,8364.7,60,F,pensionado,La Libertad,98,1
+1962,30,1165.95,11895.81,48,M,independiente,Usulutan,46,1
+1963,62,342.68,1058.04,24,F,informal,Usulutan,177,1
+1964,57,563.5,5752.42,24,F,formal,Santa Ana,0,0
+1965,64,604.35,3726.97,60,M,independiente,Sonsonate,5,0
+1966,41,2872.44,34184.31,24,M,informal,San Miguel,60,1
+1967,21,1147.53,4972.78,12,M,independiente,San Miguel,58,1
+1968,65,753.83,2698.32,60,M,independiente,Santa Ana,0,0
+1969,56,778.02,9333.63,48,M,informal,Sonsonate,177,1
+1970,33,992.03,9335.39,24,M,formal,Usulutan,0,0
+1971,53,712.91,9672.69,24,F,informal,San Miguel,104,1
+1972,35,402.01,3018.86,48,M,formal,San Miguel,10,0
+1973,28,642.84,1923.7,36,F,pensionado,San Salvador,10,0
+1974,36,1670.59,21013.14,24,M,informal,Santa Ana,44,1
+1975,62,798.07,9046.62,24,F,informal,Usulutan,30,0
+1976,25,329.87,4183.35,12,M,formal,Santa Ana,137,1
+1977,70,706.79,10147.82,36,M,independiente,Santa Ana,15,0
+1978,37,846.89,5579.45,48,F,independiente,San Miguel,10,0
+1979,33,677.53,2547.04,48,F,formal,San Salvador,0,0
+1980,50,1295.44,8424.27,12,F,formal,Santa Ana,5,0
+1981,48,662.72,7616.08,48,F,formal,San Salvador,0,0
+1982,56,491.68,2492.64,60,M,informal,La Libertad,0,0
+1983,52,691.24,9469.54,48,M,formal,Sonsonate,0,0
+1984,52,1266.67,17729.47,24,F,independiente,Sonsonate,180,1
+1985,40,606.2,3543.66,24,F,independiente,La Libertad,10,0
+1986,53,774.9,10867.04,60,M,formal,La Libertad,0,0
+1987,62,496.61,1243.43,24,M,independiente,La Libertad,0,0
+1988,69,731.62,10730.36,12,F,informal,La Libertad,0,0
+1989,34,872.27,10882.32,48,M,formal,Santa Ana,0,0
+1990,41,1338.64,6262.46,60,M,formal,Sonsonate,0,0
+1991,29,1020.84,12210.82,12,F,formal,La Libertad,126,1
+1992,51,824.29,4592.58,12,F,formal,San Salvador,0,0
+1993,56,861.77,8362.68,12,F,formal,La Libertad,5,0
+1994,39,632.29,3148.92,60,F,informal,San Salvador,112,1
+1995,59,651.77,5532.86,60,M,formal,San Miguel,5,0
+1996,32,490.21,5145.64,48,F,independiente,San Salvador,53,1
+1997,31,717.94,3322.51,60,F,informal,San Salvador,0,0
+1998,66,1210.96,6122.41,60,M,informal,San Salvador,87,1
+1999,20,1625.66,19751.56,24,F,independiente,Sonsonate,15,0
+2000,48,1366.05,4895.3,48,F,independiente,Santa Ana,0,0

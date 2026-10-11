@@ -1,0 +1,28 @@
+// Prueba de la anonimización (sin IA): boxlang probar-anonimizacion.bxs
+import models.Catalogo
+import models.IngenieroDatos
+cat = new Catalogo( true, "sal-demo" )
+tabs = cat.registrarArchivo( expandPath( "./pruebas/fuentes/clientes_sv.xlsx" ), "clientes_sv", "subida" )
+println( tabs )
+for ( a in cat.informeAnonimizacion() ) println( "  #a.tabla#.#a.columna# -> #a.tipo# | #a.metodo# | #a.valores#" )
+r = cat.consultar( "SELECT * FROM clientes_sv_clientes" )
+println( jsonSerialize( r.resultado.slice( 1, 2 ) ) )
+// JOIN por DUI pseudonimizado sigue funcionando
+j = cat.consultar( "SELECT c.Segmento, COUNT(*) AS compras, SUM(p.Monto_US) AS total FROM clientes_sv_clientes c, clientes_sv_compras p WHERE c.DUI = p.DUI_cliente GROUP BY c.Segmento" )
+println( j.error ?: jsonSerialize( j.resultado ) )
+println( cat.tabla( "clientes_sv_compras" ).columnList )
+ing = new IngenieroDatos( cat )
+d = ing.diagnosticar( "clientes_sv_clientes", true )
+println( "calidad #d.puntaje_calidad#: " & d.problemas.map( p => p.columna & ":" & p.problema ).toList( " | " ) )
+an = cat.getAnonimizador()
+p1 = r.resultado[1].DUI
+println( "reidentificar #p1# -> " & an.reidentificar( p1 ) )
+println( an.anonimizarRespuesta( "[{'nombre': 'Ana López', 'dui': '01234567-8', 'nota': 'tel 7777-8888 ana@x.com', 'monto': 12.5}]" ) )
+// sin anonimizar
+c2 = new Catalogo( false ); c2.registrarArchivo( expandPath( "./pruebas/fuentes/clientes_sv.xlsx" ), "x" )
+println( "sin anon: " & c2.consultar( "SELECT DUI FROM x_clientes" ).resultado[1].DUI )
+// los otros archivos de prueba no deben cambiar
+c3 = new Catalogo()
+for ( f in [ "ventas_erp.xlsx", "cobros_es.csv", "inventario.json", "sensores.tsv" ] ) { c3.registrarArchivo( expandPath( "./pruebas/fuentes/" & f ) ) }
+c3.registrarArchivo( expandPath( "./data/creditos.csv" ) )
+for ( a in c3.informeAnonimizacion() ) println( "  otros: #a.tabla#.#a.columna# -> #a.tipo#" )

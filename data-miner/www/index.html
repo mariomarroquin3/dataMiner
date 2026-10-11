@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data Miner · Equipo de agentes</title>
+<style>
+  :root{--bg:#0b1020;--panel:#131a2e;--line:#26304d;--txt:#e6e9f2;--mut:#8b93ad;--acc:#7c83ff;--ok:#34d399;--bad:#f87171;--warn:#fbbf24}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--txt)}
+  main{max-width:1000px;margin:0 auto;padding:24px 16px}
+  h1{margin:0 0 4px;font-size:1.6rem} .sub{color:var(--mut);margin:0 0 16px}
+  .flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.8rem;color:var(--mut);margin-bottom:16px}
+  .flow span{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:4px 10px;color:var(--txt)}
+  .bar{display:flex;gap:8px;flex-wrap:wrap} textarea{flex:1;min-width:240px;min-height:64px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font:inherit;resize:vertical}
+  button{padding:12px 16px;border:0;border-radius:10px;background:var(--acc);color:#fff;font-weight:600;cursor:pointer} button:disabled{opacity:.5;cursor:wait}
+  .chips{margin-top:8px} .chips button{background:transparent;border:1px solid var(--line);color:var(--txt);font-weight:400;padding:6px 10px;margin:4px 4px 0 0;border-radius:20px;font-size:.85rem}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:16px}
+  .card h3{margin:0 0 10px;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+  .resp{font-size:1.1rem;line-height:1.5}
+  .tbl{display:inline-block;border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin:3px;font-size:.8rem} .tbl b{color:var(--acc)}
+  .hecho{border-left:3px solid var(--ok);padding:6px 10px;margin:8px 0} .hecho.bad{border-color:var(--bad)}
+  .hecho code{display:block;color:var(--mut);font-size:.8rem;margin-top:4px;white-space:pre-wrap}
+  .interp{border-left:3px solid var(--warn);padding:6px 10px;margin:8px 0}
+  .tag{font-size:.7rem;font-weight:700;padding:2px 6px;border-radius:6px;margin-right:6px}
+  .ok{background:#064e3b;color:var(--ok)} .no{background:#4c1d1d;color:var(--bad)} .it{background:#4a3a06;color:var(--warn)}
+  .step{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.85rem} .step:last-child{border:0}
+  .step .ico{width:24px;text-align:center} .step code{color:var(--mut);white-space:pre-wrap;word-break:break-word}
+  .mut{color:var(--mut);font-size:.85rem}
+  .up{display:inline-block;padding:10px 14px;border:1px dashed var(--acc);border-radius:10px;cursor:pointer;margin:0 8px 6px 0} .up input{display:none}
+  #drop.over{border-color:var(--acc)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:10px} .q b.p{font-size:1.3rem}
+  .sev{font-size:.7rem;font-weight:700;padding:1px 6px;border-radius:6px;margin-right:6px} .alta{background:#4c1d1d;color:var(--bad)} .media{background:#4a3a06;color:var(--warn)} .baja{background:#1e293b;color:var(--mut)}
+  .anon{margin:6px 0 2px;padding:6px 8px;border-radius:8px;background:#0f2a22;color:#a7f3d0;font-size:.82rem} .anon code{color:#d1fae5}
+  .q li{margin:4px 0;font-size:.85rem} .q li i{color:var(--mut);font-style:normal;display:block;margin-left:4px}
+  iframe{width:100%;height:900px;border:0;border-radius:10px;background:#fff}
+  a.btn{display:inline-block;padding:8px 12px;border-radius:8px;background:var(--acc);color:#fff;text-decoration:none;font-size:.85rem;margin:0 6px 10px 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>⛏️ Data Miner · Equipo de agentes</h1>
+  <p class="sub">Datos desconocidos: sube CSV, Excel o JSON (los datos personales se anonimizan al entrar), o tráelos de Kaggle, Google Drive o una base vía MCP. Cada hecho se verifica re-ejecutando su SQL.</p>
+  <div class="flow"><span>🔒 Anonimización</span>→<span>🧭 Coordinador</span>→<span>🛠️ Datos: adquisición, perfil y calidad</span><span>📊 Analista: SQL, MCP, estadística</span><span>🤖 Científico ML</span>→<span>✅ Verificación</span>→<span>📄 Informe</span></div>
+  <div class="bar">
+    <textarea id="q" placeholder="Ej: Busca en Kaggle un dataset de ventas, entiéndelo y dime qué región vende más"></textarea>
+    <button id="go">Ejecutar misión</button>
+  </div>
+  <div class="chips" id="ej">
+    <button>Perfila los datos cargados y dame los 3 hallazgos más importantes</button>
+    <button>Revisa la calidad de los datos, límpialos y dime cómo recolectarlos mejor</button>
+    <button>Propón el esquema SQL para llevar estas tablas a una base de datos</button>
+    <button>¿Qué productos se van a agotar y cuánto debo pedir?</button>
+    <button>¿Qué oportunidades de venta debo priorizar esta semana?</button>
+    <button>¿Qué segmento de clientes compra más? Une clientes_sv_clientes y clientes_sv_compras</button>
+    <button>¿Qué departamento tiene más mora en creditos?</button>
+    <button>Explora la base de datos MCP y dime qué tablas tiene y qué insight encuentras</button>
+    <button>Calcula correlaciones (Pearson y Spearman) y la covarianza de creditos y grafica las más fuertes</button>
+    <button>Predice impago con Random Forest y compáralo con regresión logística y un árbol</button>
+    <button>Compara regresión lineal, ridge, lasso y polinomial para predecir monto_credito</button>
+    <button>Calcula retorno, volatilidad, Sharpe, drawdown y VaR de la tabla precios (columna precio, fecha)</button>
+    <button>Descarga https://docs.google.com/spreadsheets/d/TU_ID/edit y resúmelo</button>
+  </div>
+  <div class="card" id="drop"><h3>Sube tus datos</h3>
+    <label class="up"><input type="file" id="archivos" multiple accept=".csv,.tsv,.txt,.xlsx,.xlsm,.xls,.json,.zip"> 📂 Elegir o arrastrar archivos</label>
+    <span class="mut">CSV (con , ; tab o |), TSV, Excel (cada hoja es una tabla), JSON o un ZIP con varios</span>
+    <div id="calidad"></div></div>
+  <div class="card"><h3>Tablas disponibles</h3><div id="tablas" class="mut">Cargando…</div><div id="mcp" class="mut" style="margin-top:6px"></div></div>
+  <div id="out"></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const icono = e => e.sql.startsWith('anonimizar') ? '🔒' : e.sql.startsWith('descarga') ? '📥' : e.sql.startsWith('perfilar') ? '🔬' : /^(ml|entrenar|comparar|predecir)/i.test(e.sql) ? '🤖' : /^stock\./i.test(e.sql) ? '📦' : /^ventas\./i.test(e.sql) ? '🎯' : /^(estad|correl|covar|describ|finanz)/i.test(e.sql) ? '📈' : /^(calidad|limpiar|esquema|fuga|consejos)/i.test(e.sql) ? '🛠️' : e.fuente === 'mcp' ? '🗄️' : '📊';
+
+let lastMcp = '';
+function tablas(d) {
+  lastMcp = d.mcp || lastMcp;
+  $('#tablas').innerHTML = (d.tablas || []).map(t => `<span class="tbl"><b>${esc(t.tabla)}</b> · ${t.filas} filas · ${esc(t.fuente)}</span>`).join('') || 'Ninguna';
+  $('#mcp').textContent = lastMcp ? `🗄️ Base remota conectada vía MCP: ${lastMcp}` : 'Sin base MCP (define MCP_DB_URL)';
+}
+fetch('api/mision.bxm').then(r => r.json()).then(tablas);
+
+function render(d) {
+  if (d.error) { $('#out').innerHTML = `<div class="card">⚠️ ${esc(d.error)}</div>`; return; }
+  tablas(d);
+  const hechos = (d.hechos || []).map(h => `<div class="hecho ${h.verificado ? '' : 'bad'}">
+      <span class="tag ${h.verificado ? 'ok' : 'no'}">${h.verificado ? '✓ VERIFICADO' : '✗ NO VERIFICADO'}</span>${esc(h.afirmacion)}
+      <code>[${esc(h.origen || 'csv')}] ${esc(h.sql)}${h.verificado ? '' : '\n→ ' + esc(h.nota)}</code></div>`).join('');
+  const interp = (d.interpretaciones || []).map(i => `<div class="interp"><span class="tag it">INTERPRETACIÓN</span>${esc(i)}</div>`).join('');
+  const pasos = (d.evidencia || []).map(e => `<div class="step"><div class="ico">${icono(e)}</div><div><code>${esc(e.sql)}</code>
+      <div class="mut">${e.error ? '⚠️ ' + esc(e.error) : (e.filas !== '' ? e.filas + ' filas' : '')}</div></div></div>`).join('');
+  const next = (d.siguientes_preguntas || []).map(q => `<button>${esc(q)}</button>`).join('');
+  $('#out').innerHTML = `
+    <div class="card"><h3>Respuesta · ${esc(d.provider)}${d.formato ? " · " + esc(d.formato) : ""}</h3><div class="resp">${esc(d.respuesta)}</div></div>
+    ${(d.anonimizacion || []).length ? `<div class="card"><h3>🔒 Privacidad</h3><div class="anon">La IA trabajó con datos anonimizados: ${d.anonimizacion.map(a => `<code>${esc(a.tabla)}.${esc(a.columna)}</code> (${esc(a.tipo)})`).join(', ')}</div></div>` : ''}
+    <div class="card"><h3>Hechos vs interpretaciones</h3>${hechos || '<span class="mut">Sin hechos</span>'}${interp}</div>
+    ${(d.graficos || []).length ? `<div class="card"><h3>Informe con ${d.graficos.length} gráficas</h3>
+      <a class="btn" href="api/informe.bxm?descargar=1">⬇️ Descargar informe</a><a class="btn" href="api/informe.bxm" target="_blank">Abrir en otra pestaña</a>
+      <iframe src="api/informe.bxm?t=${Date.now()}"></iframe></div>` : ''}
+    <div class="card"><h3>Traza del equipo (${(d.evidencia || []).length} acciones)</h3>${pasos || '<span class="mut">Ninguna</span>'}</div>
+    ${next ? `<div class="card chips" id="next"><h3>Siguientes pasos</h3>${next}</div>` : ''}`;
+  document.querySelectorAll('#next button').forEach(b => b.onclick = () => { $('#q').value = b.textContent; run(); });
+}
+
+function calidad(r) {
+  if (r.error) { $('#calidad').innerHTML = `<div class="q">⚠️ ${esc(r.error)}</div>`; return; }
+  const err = (r.errores || []).map(e => `<div class="q">⚠️ ${esc(e)}</div>`).join('');
+  $('#calidad').innerHTML = err + (r.calidad || []).map(c => {
+    const o = c.origen || {}, det = [o.formato, o.hoja && 'hoja ' + o.hoja, o.separador && 'separador ' + o.separador, o.comaDecimal && 'coma decimal'].filter(Boolean).join(' · ');
+    const col = c.puntaje >= 85 ? 'var(--ok)' : c.puntaje >= 60 ? 'var(--warn)' : 'var(--bad)';
+    return `<div class="q"><b>${esc(c.tabla)}</b> · ${c.filas} filas <span class="mut">(${esc(det)})</span>
+      — calidad <b class="p" style="color:${col}">${c.puntaje}</b>/100 ${esc(c.nivel)}
+      ${(c.anonimizacion || []).length ? `<div class="anon">🔒 Anonimizado antes de que lo vea la IA: ${c.anonimizacion.map(a => `<code>${esc(a.columna)}</code> (${esc(a.tipo)} → ${esc(a.metodo)})`).join(', ')}</div>` : (r.anonimiza ? '<div class="anon">🔒 Sin datos personales detectados</div>' : '')}
+      <ul>${c.problemas.slice(0, 6).map(p => `<li><span class="sev ${p.severidad}">${p.severidad.toUpperCase()}</span><b>${esc(p.columna)}</b>: ${esc(p.problema)} — ${esc(p.detalle)}<i>💡 ${esc(p.recomendacion)}</i></li>`).join('')}</ul>
+      ${c.problemas.length > 6 ? `<span class="mut">+${c.problemas.length - 6} más</span>` : ''}</div>`;
+  }).join('');
+  tablas({ tablas: r.catalogo, mcp: lastMcp });
+  if ((r.tablas || []).length) $('#q').value = `Revisa la calidad de ${r.tablas.join(', ')}, límpialas si hace falta, analízalas y dime cómo recolectar mejor estos datos`;
+}
+async function subir(files) {
+  if (!files.length) return;
+  const fd = new FormData(); [...files].forEach(f => fd.append('archivo', f, f.name));
+  $('#calidad').innerHTML = '<div class="q">⏳ Cargando y revisando calidad…</div>';
+  try { calidad(await (await fetch('api/subir.bxm', { method: 'POST', body: fd })).json()); }
+  catch (e) { calidad({ error: e.message }); }
+}
+$('#archivos').onchange = e => subir(e.target.files);
+const drop = $('#drop');
+['dragover', 'dragenter'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => subir(e.dataTransfer.files));
+
+async function run() {
+  const pedido = $('#q').value.trim(); if (!pedido) return;
+  $('#go').disabled = true;
+  $('#out').innerHTML = '<div class="card">🤖 El equipo está trabajando… (datos → análisis → ML → verificación)</div>';
+  try {
+    const r = await fetch('api/mision.bxm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pedido }) });
+    render(await r.json());
+  } catch (e) { render({ error: e.message }); }
+  $('#go').disabled = false;
+}
+$('#go').onclick = run;
+document.querySelectorAll('#ej button').forEach(b => b.onclick = () => { $('#q').value = b.textContent; });
+</script>
+</body>
+</html>

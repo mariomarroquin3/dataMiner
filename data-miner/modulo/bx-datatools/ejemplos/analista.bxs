@@ -1,0 +1,29 @@
+/**
+ * Ejemplo de bx-datatools: un agente analista sobre un Excel con datos personales.
+ * Corre sin API key (proveedor mock). Con una key real, cambia el modelo:
+ *   model: aiModel( provider: "gemini" )
+ *
+ *   boxlang ejemplos/analista.bxs
+ */
+import bxModules.bxai.models.runnables.AiModel
+
+dt = new bxModules.bxdatatools.models.DataTools()
+println( "Tablas: " & dt.cargar( getDirectoryFromPath( getCurrentTemplatePath() ) & "clientes_sv.xlsx", "clientes_sv" ).toList() )
+println( "Anonimizado antes de que lo vea la IA:" )
+dt.anonimizacion().each( a => println( "  #a.tabla#.#a.columna#: #a.tipo# -> #a.metodo#" ) )
+
+// Guion del proveedor mock: así respondería un LLM (las tools sí se ejecutan de verdad)
+mock = new AiModel( aiService( "mock" ).setResponses( [
+  { toolCalls: [ { name: "ejecutar_sql", arguments: { sql: "SELECT c.Segmento, COUNT(*) AS compras, SUM(p.Monto_US) AS total FROM clientes_sv_clientes c, clientes_sv_compras p WHERE c.DUI = p.DUI_cliente GROUP BY c.Segmento ORDER BY total DESC" } } ] },
+  "Los mayoristas concentran la mayor parte de las compras. Uní clientes y compras por el DUI anonimizado."
+] ) )
+
+agente = aiAgent(
+  name        : "Analista",
+  instructions: "Eres analista de datos. Toda cifra sale de ejecutar_sql. Los datos personales vienen anonimizados: no intentes reidentificar a nadie.",
+  tools       : dt.tools( "sql,calidad" ),
+  model       : mock
+)
+println( "Respuesta: " & agente.run( "¿Qué segmento de clientes compra más?" ) )
+println( "Evidencia:" )
+dt.evidencia().each( e => println( "  " & e.sql.left( 110 ) ) )

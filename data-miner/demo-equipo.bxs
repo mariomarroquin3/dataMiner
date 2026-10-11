@@ -1,0 +1,90 @@
+/**
+ * Demo OFFLINE del equipo multiagente con el proveedor mock.
+ * Cada agente tiene un "guion" que simula lo que haría el LLM, pero las tools son REALES:
+ * descarga de Kaggle (servidor de prueba), perfilado, SQL y consultas MCP.
+ */
+import models.Catalogo
+import models.Fuentes
+import models.Equipo
+import bxModules.bxai.models.runnables.AiModel
+
+guiones = {
+  adquisicion : [ { toolCalls: [ { name: "buscar_kaggle", arguments: { texto: "ventas" } } ] },
+                  { toolCalls: [ { name: "descargar_kaggle", arguments: { ref: "demo/ventas" } } ] },
+                  "Descargué demo/ventas: tablas ventas_2025 y regiones." ],
+  perfilador  : [ { toolCalls: [ { name: "perfilar_tabla", arguments: { tabla: "ventas_2025" } } ] },
+                  "ventas_2025 tiene producto, region, unidades y precio; sin nulos." ],
+  ingeniero_datos: [ { toolCalls: [ { name: "diagnostico_calidad", arguments: { tabla: "ventas_erp_ventas" } } ] },
+                  { toolCalls: [ { name: "limpiar_tabla", arguments: { tabla: "ventas_erp_ventas" } } ] },
+                  { toolCalls: [ { name: "proponer_esquema", arguments: { tabla: "ventas_erp_ventas_limpia" } } ] },
+                  { toolCalls: [ { name: "consejos_recoleccion", arguments: { tabla: "ventas_erp_ventas", objetivo: "" } } ] },
+                  "El Excel tenía calidad 33/100: duplicados, 'Norte' escrito de 3 formas y montos como texto. Creé ventas_erp_ventas_limpia." ],
+  analista_csv: [ { toolCalls: [ { name: "ejecutar_sql", arguments: { sql: "SELECT region, SUM(unidades * precio) AS ingreso FROM ventas_2025 GROUP BY region ORDER BY ingreso DESC" } } ] },
+                  "Norte: 45, Sur: 37.5" ],
+  analista_db : [ { toolCalls: [ { name: "db_listar_tablas", arguments: {} } ] },
+                  { toolCalls: [ { name: "db_consultar", arguments: { sql: "SELECT categoria, ROUND(AVG(devuelto),3) AS tasa FROM pedidos GROUP BY categoria ORDER BY tasa DESC" } } ] },
+                  "Ropa tiene 17.2% de devoluciones." ],
+  estadistico : [ { toolCalls: [ { name: "correlacion", arguments: { tabla: "creditos", columnas: "", metodo: "pearson" } } ] },
+                  { toolCalls: [ { name: "graficar_sql", arguments: { tipo: "bar", sql: "SELECT tipo_empleo, AVG(impago) AS tasa FROM creditos GROUP BY tipo_empleo", x: "tipo_empleo", y: "tasa", titulo: "Impago por tipo de empleo" } } ] },
+                  "dias_mora_max e impago tienen correlación fuerte (0.87)." ],
+  cientifico_ml: [ { toolCalls: [ { name: "comparar_modelos", arguments: { tabla: "creditos", objetivo: "impago", tipos: "logistica,random_forest", features: "edad,ingreso_mensual,monto_credito,plazo_meses,tipo_empleo" } } ] },
+                  { toolCalls: [ { name: "predecir", arguments: { nombreModelo: "random_forest_impago", valoresJson: '{"edad":22,"ingreso_mensual":300,"monto_credito":4000,"plazo_meses":12,"tipo_empleo":"informal"}' } } ] },
+                  "Random Forest supera a la línea base." ],
+  coordinador : [ { toolCalls: [ { name: "delegate_to_adquisicion", arguments: { task: "Consigue un dataset de ventas en Kaggle" } } ] },
+                  { toolCalls: [ { name: "delegate_to_perfilador", arguments: { task: "Perfila ventas_2025" } } ] },
+                  { toolCalls: [ { name: "delegate_to_ingenierodatos", arguments: { task: "Revisa la calidad del Excel del ERP, límpialo y dame consejos de recolección" } } ] },
+                  { toolCalls: [ { name: "delegate_to_analistacsv", arguments: { task: "¿Qué región vende más?" } } ] },
+                  { toolCalls: [ { name: "delegate_to_analistadb", arguments: { task: "¿Qué categoría tiene más devoluciones?" } } ] },
+                  { toolCalls: [ { name: "delegate_to_estadistico", arguments: { task: "Correlaciones en creditos" } } ] },
+                  { toolCalls: [ { name: "delegate_to_cientificoml", arguments: { task: "Predice impago en creditos" } } ] },
+                  '{"respuesta":"Norte genera más ingreso y ropa concentra las devoluciones.","hechos":[{"afirmacion":"Norte ingresa 45 vs 37.5 de Sur","sql":"SELECT region, SUM(unidades * precio) AS ingreso FROM ventas_2025 GROUP BY region","origen":"csv"},{"afirmacion":"Ropa: 17.2% de devoluciones","sql":"SELECT categoria, AVG(devuelto) AS tasa FROM pedidos GROUP BY categoria","origen":"db"},{"afirmacion":"Dato inventado","sql":"SELECT nada FROM ventas_2025","origen":"csv"}],"interpretaciones":["La ropa podría tener problemas de tallas"],"siguientes_preguntas":["¿Las devoluciones cambian por mes?"]}' ]
+}
+// Guiones del modo compacto: los mismos pasos, agrupados en 3 agentes
+compacto = {
+  datos       : [ { toolCalls: [ { name: "buscar_kaggle", arguments: { texto: "ventas" } } ] },
+                  { toolCalls: [ { name: "descargar_kaggle", arguments: { ref: "demo/ventas" } } ] },
+                  { toolCalls: [ { name: "perfilar_tabla", arguments: { tabla: "ventas_2025" } } ] },
+                  { toolCalls: [ { name: "diagnostico_calidad", arguments: { tabla: "ventas_erp_ventas" } } ] },
+                  { toolCalls: [ { name: "limpiar_tabla", arguments: { tabla: "ventas_erp_ventas" } } ] },
+                  { toolCalls: [ { name: "consejos_recoleccion", arguments: { tabla: "ventas_erp_ventas", objetivo: "" } } ] },
+                  "Descargué ventas_2025. El Excel del ERP tenía calidad 33/100; creé ventas_erp_ventas_limpia." ],
+  analista    : [ { toolCalls: [ { name: "ejecutar_sql", arguments: { sql: "SELECT region, SUM(unidades * precio) AS ingreso FROM ventas_2025 GROUP BY region ORDER BY ingreso DESC" } } ] },
+                  { toolCalls: [ { name: "db_consultar", arguments: { sql: "SELECT categoria, ROUND(AVG(devuelto),3) AS tasa FROM pedidos GROUP BY categoria ORDER BY tasa DESC" } } ] },
+                  { toolCalls: [ { name: "correlacion", arguments: { tabla: "creditos", columnas: "", metodo: "pearson" } } ] },
+                  "Norte: 45; Ropa 17.2% de devoluciones; mora e impago muy correlacionados." ],
+  cientifico_ml: guiones.cientifico_ml,
+  coordinador : [ { toolCalls: [ { name: "delegate_to_datos", arguments: { task: "Consigue datos de ventas en Kaggle, entiéndelos y revisa la calidad del Excel del ERP" } } ] },
+                  { toolCalls: [ { name: "delegate_to_analista", arguments: { task: "¿Qué región vende más? ¿Qué categoría tiene más devoluciones? Correlaciones de creditos" } } ] },
+                  { toolCalls: [ { name: "delegate_to_cientificoml", arguments: { task: "Predice impago en creditos" } } ] },
+                  guiones.coordinador.last() ]
+}
+// Paso de structured output: devuelve el reporte final del coordinador con el esquema fijo
+guiones.formateador = [ guiones.coordinador.last() ]
+compacto.formateador = guiones.formateador
+modo = getSystemSetting( "EQUIPO_MODO", "compacto" )
+llamadas = 0
+modelo = ( nombre ) => {
+  var g = duplicate( ( modo == "completo" ? guiones : compacto )[ nombre ] )
+  llamadas += g.len()
+  return new AiModel( aiService( "mock" ).setResponses( g ) )
+}
+
+cat = new Catalogo()
+cat.registrarCSV( expandPath( "./data/creditos.csv" ), "creditos", "local" )
+fu  = new Fuentes( cat, expandPath( "./tmp_descargas/" ) )
+// Un Excel "sucio" de ERP (título arriba, 2 hojas, fórmulas, duplicados) además de lo que baje de Kaggle
+println( "Excel cargado: " & fu.cargarArchivo( expandPath( "./pruebas/fuentes/ventas_erp.xlsx" ), "local" ).tablas.toList() )
+eq  = new Equipo( cat, fu, modelo, getSystemSetting( "MCP_DB_URL", "" ), modo )
+println( "Modo #modo#: #llamadas# llamadas al LLM guionadas para esta misión" )
+println( "Herramientas del coordinador: " & eq.getCoordinador().getTools().map( t => t.getName() ).toList() )
+
+r = eq.mision( "Busca datos de ventas, entiéndelos y dime qué región vende más y qué categoría tiene más devoluciones" )
+println( "RESPUESTA: " & r.respuesta )
+println( "FORMATO: " & ( r.formato ?: "" ) )
+r.hechos.each( h => println( "  [#h.verificado ? 'OK' : 'X'#] #h.afirmacion# (#h.origen#) - #h.nota#" ) )
+println( "TABLAS: " & r.tablas.map( t => t.tabla & "(" & t.fuente & ")" ).toList( ", " ) )
+println( "EVIDENCIA (#r.evidencia.len()#):" )
+r.evidencia.each( e => println( "  - " & e.sql.left( 110 ) ) )
+println( "GRÁFICAS: " & r.graficos.map( g => g.tipo & ":" & g.titulo ).toList( " | " ) )
+fileWrite( expandPath( "./informe-demo.html" ), eq.informeHTML( "Informe demo" ) )
+println( "Informe guardado en informe-demo.html" )

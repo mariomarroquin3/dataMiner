@@ -1,0 +1,207 @@
+/**
+ * Anonimiza los datos ANTES de que entren al catálogo, o sea antes de que cualquier agente o LLM los vea.
+ *
+ * - Identificadores (DUI, NIT, correo, teléfono, pasaporte, tarjeta, cuenta): pseudónimo estable
+ *   (HMAC-SHA256 con una sal secreta). El mismo DUI siempre da el mismo pseudónimo, así que los JOIN,
+ *   los conteos y los duplicados siguen funcionando, pero el valor real no sale del servidor.
+ * - Nombres: Persona_xxxxxx (también estable).
+ * - Direcciones: se reducen al departamento de El Salvador si se reconoce; si no, se eliminan.
+ * - Fecha de nacimiento: se convierte en rango de edad (30-39).
+ * - Texto libre (comentarios, notas): se enmascaran DUI, NIT, correos, teléfonos y tarjetas dentro del texto.
+ *
+ * La tabla de equivalencias pseudónimo → valor real se queda en memoria del servidor (reidentificar()).
+ * Ninguna tool la expone, así que nunca llega al LLM.
+ */
+class {
+
+  property name="sal";
+  property name="mapa";
+
+  function init( string sal = "" ) {
+    variables.sal  = len( sal ) ? sal : getSystemSetting( "ANON_SALT", createUUID() )
+    variables.mapa = [:]
+    variables.re = {
+      // por nombre de columna (sin tildes, en minúscula)
+      COL_DUI      : "(^|_)(dui|documento|doc_identidad|cedula)(_|$)",
+      COL_NIT      : "(^|_)(nit|nrc|nup|isss|afp)(_|$)",
+      COL_CORREO   : "(correo|email|e_mail|mail)",
+      COL_TEL      : "(telefono|tel|celular|cel|movil|phone|whatsapp)(_|$|[0-9])",
+      COL_DOC      : "(pasaporte|passport|licencia|carnet)",
+      COL_TARJETA  : "(tarjeta|card|cuenta_banc|cuenta_bancaria|iban|num_cuenta)",
+      COL_NOMBRE   : "^(nombre|nombres|name|apellido|apellidos|cliente_nombre|nombre_cliente|nombre_completo|full_name|razon_social|contacto|empleado|titular)(_|$|[0-9])",
+      COL_DIR      : "(direccion|domicilio|address|residencia|calle)",
+      COL_NAC      : "(fecha_nac|nacimiento|f_nac|birth|fec_nac)",
+      // por contenido
+      DUI          : "^\d{8}-?\d$",
+      NIT          : "^\d{4}-?\d{6}-?\d{3}-?\d$",
+      CORREO       : "^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$",
+      TEL          : "^(\+?503[\s-]?)?[267]\d{3}[\s-]?\d{4}$",
+      // dentro de texto libre
+      T_CORREO     : "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
+      T_NIT        : "\b\d{4}-\d{6}-\d{3}-\d\b",
+      T_DUI        : "\b\d{8}-\d\b",
+      T_TARJETA    : "\b(?:\d{4}[ -]?){3}\d{4}\b",
+      T_TEL        : "(\+?503[\s-]?)?\b[267]\d{3}[\s-]?\d{4}\b"
+    }
+    variables.departamentos = [ "Ahuachapán", "Santa Ana", "Sonsonate", "Chalatenango", "La Libertad", "San Salvador",
+      "Cuscatlán", "La Paz", "Cabañas", "San Vicente", "Usulután", "San Miguel", "Morazán", "La Unión" ]
+    return this
+  }
+
+  /**
+   * Anonimiza { columnas, filas } (lo que devuelven los lectores del catálogo).
+   * Devuelve { columnas, filas, informe: [ { columna, tipo, metodo, valores } ] }
+   */
+  struct function anonimizar( required struct d ) {
+    var cols = d.columnas.map( c => normalizar( toString( c ) ) )
+    var informe = []
+    var reglas = cols.map( ( c, idx ) => {
+      var valores = d.filas.map( f => trim( toString( f[ idx ] ?: "" ) ) ).filter( v => len( v ) )
+      return clasificar( c, valores )
+    } )
+    // Un "nombre" genérico (nombre, name, contacto...) solo es dato personal si la tabla tiene además
+    // un identificador o dato de contacto: así "nombre" de un producto en un inventario no se toca
+    var hayFuerte = reglas.some( r => r.fn == "pseudo" && !( r.debil ?: false ) || r.fn == "direccion" || r.fn == "edad" )
+    if ( !hayFuerte ) reglas = reglas.map( r => ( r.debil ?: false ) ? { tipo: "texto_libre", metodo: "enmascarar", fn: "texto" } : r )
+    var filas = d.filas.map( f => {
+      var nueva = []
+      for ( var i = 1; i <= d.columnas.len(); i++ ) {
+        var v = toString( f[ i ] ?: "" )
+        // el texto libre se procesa tal cual (sin trim) para no alterar lo que no es dato personal
+      nueva.append( !len( trim( v ) ) ? v : ( reglas[ i ].fn == "texto" ? aplicar( reglas[ i ], v ) : aplicar( reglas[ i ], trim( v ) ) ) )
+      }
+      return nueva
+    } )
+    reglas.each( ( r, idx ) => {
+      if ( r.tipo == "texto_libre" ) {
+        var cambiados = 0
+        for ( var i = 1; i <= filas.len(); i++ ) { if ( filas[ i ][ idx ] != toString( d.filas[ i ][ idx ] ?: "" ) ) cambiados++ }
+        if ( cambiados ) informe.append( { idx: idx, columna: d.columnas[ idx ], tipo: "texto con datos personales", metodo: "enmascarado dentro del texto", valores: cambiados } )
+      } else if ( r.tipo != "ninguno" ) {
+        informe.append( { idx: idx, columna: d.columnas[ idx ], tipo: r.tipo, metodo: r.metodo, valores: d.filas.filter( f => len( trim( toString( f[ idx ] ?: "" ) ) ) ).len() } )
+      }
+    } )
+    return { columnas: d.columnas, filas: filas, informe: informe }
+  }
+
+  /** Enmascara datos personales dentro de un texto cualquiera (resultados de MCP, comentarios...) */
+  string function enmascararTexto( required string texto ) {
+    var t = texto
+    t = t.reReplace( variables.re.T_CORREO, "[correo]", "all" )
+    t = t.reReplace( variables.re.T_NIT, "[NIT]", "all" )
+    t = t.reReplace( variables.re.T_DUI, "[DUI]", "all" )
+    t = t.reReplace( variables.re.T_TARJETA, "[tarjeta]", "all" )
+    t = t.reReplace( variables.re.T_TEL, "[teléfono]", "all" )
+    return t
+  }
+
+  /**
+   * Para respuestas de bases de datos en texto (por ejemplo MCP: [{'nombre': 'Ana', ...}]):
+   * pseudonimiza los valores de campos con nombre de dato personal y enmascara el resto del texto.
+   */
+  string function anonimizarRespuesta( required string texto ) {
+    var t = texto
+    var patron = "(['""])([A-Za-z_]+)\1(\s*:\s*)(['""])([^'""]*)\4"
+    var salida = createObject( "java", "java.lang.StringBuilder" ).init()
+    var m = createObject( "java", "java.util.regex.Pattern" ).compile( patron ).matcher( t )
+    var ultimo = 0
+    while ( m.find() ) {
+      var regla = clasificar( normalizar( m.group( 2 ) ), [] )
+      var valor = m.group( 5 )
+      var nuevo = ( regla.tipo != "ninguno" && regla.tipo != "texto_libre" && len( valor ) ) ? aplicar( regla, valor ) : valor
+      salida.append( t.substring( ultimo, m.start( 5 ) ) ).append( nuevo )
+      ultimo = m.end( 5 )
+    }
+    salida.append( t.substring( ultimo ) )
+    return enmascararTexto( salida.toString() )
+  }
+
+  /** Solo para el usuario dueño de los datos (no es una tool): pseudónimo → valor real */
+  string function reidentificar( required string pseudonimo ) {
+    return variables.mapa[ pseudonimo ] ?: ""
+  }
+
+  /** Cuántos valores distintos se pseudonimizaron */
+  numeric function totalPseudonimos() { return variables.mapa.count() }
+
+  // ---------------------------------------------------------------------------------------------
+
+  private struct function clasificar( required string col, required array valores ) {
+    if ( col.reFind( variables.re.COL_NAC ) )     return { tipo: "fecha de nacimiento", metodo: "rango de edad", fn: "edad" }
+    if ( col.reFind( variables.re.COL_DUI ) )     return { tipo: "DUI", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "DUI" }
+    if ( col.reFind( variables.re.COL_NIT ) )     return { tipo: "NIT u otro documento fiscal", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "NIT" }
+    if ( col.reFind( variables.re.COL_CORREO ) )  return { tipo: "correo", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "correo" }
+    if ( col.reFind( variables.re.COL_TEL ) )     return { tipo: "teléfono", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "tel" }
+    if ( col.reFind( variables.re.COL_DOC ) )     return { tipo: "documento", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "doc" }
+    if ( col.reFind( variables.re.COL_TARJETA ) ) return { tipo: "tarjeta o cuenta", metodo: "pseudónimo estable", fn: "pseudo", prefijo: "cuenta" }
+    if ( col.reFind( variables.re.COL_NOMBRE ) ) {
+      var debil = !col.reFind( "(apellido|nombre_completo|full_name|cliente_nombre|nombre_cliente|nombres_y_apellidos)" )
+      return { tipo: "nombre", metodo: "pseudónimo estable (Persona_…)", fn: "pseudo", prefijo: "Persona", debil: debil }
+    }
+    if ( col.reFind( variables.re.COL_DIR ) )     return { tipo: "dirección", metodo: "reducida al departamento", fn: "direccion" }
+    // Por contenido: si 60 % o más de los valores tienen forma de DUI, NIT, correo o teléfono
+    if ( valores.len() ) {
+      var muestra = valores.len() > 200 ? valores.slice( 1, 200 ) : valores
+      var tipos = [
+        { re: variables.re.NIT, tipo: "NIT", prefijo: "NIT" },
+        { re: variables.re.DUI, tipo: "DUI", prefijo: "DUI" },
+        { re: variables.re.CORREO, tipo: "correo", prefijo: "correo" },
+        { re: variables.re.TEL, tipo: "teléfono", prefijo: "tel" }
+      ]
+      for ( var t in tipos ) {
+        if ( muestra.filter( v => v.reFind( t.re ) ).len() >= muestra.len() * 0.6 ) {
+          return { tipo: t.tipo & " (detectado por contenido)", metodo: "pseudónimo estable", fn: "pseudo", prefijo: t.prefijo }
+        }
+      }
+      if ( muestra.some( v => !isNumeric( v ) ) ) return { tipo: "texto_libre", metodo: "enmascarar", fn: "texto" }
+    }
+    return { tipo: "ninguno", metodo: "", fn: "" }
+  }
+
+  private string function aplicar( required struct regla, required string v ) {
+    switch ( regla.fn ) {
+      case "pseudo":    return pseudonimo( regla.prefijo, v )
+      case "direccion": return departamento( v )
+      case "edad":      return rangoEdad( v )
+      case "texto":     return enmascararTexto( v )
+      default:          return v
+    }
+  }
+
+  private string function pseudonimo( required string prefijo, required string v ) {
+    // normaliza para que "0123-4567" y "01234567", o "Ana " y "ana", den el mismo pseudónimo
+    var base = prefijo == "Persona" ? v.lCase().reReplace( "\s+", " ", "all" ) : v.lCase().reReplace( "[\s\-().+]", "", "all" )
+    var p = prefijo & "_" & hmac( prefijo & "|" & base, variables.sal, "HmacSHA256" ).lCase().left( 8 )
+    variables.mapa[ p ] = v
+    return p
+  }
+
+  private string function departamento( required string v ) {
+    var plano = sinTildes( v ).lCase()
+    for ( var d in variables.departamentos ) {
+      if ( plano.find( sinTildes( d ).lCase() ) ) return d
+    }
+    return "[dirección eliminada]"
+  }
+
+  private string function rangoEdad( required string v ) {
+    var anio = 0
+    var m = v.reFind( "(19|20)\d\d", 1, true )
+    if ( m.pos[ 1 ] ) anio = val( v.mid( m.pos[ 1 ], 4 ) )
+    if ( !anio ) return "[fecha eliminada]"
+    var edad = year( now() ) - anio
+    if ( edad < 18 ) return "menor de 18"
+    if ( edad >= 70 ) return "70+"
+    var desde = int( edad / 10 ) * 10
+    return "#desde#-#desde + 9#"
+  }
+
+  private string function normalizar( required string c ) {
+    return sinTildes( c ).lCase().trim().reReplace( "[^a-z0-9]+", "_", "all" ).reReplace( "^_|_$", "", "all" )
+  }
+
+  private string function sinTildes( required string s ) {
+    return createObject( "java", "java.text.Normalizer" ).normalize( s, createObject( "java", "java.text.Normalizer$Form" ).NFD )
+      .reReplace( "[̀-ͯ]", "", "all" )
+  }
+}

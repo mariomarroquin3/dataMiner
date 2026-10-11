@@ -1,0 +1,32 @@
+<bx:script>
+  bx:header name="Content-Type" value="application/json";
+  try {
+    raw     = toString( getHTTPRequestData().content ?: "" )
+    body    = isJSON( raw ) ? jsonDeserialize( raw ) : form
+    mensaje = body.message ?: ( url.q ?: "" )
+    if ( !len( trim( mensaje ) ) ) {
+      bx:header statusCode=400;
+      writeOutput( jsonSerialize( { error: "Falta 'message'" } ) )
+      return
+    }
+
+    // Un agente por sesión (conserva memoria de la conversación)
+    if ( !session.keyExists( "agente" ) ) {
+      session.agente = aiAgent(
+        name        : "Asistente",
+        instructions: "Eres un asistente útil para estudiantes. Responde en español, claro y breve.",
+        model       : aiModel( application.provider ),
+        tools       : [
+          aiTool( "hora_actual", "Devuelve la fecha y hora actual del servidor", () => dateTimeFormat( now(), "yyyy-MM-dd HH:nn" ) )
+        ],
+        memory      : aiMemory( memory: "window", config: { maxMessages: 20 } )
+      )
+    }
+
+    respuesta = session.agente.run( mensaje )
+    writeOutput( jsonSerialize( { reply: respuesta, provider: application.provider } ) )
+  } catch ( any e ) {
+    bx:header statusCode=500;
+    writeOutput( jsonSerialize( { error: e.message } ) )
+  }
+</bx:script>

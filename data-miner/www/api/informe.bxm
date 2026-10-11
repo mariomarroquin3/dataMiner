@@ -1,0 +1,13 @@
+<bx:script>
+  // Informe HTML autocontenido de la última misión (gráficas incluidas). ?descargar=1 lo baja como archivo
+  if ( !session.keyExists( "equipo" ) ) {
+    bx:header statusCode=404;
+    writeOutput( "Primero ejecuta una misión" )
+    return
+  }
+  bx:header name="Content-Type" value="text/html; charset=utf-8";
+  if ( url.keyExists( "descargar" ) ) {
+    bx:header name="Content-Disposition" value="attachment; filename=informe-data-miner.html";
+  }
+  writeOutput( session.equipo.informeHTML( "Informe Data Miner" ) )
+</bx:script>

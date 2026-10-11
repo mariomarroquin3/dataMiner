@@ -1,0 +1,84 @@
+<bx:script>
+  bx:header name="Content-Type" value="application/json";
+  import bxModules.bxai.models.runnables.AiModel;
+  try {
+    raw    = toString( getHTTPRequestData().content ?: "" )
+    body   = isJSON( raw ) ? jsonDeserialize( raw ) : form
+    pedido = body.pedido ?: ( url.q ?: "" )
+
+    // Un equipo por sesión: conserva tablas descargadas y memoria de la conversación
+    // El catálogo de la sesión lo crea Application.bx (onSessionStart); ?reset=1 lo reinicia
+    if ( url.keyExists( "reset" ) ) {
+      structDelete( session, "catalogo" )
+      structDelete( session, "equipo" )
+      session.catalogo = new models.Catalogo( application.anonimizar )
+      session.catalogo.registrarCSV( application.raiz & "data/creditos.csv", "creditos", "local" )
+      session.catalogo.registrarCSV( application.raiz & "data/precios.csv", "precios", "local" )
+      session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/clientes_sv.xlsx", "clientes_sv", "local" )
+      session.catalogo.registrarArchivo( application.raiz & "pruebas/fuentes/operaciones_sv.xlsx", "operaciones_sv", "local" )
+    }
+    // En modo mock se recrea el equipo en cada misión para reiniciar los guiones
+    if ( !session.keyExists( "equipo" ) || application.provider == "mock" ) {
+      fuentes = new models.Fuentes( session.catalogo, getTempDirectory() & "dataminer/" & session.sessionid & "/" )
+
+      if ( application.provider == "mock" ) {
+        // Modo demo sin IA: guiones fijos, tools reales sobre el dataset local
+        guiones = {
+          coordinador : [ { toolCalls: [ { name: "delegate_to_datos", arguments: { task: "Entiende la tabla creditos y revisa su calidad pensando en predecir impago" } } ] },
+                          { toolCalls: [ { name: "delegate_to_analista", arguments: { task: "Compras por segmento de clientes (une clientes y compras por DUI), tasa de impago por tipo de empleo y correlaciones de creditos" } } ] },
+                          { toolCalls: [ { name: "delegate_to_cientificoml", arguments: { task: "Predice impago: Random Forest vs regresión logística y árbol" } } ] },
+                          '{"respuesta":"(Modo demo sin IA) Los datos personales llegaron anonimizados. El equipo revisó la calidad de creditos, unió clientes y compras por DUI anonimizado, midió correlaciones y comparó modelos para predecir el impago.","hechos":[{"afirmacion":"Los clientes mayoristas concentran la mayor parte de las compras (clientes y compras unidos por DUI anonimizado)","sql":"SELECT c.Segmento, SUM(p.Monto_US) AS total FROM clientes_sv_clientes c, clientes_sv_compras p WHERE c.DUI = p.DUI_cliente GROUP BY c.Segmento ORDER BY total DESC","origen":"csv"},{"afirmacion":"La tasa de impago cambia según el tipo de empleo","sql":"SELECT tipo_empleo, AVG(impago) AS tasa FROM creditos GROUP BY tipo_empleo","origen":"csv"}],"interpretaciones":["dias_mora_max se conoce después del crédito: no debe usarse para predecir impago","Configura AI_PROVIDER para que los agentes razonen de verdad"],"siguientes_preguntas":["Sube un Excel y revisa su calidad","¿Qué departamento tiene más mora?"]}' ],
+          formateador : [],
+          datos       : [ { toolCalls: [ { name: "perfilar_tabla", arguments: { tabla: "creditos" } } ] },
+                          { toolCalls: [ { name: "diagnostico_calidad", arguments: { tabla: "creditos" } } ] },
+                          { toolCalls: [ { name: "consejos_recoleccion", arguments: { tabla: "creditos", objetivo: "impago" } } ] },
+                          "creditos: 2000 filas, calidad buena. Ojo: dias_mora_max filtra la respuesta (fuga de datos)." ],
+          analista    : [ { toolCalls: [ { name: "graficar_sql", arguments: { tipo: "bar", sql: "SELECT c.Segmento, SUM(p.Monto_US) AS total FROM clientes_sv_clientes c, clientes_sv_compras p WHERE c.DUI = p.DUI_cliente GROUP BY c.Segmento ORDER BY total DESC", x: "Segmento", y: "total", titulo: "Compras 2025 por segmento (clientes y compras unidos por DUI anonimizado)" } } ] },
+                          { toolCalls: [ { name: "graficar_sql", arguments: { tipo: "bar", sql: "SELECT tipo_empleo, AVG(impago) AS tasa FROM creditos GROUP BY tipo_empleo ORDER BY tasa DESC", x: "tipo_empleo", y: "tasa", titulo: "Tasa de impago por tipo de empleo" } } ] },
+                          { toolCalls: [ { name: "correlacion", arguments: { tabla: "creditos", columnas: "", metodo: "pearson" } } ] },
+                          "Los mayoristas concentran más compras; en créditos, informal tiene el impago más alto y la mora máxima es la variable más correlacionada." ],
+          cientifico_ml: [ { toolCalls: [ { name: "comparar_modelos", arguments: { tabla: "creditos", objetivo: "impago", tipos: "logistica,arbol,random_forest", features: "edad,ingreso_mensual,monto_credito,plazo_meses,tipo_empleo" } } ] },
+                          "Comparé tres modelos contra la línea base." ]
+        }
+        // El paso de structured output devuelve el mismo reporte final del coordinador, ya con esquema
+        // Misiones de operación: si la pregunta es de stock o de priorizar ventas, usa su propio guion
+        pedidoL = pedido.lCase()
+        if ( pedidoL.reFind( "stock|agot|inventario|reabastec|pedir|reorden" ) ) {
+          guiones.coordinador = [ { toolCalls: [ { name: "delegate_to_analista", arguments: { task: "Pronostica cuándo se agota cada producto de operaciones_sv_inventario según operaciones_sv_ventas_diarias, y cuánto pedir" } } ] },
+            '{"respuesta":"(Modo demo sin IA) Hay productos que se agotan antes de que llegue un pedido nuevo: hay que reabastecerlos hoy. El cálculo usa la demanda de los últimos 14 días más su tendencia y el tiempo de entrega de cada proveedor.","hechos":[{"afirmacion":"Productos agotados o que se agotan antes de que llegue el proveedor, con cuánto pedir","sql":"SELECT producto, descripcion, stock, dias_restantes, fecha_agotamiento, dias_entrega, pedir_unidades FROM pronostico_stock WHERE estado IN (''agotado'',''crítico'') ORDER BY dias_restantes","origen":"csv"},{"afirmacion":"Productos que se agotan en la próxima semana después del tiempo de entrega","sql":"SELECT producto, descripcion, dias_restantes, pedir_unidades FROM pronostico_stock WHERE estado = ''pronto'' ORDER BY dias_restantes","origen":"csv"}],"interpretaciones":["Los productos con tendencia creciente se agotan antes de lo que sugiere el promedio: conviene revisar el pedido mínimo con esos proveedores","Configura AI_PROVIDER para que los agentes razonen de verdad"],"siguientes_preguntas":["¿Qué oportunidades de venta debo priorizar esta semana?","¿Cuánto dinero inmovilizado hay en productos con más de 60 días de inventario?"]}' ]
+          guiones.analista = [ { toolCalls: [ { name: "pronostico_stock", arguments: { tablaVentas: "operaciones_sv_ventas_diarias", tablaInventario: "operaciones_sv_inventario", nivelServicio: 0.95, diasHistoria: 56 } } ] },
+            "Pronóstico listo en la tabla pronostico_stock: hay productos agotados y críticos." ]
+        } else if ( pedidoL.reFind( "prioriz|oportunidad|qué ventas|que ventas|cerrar primero|pipeline" ) ) {
+          guiones.coordinador = [ { toolCalls: [ { name: "delegate_to_cientificoml", arguments: { task: "Prioriza las oportunidades abiertas de operaciones_sv_oportunidades por ganancia esperada" } } ] },
+            '{"respuesta":"(Modo demo sin IA) El equipo aprendió de las oportunidades ya ganadas y perdidas qué tan probable es cerrar cada una de las abiertas, y las ordenó por ganancia esperada (monto × margen × probabilidad).","hechos":[{"afirmacion":"Las 10 oportunidades con mayor ganancia esperada y la acción sugerida","sql":"SELECT oportunidad, monto, probabilidad_cierre, ganancia_esperada, accion FROM prioridad_ventas WHERE prioridad <= 10 ORDER BY prioridad","origen":"csv"},{"afirmacion":"La tasa de cierre histórica cambia mucho según el origen del cliente","sql":"SELECT Origen, AVG(ganada) AS tasa_cierre, COUNT(*) AS oportunidades FROM entrenamiento_operaciones_sv_oportunidades GROUP BY Origen","origen":"csv"}],"interpretaciones":["Las oportunidades por referido cierran más que las de llamada en frío: conviene pedir referidos a los clientes actuales","Configura AI_PROVIDER para que los agentes razonen de verdad"],"siguientes_preguntas":["¿Qué productos se van a agotar y cuánto debo pedir?","¿Qué segmento de clientes compra más?"]}' ]
+          guiones.cientifico_ml = [ { toolCalls: [ { name: "priorizar_ventas", arguments: { tabla: "operaciones_sv_oportunidades", top: 10 } } ] },
+            "Prioridades listas en la tabla prioridad_ventas." ]
+        }
+        guiones.formateador = [ guiones.coordinador.last() ]
+        // El modo completo usa otros nombres de agente: en demo usamos siempre el compacto
+        modelo = ( nombre ) => new AiModel( aiService( "mock" ).setResponses( duplicate( guiones[ nombre ] ) ) )
+      } else {
+        // AI_MODEL_LIGERO (opcional): un modelo más barato/rápido para los agentes simples,
+        // así el plan gratuito rinde más (el límite por día y por minuto es por modelo)
+        modelo = ( nombre ) => {
+          var m = ( listFindNoCase( "adquisicion,perfilador,analista_csv,analista_db,datos", nombre ) && len( application.modelLigero ) ) ? application.modelLigero : application.model
+          return aiModel( provider: application.provider, params: len( m ) ? { model: m } : {} )
+        }
+      }
+      modo = application.provider == "mock" ? "compacto" : application.equipoModo
+      session.equipo = new models.Equipo( session.catalogo, fuentes, modelo, application.mcpUrl, modo )
+    }
+
+    if ( !len( trim( pedido ) ) ) {
+      writeOutput( jsonSerialize( { tablas: session.catalogo.listar(), mcp: application.mcpUrl, provider: application.provider } ) )
+      return
+    }
+    r = session.equipo.mision( pedido )
+    r.provider = application.provider
+    r.mcp = application.mcpUrl
+    writeOutput( jsonSerialize( r ) )
+  } catch ( any e ) {
+    bx:header statusCode=500;
+    writeOutput( jsonSerialize( { error: e.message, detalle: e.detail ?: "" } ) )
+  }
+</bx:script>

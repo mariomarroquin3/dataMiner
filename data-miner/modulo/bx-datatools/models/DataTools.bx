@@ -1,0 +1,107 @@
+/**
+ * Punto de entrada del módulo: un catálogo de datos + las tools listas para cualquier aiAgent().
+ *
+ *   dt = new bxModules.bxdatatools.models.DataTools()
+ *   dt.cargar( "/ruta/clientes.xlsx" )            // se anonimiza al entrar
+ *   agente = aiAgent( name: "Analista", instructions: "...", tools: dt.tools() )
+ *
+ * Todas las tools son de solo lectura sobre los datos originales: el SQL solo acepta SELECT,
+ * limpiar_tabla crea una tabla nueva y el conector MCP nunca expone las tools de escritura del servidor.
+ */
+class {
+
+  property name="catalogo";
+  property name="informe";
+  property name="db";
+
+  /**
+   * @anonimizar Anonimiza todo archivo que entra (por defecto true)
+   * @mcpUrl     URL de un servidor MCP de base de datos por HTTP (opcional)
+   * @nombresMcp Nombres de las tools del servidor MCP si no es el de SQLite: { listar, describir, consultar, argTabla, argSql }
+   */
+  function init( boolean anonimizar = true, string sal = "", string mcpUrl = "", struct nombresMcp = {} ) {
+    variables.catalogo = new Catalogo( anonimizar, sal )
+    variables.informe  = new Informe()
+    variables.ing      = new IngenieroDatos( variables.catalogo, variables.informe )
+    variables.est      = new Estadistica( variables.catalogo, variables.informe )
+    variables.ope      = new Operaciones( variables.catalogo, variables.informe )
+    if ( len( mcpUrl ) ) variables.db = new ConectorMCP( mcpUrl, variables.catalogo, nombresMcp )
+    return this
+  }
+
+  /** Carga un archivo (CSV, TSV, TXT, Excel, JSON). Devuelve las tablas creadas */
+  array function cargar( required string archivo, string nombre = "", string fuente = "local" ) {
+    return variables.catalogo.registrarArchivo( archivo, nombre, fuente )
+  }
+
+  /** Qué datos personales se anonimizaron: [ { tabla, columna, tipo, metodo, valores } ] */
+  array function anonimizacion() { return variables.catalogo.informeAnonimizacion() }
+
+  /** Bitácora de todo lo que ejecutaron las tools (para mostrar evidencia) */
+  array function evidencia() { return variables.catalogo.getConsultas() }
+
+  /** Informe HTML autocontenido con las gráficas que generaron las tools */
+  string function informeHTML( struct reporte = {}, string titulo = "Informe de datos" ) {
+    return variables.informe.html( reporte.append( { tablas: variables.catalogo.listar(), anonimizacion: anonimizacion() }, false ), titulo )
+  }
+
+  /**
+   * Tools para aiAgent( tools: ... ).
+   * @grupos Lista con: sql, calidad, estadistica, operaciones, db (por defecto todos los disponibles)
+   */
+  array function tools( string grupos = "sql,calidad,estadistica,operaciones,db" ) {
+    var cat = variables.catalogo; var ing = variables.ing; var est = variables.est; var inf = variables.informe
+    var out = [
+      aiTool( "listar_tablas", "Lista las tablas cargadas con filas, columnas y origen", () => cat.listar() ),
+      aiTool( "perfilar_tabla", "Perfil de una tabla desconocida: tipo, nulos, distintos, ejemplos, min/max/media", ( tabla ) => cat.perfilar( tabla ) )
+        .describeArg( "tabla", "Nombre de la tabla" )
+    ]
+    if ( listFindNoCase( grupos, "sql" ) ) {
+      out.append( aiTool( "ejecutar_sql", "SELECT de solo lectura sobre las tablas cargadas (admite JOIN). Devuelve hasta 50 filas", ( sql ) => cat.consultar( sql ) )
+        .describeArg( "sql", "Una sola sentencia SELECT" ) )
+      out.append( aiTool( "graficar_sql", "Crea una gráfica (bar, line, pie, scatter) a partir de un SELECT",
+        ( tipo, sql, x, y, titulo ) => {
+          var r = cat.consultar( sql )
+          return r.keyExists( "error" ) && len( r.error ) ? r : inf.desdeFilas( r.resultado, tipo, x, y, titulo )
+        } )
+        .describeArg( "tipo", "bar | line | pie | scatter" ).describeArg( "sql", "SELECT que produce los datos" )
+        .describeArg( "x", "Columna para el eje X / etiquetas" ).describeArg( "y", "Columna(s) numéricas separadas por coma" )
+        .describeArg( "titulo", "Título de la gráfica" ) )
+    }
+    if ( listFindNoCase( grupos, "calidad" ) ) {
+      out.append( [
+        aiTool( "diagnostico_calidad", "Diagnóstico de calidad 0-100: vacíos, duplicados, atípicos, categorías inconsistentes, fechas mezcladas, números como texto, IDs repetidos, datos personales", ( tabla ) => ing.diagnosticar( tabla ) )
+          .describeArg( "tabla", "Tabla" ),
+        aiTool( "limpiar_tabla", "Crea <tabla>_limpia (la original no se toca): espacios, categorías, montos, fechas y duplicados", ( tabla ) => ing.limpiar( tabla ) )
+          .describeArg( "tabla", "Tabla a limpiar" ),
+        aiTool( "proponer_esquema", "CREATE TABLE sugerido (tipos, NOT NULL, clave primaria, CHECK)", ( tabla ) => ing.esquema( tabla ) )
+          .describeArg( "tabla", "Tabla" ),
+        aiTool( "detectar_fuga", "Columnas que filtran la respuesta (data leakage) al predecir un objetivo", ( tabla, objetivo ) => ing.fugaDeDatos( tabla, objetivo ) )
+          .describeArg( "tabla", "Tabla" ).describeArg( "objetivo", "Columna a predecir" ),
+        aiTool( "consejos_recoleccion", "Cómo recolectar mejores datos según los problemas encontrados", ( tabla, objetivo ) => ing.consejos( tabla, objetivo ?: "" ) )
+          .describeArg( "tabla", "Tabla" ).describeArg( "objetivo", "Columna a predecir (opcional)" )
+      ], true )
+    }
+    if ( listFindNoCase( grupos, "estadistica" ) ) {
+      out.append( [
+        aiTool( "describir", "Estadística descriptiva de columnas numéricas", ( tabla, columnas ) => est.describir( tabla, columnas ?: "" ) )
+          .describeArg( "tabla", "Tabla" ).describeArg( "columnas", "Columnas separadas por coma; vacío = todas" ),
+        aiTool( "correlacion", "Matriz de correlación (pearson o spearman) y pares más fuertes", ( tabla, columnas, metodo ) => est.correlacion( tabla, columnas ?: "", metodo ?: "pearson" ) )
+          .describeArg( "tabla", "Tabla" ).describeArg( "columnas", "Columnas; vacío = todas las numéricas" ).describeArg( "metodo", "pearson o spearman" )
+      ], true )
+    }
+    if ( listFindNoCase( grupos, "operaciones" ) ) {
+      var ope = variables.ope
+      out.append( aiTool( "pronostico_stock", "Predice cuándo se agota cada producto (demanda reciente + tendencia), su punto de reorden, stock de seguridad y cuánto pedir. Guarda el resultado en la tabla pronostico_stock",
+          ( tablaVentas, tablaInventario, nivelServicio, diasHistoria ) => ope.quiebreStock( tablaVentas, tablaInventario,
+            ( isNumeric( diasHistoria ?: "" ) && diasHistoria > 0 ) ? diasHistoria : 56,
+            ( isNumeric( nivelServicio ?: "" ) && nivelServicio > 0 ) ? nivelServicio : 0.95 ) )
+        .describeArg( "tablaVentas", "Tabla de ventas con fecha, producto/SKU y unidades" )
+        .describeArg( "tablaInventario", "Tabla con producto/SKU y stock actual (y días de entrega si hay)" )
+        .describeArg( "nivelServicio", "0.90, 0.95 (por defecto), 0.975 o 0.99: protección contra quiebres" )
+        .describeArg( "diasHistoria", "Días de historia para estimar la demanda (por defecto 56)" ) )
+    }
+    if ( listFindNoCase( grupos, "db" ) && !isNull( variables.db ) ) out.append( variables.db.tools(), true )
+    return out
+  }
+}

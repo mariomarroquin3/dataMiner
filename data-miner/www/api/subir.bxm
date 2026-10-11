@@ -1,0 +1,37 @@
+<bx:script>
+  // Sube uno o varios archivos (CSV, TSV, TXT, Excel, JSON o ZIP) y los carga como tablas de la sesión
+  bx:header name="Content-Type" value="application/json";
+  try {
+    carpeta = getTempDirectory() & "dataminer/" & session.sessionid & "/subidas/"
+    if ( !directoryExists( carpeta ) ) directoryCreate( carpeta )
+    // accept "*": el filtro de formatos lo hacemos abajo. overwrite: volver a subir un archivo reemplaza su tabla
+    subidos = fileUploadAll( destination: carpeta, accept: "*", nameConflict: "overwrite", strict: false )
+    fuentes = new models.Fuentes( session.catalogo, carpeta )
+    resultado = { tablas: [], errores: [] }
+    for ( s in subidos ) {
+      nombre = s.clientFile ?: s.serverFile
+      ext = listLast( nombre, "." ).lCase()
+      if ( !session.catalogo.formatos().append( "zip" ).findNoCase( ext ) ) {
+        resultado.errores.append( "#nombre#: formato .#ext# no soportado" )
+        if ( s.fileWasSaved ) fileDelete( s.serverDirectory & "/" & s.serverFile )
+        continue
+      }
+      ruta = s.serverDirectory & "/" & s.serverFile
+      r = fuentes.cargarArchivo( ruta, "subida:#nombre#" )
+      if ( r.keyExists( "error" ) ) resultado.errores.append( "#nombre#: #r.error#" )
+      else { resultado.tablas.append( r.tablas, true ); resultado.errores.append( r.errores, true ) }
+    }
+    // Diagnóstico inmediato (determinista, no necesita IA)
+    ing = new models.IngenieroDatos( session.catalogo )
+    resultado.calidad = resultado.tablas.map( t => {
+      var d = ing.diagnosticar( t )
+      return { tabla: t, filas: d.filas, origen: d.origen, puntaje: d.puntaje_calidad, nivel: d.nivel, problemas: d.problemas, anonimizacion: d.origen.anonimizacion ?: [] }
+    } )
+    resultado.catalogo = session.catalogo.listar()
+    resultado.anonimiza = session.catalogo.anonimiza()
+    writeOutput( jsonSerialize( resultado ) )
+  } catch ( any e ) {
+    bx:header statusCode=500;
+    writeOutput( jsonSerialize( { error: e.message } ) )
+  }
+</bx:script>

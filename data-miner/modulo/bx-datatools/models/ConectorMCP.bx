@@ -1,0 +1,74 @@
+/**
+ * Conecta una base de datos expuesta por un servidor MCP (HTTP) y la ofrece como tools seguras.
+ * Por defecto usa los nombres del servidor MCP de SQLite (list_tables, describe_table, read_query).
+ * Solo se exponen operaciones de lectura: write_query/create_table nunca llegan al agente.
+ */
+class {
+
+  property name="cliente";
+  property name="url";
+  property name="nombres";
+  property name="catalogo";
+
+  function init( required string url, any catalogo, struct nombres = {} ) {
+    variables.url      = arguments.url
+    variables.catalogo = arguments.catalogo ?: javaCast( "null", "" )
+    variables.cliente  = MCP( arguments.url ).withTimeout( 60 )
+    variables.nombres  = {
+      listar   : "list_tables",
+      describir: "describe_table",
+      consultar: "read_query",
+      argTabla : "table_name",
+      argSql   : "query"
+    }.append( arguments.nombres )
+    return this
+  }
+
+  /** Herramientas que expone el servidor (para mostrar en la UI) */
+  array function herramientasServidor() {
+    var r = variables.cliente.listTools()
+    return r.isSuccess() ? ( r.getData().tools ?: [] ).map( t => t.name ) : []
+  }
+
+  any function listarTablas() {
+    return llamar( variables.nombres.listar, {}, "db.listar_tablas" )
+  }
+
+  any function describir( required string tabla ) {
+    var args = {}; args[ variables.nombres.argTabla ] = tabla
+    return llamar( variables.nombres.describir, args, "db.describir(#tabla#)" )
+  }
+
+  any function consultar( required string sql ) {
+    var limpio = trim( sql ).reReplace( ";\s*$", "" )
+    if ( !limpio.reFindNoCase( "^(select|with)\s" ) || limpio.find( ";" ) ) return { sql: limpio, error: "Solo se permite SELECT." }
+    var args = {}; args[ variables.nombres.argSql ] = limpio
+    return llamar( variables.nombres.consultar, args, limpio, true )
+  }
+
+  /** Tools listas para un agente */
+  array function tools() {
+    var self = this
+    return [
+      aiTool( "db_listar_tablas", "Lista las tablas de la base de datos remota (vía MCP)", () => self.listarTablas() ),
+      aiTool( "db_describir_tabla", "Columnas y tipos de una tabla de la base remota (vía MCP)", ( tabla ) => self.describir( tabla ) )
+        .describeArg( "tabla", "Nombre de la tabla" ),
+      aiTool( "db_consultar", "Ejecuta un SELECT de solo lectura en la base remota (vía MCP) y devuelve las filas", ( sql ) => self.consultar( sql ) )
+        .describeArg( "sql", "Consulta SELECT en SQL estándar (SQLite)" )
+    ]
+  }
+
+  private any function llamar( required string tool, struct args = {}, string etiqueta = tool, boolean esSql = false ) {
+    var r = variables.cliente.send( tool, args )
+    if ( !r.isSuccess() ) return { error: r.getError() }
+    var data  = r.getData()
+    var texto = ( data.content ?: [] ).map( c => c.text ?: "" ).toList( char( 10 ) )
+    // Las filas de la base remota también se anonimizan antes de llegar al agente
+    if ( !isNull( variables.catalogo ) && variables.catalogo.anonimiza() ) texto = variables.catalogo.getAnonimizador().anonimizarRespuesta( texto )
+    var res   = { sql: etiqueta, fuente: "mcp", resultado: texto.len() > 4000 ? texto.left( 4000 ) & "…" : texto, error: ( data.isError ?: false ) ? texto : "" }
+    if ( !isNull( variables.catalogo ) ) {
+      variables.catalogo.registrarEvidencia( { sql: etiqueta, fuente: "mcp", filas: "", resultado: [ { respuesta: res.resultado.left( 600 ) } ] } )
+    }
+    return res
+  }
+}

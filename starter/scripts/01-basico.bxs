@@ -1,0 +1,71 @@
+// Variables, strings, interpolación
+nombre = "Mario"
+edad = 19
+println( "Hola #nombre#, tienes #edad# años" )
+println( "Concatenar: " & nombre & "!" )
+
+// Arrays (índice 1) y structs
+frutas = [ "manzana", "pera", "uva" ]
+frutas.append( "mango" )
+println( frutas[ 1 ] & " / total: " & frutas.len() )
+
+persona = { nombre: "Ana", skills: [ "java", "boxlang" ] }
+persona.ciudad = "San Salvador"
+println( persona.keyList() )
+
+// Lambdas y funciones de orden superior
+proyectos = [
+  { name: "Study Buddy", score: 92 },
+  { name: "Campus Guide", score: 87 },
+  { name: "Resume Coach", score: 95 }
+]
+top = proyectos.filter( p => p.score >= 90 ).map( p => p.name )
+println( top.toList( ", " ) )
+total = proyectos.reduce( ( acc, p ) => acc + p.score, 0 )
+println( "Promedio: " & numberFormat( total / proyectos.len(), "0.0" ) )
+ordenados = proyectos.sort( ( a, b ) => b.score - a.score )
+println( ordenados.first().name )
+
+// Funciones con argumentos por defecto y nombrados
+function saludar( required string quien, string saludo = "Hola" ) {
+  return "#saludo#, #quien#"
+}
+println( saludar( "Luis" ) )
+println( saludar( saludo: "Buenas", quien: "jurado" ) )
+
+// Condicionales y bucles
+for ( f in frutas ) {
+  if ( f.len() > 4 ) { println( "larga: " & f ) } else if ( f == "uva" ) { println( "uva!" ) }
+}
+for ( i = 1; i <= 3; i++ ) { print( i & " " ) }
+println( "" )
+for ( k, v in persona ) { println( "#k# => #isSimpleValue( v ) ? v : jsonSerialize( v )#" ) }
+switch ( edad ) { case 19: println( "diecinueve" ); break; default: println( "otro" ) }
+
+// Null-safety: elvis y navegación segura
+config = {}
+println( config.tema ?: "oscuro" )
+println( config?.usuario?.nombre ?: "anónimo" )
+
+// try/catch
+try {
+  throw( type: "MiError", message: "algo falló" )
+} catch ( MiError e ) {
+  println( "Capturado: " & e.message )
+} finally {
+  println( "finally" )
+}
+
+// JSON
+json = jsonSerialize( persona )
+println( json )
+back = jsonDeserialize( '{"a":1,"b":[1,2]}' )
+println( back.b.len() )
+
+// Java directo
+import java.time.LocalDate
+println( "Hoy: " & LocalDate.now() )
+
+// Fechas y strings útiles
+println( dateFormat( now(), "yyyy-MM-dd" ) & " " & ucFirst( "boxlang" ) & " " & "a,b,c".listToArray().len() )
+println( "texto largo".reReplace( "\s+", "-", "all" ) )

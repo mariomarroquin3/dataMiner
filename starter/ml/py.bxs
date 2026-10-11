@@ -1,0 +1,5 @@
+datos = jsonSerialize( { xs: [ 1, 2, 3.5 ] } )
+r = systemExecute( "python3", [ expandPath( "./py.py" ), datos ] )
+println( r.keyList() )
+res = jsonDeserialize( r.output )
+println( "Desde Python: " & res.suma )

@@ -1,0 +1,69 @@
+import models.Receta
+mock = ( responses ) => { return { provider: "mock", providerOptions: { responses: responses } } }
+
+// 1. aiChat simple
+println( aiChat( "Sugiere 3 features", {}, mock( [ "1) Quiz 2) Resumen 3) Flashcards" ] ) ) )
+
+// 2. Mensajes con rol system + user
+msgs = [
+  { role: "system", content: "Eres un tutor conciso" },
+  { role: "user", content: "¿Qué es RAG?" }
+]
+println( aiChat( msgs, { temperature: 0.2 }, mock( [ "RAG = recuperar + generar" ] ) ) )
+
+// 3. aiMessage fluido con plantillas ${}
+msg = aiMessage().system( "Eres experto en ${tema}" ).user( "Explica ${concepto} en una frase" )
+println( aiChat( msg.bind( { tema: "IA", concepto: "embeddings" } ), {}, mock( [ "Vectores que representan significado" ] ) ) )
+
+// 4. Salida estructurada a una clase
+r = aiChat( "Dame una receta rápida", {}, {
+  provider: "mock",
+  returnFormat: new Receta(),
+  providerOptions: { responses: [ '{"nombre":"Pupusas","minutos":30,"ingredientes":["masa","queso","frijol"]}' ] }
+} )
+println( "#r.getNombre()# - #r.getMinutos()# min - #r.getIngredientes().toList()#" )
+
+// 5. Salida JSON (struct)
+data = aiChat( "Lista 2 ideas en JSON", {}, {
+  provider: "mock", returnFormat: "json",
+  providerOptions: { responses: [ '```json
+{"ideas":["A","B"]}
+```' ] }
+} )
+println( data.ideas.len() )
+
+// 6. Tool calling
+clima = aiTool( "get_weather", "Clima actual de una ciudad", ( city ) => {
+  return { city: city, temp: 31, condition: "Soleado" }
+} ).describeArg( "city", "Nombre de la ciudad" )
+
+res = aiChat( "¿Clima en San Salvador?", { tools: [ clima ] }, mock( [
+  { toolCalls: [ { name: "get_weather", arguments: { city: "San Salvador" } } ] },
+  "En San Salvador hay 31°C y soleado."
+] ) )
+println( res )
+
+// 7. Agente con memoria y tools
+agente = aiAgent(
+  name: "Tutor",
+  description: "Tutor de estudio",
+  instructions: "Responde en español, breve.",
+  model: aiModel( "mock" ),
+  tools: [ clima ],
+  memory: aiMemory( memory: "window", config: { maxMessages: 10 } )
+)
+println( agente.run( "Hola, soy Mario", {}, { providerOptions: { responses: [ "¡Hola Mario!" ] } } ) )
+println( agente.run( "¿Cómo me llamo?", {}, { providerOptions: { responses: [ "Te llamas Mario" ] } } ) )
+println( "Mensajes en memoria: " & agente.getMemoryMessages().len() )
+
+// 8. Pipeline: modelo -> transformación
+pipe = aiModel( "mock" ).to( aiTransform( "json" ) ).to( aiTransform( d => d.users.len() ) )
+println( "Usuarios: " & pipe.run( "Genera usuarios", {}, { providerOptions: { responses: [ '{"users":[{"n":1},{"n":2}]}' ] } } ) )
+
+// 9. Streaming
+aiChatStream( "Cuenta hasta 3", ( chunk ) => print( chunk.choices?.first()?.delta?.content ?: "" ), {}, mock( [ "uno dos tres" ] ) )
+println( "" )
+
+// 10. Utilidades
+println( "Tokens aprox: " & aiTokens( "Hola mundo desde BoxLang AI" ) )
+println( "Chunks: " & aiChunk( repeatString( "texto ", 500 ), { chunkSize: 500, overlap: 50 } ).len() )

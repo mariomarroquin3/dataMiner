@@ -1,0 +1,8 @@
+import models.Tarea
+
+t = new Tarea( "Pitch del hackathon", 3 )
+println( t.resumen() )
+t.completar()
+println( t.resumen() & " hecha=" & t.getHecha() )
+t.setPrioridad( 5 )
+println( t.getPrioridad() )

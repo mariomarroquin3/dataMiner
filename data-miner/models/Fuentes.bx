@@ -1,0 +1,150 @@
+/**
+ * Fuentes de datos: Kaggle (API oficial), Google Drive/Sheets (enlaces públicos) y URLs.
+ * Todo lo descargado se registra como tablas en el Catálogo.
+ */
+class {
+
+  property name="catalogo";
+  property name="carpeta";
+  property name="kaggleUrl";
+
+  function init( required any catalogo, string carpeta = "" ) {
+    variables.catalogo  = arguments.catalogo
+    variables.carpeta   = len( arguments.carpeta ) ? arguments.carpeta : getTempDirectory() & "dataminer/"
+    variables.kaggleUrl = getSystemSetting( "KAGGLE_API_URL", "https://www.kaggle.com/api/v1" )
+    if ( !directoryExists( variables.carpeta ) ) directoryCreate( variables.carpeta )
+    return this
+  }
+
+  // ---------------------------------------------------------------- Kaggle
+
+  /** Busca datasets en Kaggle. Requiere KAGGLE_USERNAME y KAGGLE_KEY (o ~/.kaggle/kaggle.json) */
+  any function buscarKaggle( required string texto ) {
+    var cred = credencialesKaggle()
+    if ( cred.keyExists( "error" ) ) return cred
+    bx:http url="#variables.kaggleUrl#/datasets/list?search=#urlEncodedFormat( texto )#&filetype=csv" method="GET"
+      username=cred.usuario password=cred.key result="local.r" timeout=60;
+    if ( !r.status_code.toString().startsWith( "2" ) ) return { error: "Kaggle respondió #r.status_code#" }
+    return jsonDeserialize( r.filecontent ).slice( 1, 8 ).map( d => {
+      return { ref: d.ref, titulo: d.title ?: "", tamano: d.totalBytes ?: d.size ?: "", votos: d.voteCount ?: "" }
+    } )
+  }
+
+  /** Descarga un dataset de Kaggle ("owner/dataset"), lo descomprime y registra sus CSV */
+  any function descargarKaggle( required string ref ) {
+    var cred = credencialesKaggle()
+    if ( cred.keyExists( "error" ) ) return cred
+    var destino = variables.carpeta & ref.replace( "/", "__", "all" ) & "/"
+    if ( !directoryExists( destino ) ) directoryCreate( destino )
+    bx:http url="#variables.kaggleUrl#/datasets/download/#ref#" method="GET" redirect=true
+      username=cred.usuario password=cred.key path=destino file="dataset.zip" result="local.r" timeout=300;
+    if ( !r.status_code.toString().startsWith( "2" ) ) return { error: "Kaggle respondió #r.status_code# para #ref#" }
+    return registrarDescarga( destino & "dataset.zip", destino, "kaggle:#ref#" )
+  }
+
+  private struct function credencialesKaggle() {
+    var usuario = getSystemSetting( "KAGGLE_USERNAME", "" )
+    var key     = getSystemSetting( "KAGGLE_KEY", "" )
+    var archivo = getSystemSetting( "user.home", "" ) & "/.kaggle/kaggle.json"
+    if ( ( !len( usuario ) || !len( key ) ) && fileExists( archivo ) ) {
+      var j = jsonDeserialize( fileRead( archivo ) )
+      usuario = j.username; key = j.key
+    }
+    if ( !len( usuario ) || !len( key ) ) return { error: "Faltan KAGGLE_USERNAME y KAGGLE_KEY" }
+    return { usuario: usuario, key: key }
+  }
+
+  // ---------------------------------------------------------------- Drive / URL
+
+  /**
+   * Descarga un archivo público: Google Drive (link de compartir), Google Sheets (se exporta a CSV)
+   * o cualquier URL a .csv/.zip
+   */
+  any function descargarUrl( required string enlace ) {
+    var u = normalizarEnlace( enlace )
+    var destino = variables.carpeta & "url_" & hash( u ).left( 8 ) & "/"
+    if ( !directoryExists( destino ) ) directoryCreate( destino )
+    var nombre = u.nombre & "." & u.ext
+    bx:http url=u.url method="GET" redirect=true path=destino file=nombre result="local.r" timeout=300;
+    if ( !r.status_code.toString().startsWith( "2" ) ) return { error: "La descarga respondió #r.status_code#" }
+    return registrarDescarga( destino & nombre, destino, u.fuente )
+  }
+
+  struct function normalizarEnlace( required string enlace ) {
+    var id = ""
+    if ( enlace.findNoCase( "docs.google.com/spreadsheets" ) ) {
+      id = enlace.reMatch( "/d/([A-Za-z0-9_-]+)" ).first().listLast( "/" )
+      // xlsx trae TODAS las hojas (csv solo trae la primera)
+      return { url: "https://docs.google.com/spreadsheets/d/#id#/export?format=xlsx", nombre: "sheet_" & id.left( 6 ), ext: "xlsx", fuente: "google-sheets" }
+    }
+    if ( enlace.findNoCase( "drive.google.com" ) ) {
+      var m = enlace.reMatch( "/d/([A-Za-z0-9_-]+)" )
+      id = m.len() ? m.first().listLast( "/" ) : enlace.reReplace( ".*[?&]id=([A-Za-z0-9_-]+).*", "\1" )
+      // En Drive no sabemos el tipo hasta descargar: cargarArchivo lo detecta por contenido
+      return { url: "https://drive.google.com/uc?export=download&confirm=t&id=#id#", nombre: "drive_" & id.left( 6 ), ext: "bin", fuente: "google-drive" }
+    }
+    var archivo = enlace.listLast( "/" ).listFirst( "?" )
+    var ext = archivo.find( "." ) ? archivo.listLast( "." ).lCase() : "bin"
+    return { url: enlace, nombre: archivo.reReplace( "\.[^.]+$", "" ), ext: ext, fuente: "url" }
+  }
+
+  // ---------------------------------------------------------------- Común
+
+  private any function registrarDescarga( required string archivo, required string destino, required string fuente ) {
+    return cargarArchivo( archivo, fuente, destino )
+  }
+
+  /**
+   * Carga cualquier archivo (descargado o subido): CSV, TSV, TXT, Excel, JSON o un ZIP con varios de ellos.
+   * Si la extensión no se conoce (descargas de Drive) detecta el tipo por el contenido.
+   */
+  any function cargarArchivo( required string archivo, string fuente = "subida", string destino = "" ) {
+    var ruta = detectarTipo( archivo )
+    var archivos = []
+    if ( listLast( ruta, "." ).lCase() == "zip" ) {
+      var carpeta = len( destino ) ? destino : getDirectoryFromPath( ruta ) & "zip_" & hash( ruta ).left( 6 ) & "/"
+      extract( "zip", ruta, carpeta )
+      archivos = directoryList( carpeta, true, "path" ).filter( f => variables.catalogo.formatos().findNoCase( listLast( f, "." ) ) && !f.findNoCase( "__MACOSX" ) )
+    } else {
+      archivos = [ ruta ]
+    }
+    if ( !archivos.len() ) return { error: "No encontré archivos de datos (#variables.catalogo.formatos().toList( ', ' )#)", fuente: fuente }
+    var tablas = []; var errores = []
+    for ( var f in archivos ) {
+      try { tablas.append( variables.catalogo.registrarArchivo( f, "", fuente ), true ) }
+      catch ( any e ) { errores.append( getFileFromPath( f ) & ": " & e.message ) }
+    }
+    variables.catalogo.registrarEvidencia( { sql: "descarga(#fuente#)", filas: tablas.len(), resultado: tablas.map( t => { return { tabla: t } } ) } )
+    return { fuente: fuente, tablas: tablas, errores: errores, catalogo: variables.catalogo.listar() }
+  }
+
+  /** Renombra el archivo con la extensión real según su contenido (zip, xlsx, xls, json o csv) */
+  private string function detectarTipo( required string archivo ) {
+    var ext = listLast( archivo, "." ).lCase()
+    if ( variables.catalogo.formatos().findNoCase( ext ) || ext == "zip" ) {
+      // un .zip que en realidad es un Excel también se detecta abajo
+      if ( ext != "zip" ) return archivo
+    }
+    var real = "csv"
+    var bytes = fileReadBinary( archivo )
+    if ( isZip( archivo ) ) {
+      var zip = createObject( "java", "java.util.zip.ZipFile" ).init( archivo )
+      real = isNull( zip.getEntry( "xl/workbook.xml" ) ) ? "zip" : "xlsx"
+      zip.close()
+    } else if ( bytes.len() > 3 && bytes[ 1 ] == -48 && bytes[ 2 ] == -49 ) {
+      real = "xls"   // formato binario antiguo de Excel (D0 CF)
+    } else {
+      var inicio = trim( charsetEncode( bytes.len() > 200 ? arraySlice( bytes, 1, 200 ) : bytes, "utf-8" ) )
+      if ( inicio.startsWith( "[" ) || inicio.startsWith( "{" ) ) real = "json"
+    }
+    if ( real == ext ) return archivo
+    var nuevo = archivo.reReplace( "\.[^./]*$", "" ) & "." & real
+    fileMove( archivo, nuevo )
+    return nuevo
+  }
+
+  private boolean function isZip( required string archivo ) {
+    var bytes = fileReadBinary( archivo )
+    return bytes.len() > 1 && bytes[ 1 ] == 80 && bytes[ 2 ] == 75   // "PK"
+  }
+}

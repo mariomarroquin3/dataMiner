@@ -1,0 +1,346 @@
+/**
+ * Catálogo de tablas en memoria cargadas desde CSV, TSV, Excel o JSON (fuentes desconocidas).
+ * Permite SQL de solo lectura (Query of Queries) con JOINs entre tablas.
+ */
+class {
+
+  property name="tablas";      // nombre -> query
+  property name="origenes";    // nombre -> { archivo, fuente }
+  property name="consultas";   // bitácora (evidencia)
+  property name="anonimizador"; // null = sin anonimizar
+
+  /**
+   * anonimizar = true (por defecto): todo archivo que entra pasa primero por el Anonimizador,
+   * antes de que exista como tabla. Así ningún agente ni LLM ve DUI, NIT, nombres, teléfonos o correos reales.
+   */
+  function init( boolean anonimizar = true, string sal = "" ) {
+    variables.tablas    = [:]
+    variables.origenes  = [:]
+    variables.consultas = []
+    if ( anonimizar ) variables.anonimizador = new Anonimizador( sal )
+    return this
+  }
+
+  boolean function anonimiza() { return !isNull( variables.anonimizador ) }
+
+  /** El anonimizador (para enmascarar respuestas de MCP); null si está apagado */
+  any function getAnonimizador() { return variables.anonimizador ?: javaCast( "null", "" ) }
+
+  /** Qué se anonimizó en cada tabla: [ { tabla, columna, tipo, metodo, valores } ] */
+  array function informeAnonimizacion() {
+    var out = []
+    for ( var n in variables.origenes ) {
+      ( variables.origenes[ n ].anonimizacion ?: [] ).each( a => out.append( { tabla: n }.append( a ) ) )
+    }
+    return out
+  }
+
+  /** Formatos que entiende registrarArchivo */
+  array function formatos() { return [ "csv", "tsv", "txt", "xlsx", "xlsm", "xls", "json" ] }
+
+  /**
+   * Registra cualquier archivo soportado. Devuelve los nombres de tabla creados
+   * (un Excel con varias hojas crea una tabla por hoja: archivo_hoja).
+   */
+  array function registrarArchivo( required string archivo, string nombre = "", string fuente = "local" ) {
+    var ext  = listLast( archivo, "." ).lCase()
+    var base = len( nombre ) ? nombre : getFileFromPath( archivo ).reReplace( "\.[^.]+$", "" )
+    switch ( ext ) {
+      case "xlsx": case "xlsm": case "xls":
+        var hojas = leerExcel( archivo )
+        return hojas.map( h => guardar( hojas.len() == 1 ? base : base & "__" & h.hoja, h.datos, archivo, fuente, { formato: ext, hoja: h.hoja, filaEncabezado: h.filaEncabezado }, true ) )
+      case "json":
+        return [ guardar( base, leerJSON( archivo ), archivo, fuente, { formato: "json" }, true ) ]
+      case "csv": case "tsv": case "txt":
+        var d = leerDelimitado( archivo )
+        return [ guardar( base, d, archivo, fuente, { formato: ext, separador: d.separador == chr9() ? "tab" : d.separador, comaDecimal: d.comaDecimal }, true ) ]
+      default:
+        throw( type: "Catalogo.Formato", message: "Formato .#ext# no soportado. Usa: #formatos().toList( ", " )#" )
+    }
+  }
+
+  /** Compatibilidad: registra un CSV y devuelve el nombre de la tabla */
+  string function registrarCSV( required string archivo, string nombre = "", string fuente = "local" ) {
+    return registrarArchivo( archivo, nombre, fuente ).first()
+  }
+
+  /** Crea una tabla nueva desde un query (lo usa la limpieza de datos) */
+  string function registrarQuery( required string nombre, required query q, string fuente = "derivada" ) {
+    var n = nombreTabla( nombre )
+    variables.tablas[ n ]   = q
+    variables.origenes[ n ] = { archivo: "", fuente: fuente, formato: "query" }
+    return n
+  }
+
+  /** Crea una tabla nueva desde columnas + filas (arreglos), infiriendo tipos */
+  string function registrarFilas( required string nombre, required array columnas, required array filas, string fuente = "derivada" ) {
+    return guardar( nombre, { columnas: columnas, filas: filas }, "", fuente, { formato: "derivada" } )
+  }
+
+  /** Datos de origen de una tabla (formato, separador, hoja...) */
+  struct function origen( required string tabla ) { return variables.origenes[ tabla ] ?: {} }
+
+  /** Query crudo de una tabla (para Estadistica, ML, IngenieroDatos) */
+  query function tabla( required string tabla ) {
+    if ( !variables.tablas.keyExists( tabla ) ) throw( type: "Catalogo.NoExiste", message: "No existe la tabla #tabla#. Tablas: #variables.tablas.keyList()#" )
+    return variables.tablas[ tabla ]
+  }
+
+  /** Lista de tablas con filas, columnas y fuente */
+  array function listar() {
+    return variables.tablas.keyArray().map( n => {
+      return { tabla: n, filas: variables.tablas[ n ].recordCount, columnas: variables.tablas[ n ].columnList, fuente: variables.origenes[ n ].fuente }
+    } )
+  }
+
+  /** Perfil de una tabla desconocida: tipo, nulos, distintos, ejemplos y estadísticas */
+  struct function perfilar( required string tabla ) {
+    if ( !variables.tablas.keyExists( tabla ) ) return { error: "No existe la tabla #tabla#. Tablas: #variables.tablas.keyList()#" }
+    var q = variables.tablas[ tabla ]
+    var columnas = q.columnList.listToArray().map( c => {
+      var valores  = q.columnData( c )
+      var noVacios = valores.filter( v => len( trim( v ) ) )
+      var numerico = noVacios.len() && noVacios.every( v => isNumeric( v ) )
+      var info = {
+        columna  : c,
+        tipo     : numerico ? "numérico" : "texto",
+        nulos    : valores.len() - noVacios.len(),
+        distintos: noVacios.toList( char( 31 ) ).listRemoveDuplicates( char( 31 ) ).listLen( char( 31 ) ),
+        ejemplos : noVacios.slice( 1, min( 3, max( 1, noVacios.len() ) ) )
+      }
+      if ( numerico ) {
+        var nums = noVacios.map( v => val( v ) ).sort( "numeric" )
+        info.min = nums.first(); info.max = nums.last()
+        info.media = round( nums.sum() / nums.len() * 1000 ) / 1000
+        info.mediana = nums[ max( 1, ceiling( nums.len() / 2 ) ) ]
+      }
+      return info
+    } )
+    var res = { tabla: tabla, filas: q.recordCount, columnas: columnas }
+    variables.consultas.append( { sql: "perfilar(#tabla#)", filas: q.recordCount, resultado: [ { tabla: tabla, columnas: columnas.len() } ] } )
+    return res
+  }
+
+  /** SELECT de solo lectura; todas las tablas del catálogo están disponibles (con JOIN) */
+  struct function consultar( required string sql ) {
+    var limpio = trim( arguments.sql ).reReplace( ";\s*$", "" )
+    if ( !limpio.reFindNoCase( "^select\s" ) || limpio.find( ";" ) ) {
+      return { sql: limpio, error: "Solo se permite una sentencia SELECT." }
+    }
+    try {
+      // Query of Queries resuelve las tablas por nombre en el scope local
+      for ( var n in variables.tablas ) { local[ n ] = variables.tablas[ n ] }
+      var r = queryExecute( limpio, {}, { dbtype: "query" } )
+      var filas = r.recordCount ? jsonDeserialize( jsonSerialize( r, "struct" ) ) : []
+      var res = { sql: limpio, filas: r.recordCount, resultado: filas.len() > 50 ? filas.slice( 1, 50 ) : filas }
+      variables.consultas.append( res )
+      return res
+    } catch ( any e ) {
+      return { sql: limpio, error: e.message }
+    }
+  }
+
+  void function registrarEvidencia( required struct e ) { variables.consultas.append( e ) }
+
+  private string function nombreTabla( required string n ) {
+    return n.lCase().reReplace( "[^a-z0-9_]", "_", "all" ).reReplace( "_+", "_", "all" ).reReplace( "^([0-9])", "t_\1" )
+  }
+
+  private string function guardar( required string nombre, required struct d, required string archivo, required string fuente, struct extra = {}, boolean entrante = false ) {
+    var n = nombreTabla( nombre )
+    // Datos que vienen de afuera: se anonimizan ANTES de crear la tabla
+    if ( entrante && anonimiza() ) {
+      var a = variables.anonimizador.anonimizar( d )
+      d = a
+      var limpios = limpiarEncabezados( d.columnas )
+      extra.anonimizacion = a.informe.map( x => { return { columna: limpios[ x.idx ], tipo: x.tipo, metodo: x.metodo, valores: x.valores } } )
+      a.informe = extra.anonimizacion
+      if ( a.informe.len() ) {
+        variables.consultas.append( { sql: "anonimizar(#n#)", filas: d.filas.len(), resultado: a.informe.map( x => { return { columna: x.columna, tipo: x.tipo, metodo: x.metodo } } ) } )
+      }
+    }
+    variables.tablas[ n ]   = construirQuery( d.columnas, d.filas )
+    variables.origenes[ n ] = { archivo: archivo, fuente: fuente }.append( extra )
+    return n
+  }
+
+  private string function chr9() { return char( 9 ) }
+
+  /** Encabezados limpios y únicos: vacíos -> col_N, repetidos -> nombre_2 */
+  private array function limpiarEncabezados( required array crudos ) {
+    var vistos = {}
+    return crudos.map( ( c, i ) => {
+      var n = toString( c ?: "" ).trim()
+      n = n.reReplace( "[áàä]", "a", "all" ).reReplace( "[éèë]", "e", "all" ).reReplace( "[íìï]", "i", "all" )
+           .reReplace( "[óòö]", "o", "all" ).reReplace( "[úùü]", "u", "all" ).reReplace( "ñ", "n", "all" )
+           .reReplace( "[ÁÀÄ]", "A", "all" ).reReplace( "[ÉÈË]", "E", "all" ).reReplace( "[ÍÌÏ]", "I", "all" )
+           .reReplace( "[ÓÒÖ]", "O", "all" ).reReplace( "[ÚÙÜ]", "U", "all" ).reReplace( "Ñ", "N", "all" )
+           .reReplace( "[^A-Za-z0-9_]", "_", "all" ).reReplace( "_+", "_", "all" ).reReplace( "^_|_$", "", "all" )
+      if ( !len( n ) ) n = "col_#i#"
+      if ( n.reFind( "^[0-9]" ) ) n = "c_" & n
+      var k = n.lCase()
+      if ( vistos.keyExists( k ) ) { vistos[ k ]++; n &= "_" & vistos[ k ] } else { vistos[ k ] = 1 }
+      return n
+    } )
+  }
+
+  /** Numérica si todos los valores no vacíos son números (los vacíos se guardan como null) */
+  private query function construirQuery( required array columnas, required array filas ) {
+    var cols  = limpiarEncabezados( columnas )
+    var tipos = cols.map( ( c, idx ) => {
+      var hay = false
+      for ( var f in filas ) {
+        var v = trim( toString( f[ idx ] ?: "" ) )
+        if ( !len( v ) ) continue
+        if ( !isNumeric( v ) ) return "varchar"
+        hay = true
+      }
+      return hay ? "double" : "varchar"
+    } )
+    var q = queryNew( cols.toList(), tipos.toList() )
+    for ( var f in filas ) {
+      var row = {}
+      cols.each( ( c, idx ) => {
+        var v = toString( f[ idx ] ?: "" )
+        row[ c ] = ( tipos[ idx ] == "double" && !len( trim( v ) ) ) ? javaCast( "null", "" ) : v
+      } )
+      q.addRow( row )
+    }
+    return q
+  }
+
+  /**
+   * CSV/TSV/TXT: detecta el separador (, ; tab |), quita el BOM y, si el separador es ";",
+   * convierte números con coma decimal (1.234,5 -> 1234.5), típico de Excel en español.
+   */
+  private struct function leerDelimitado( required string archivo ) {
+    var texto = fileRead( archivo, "utf-8" )
+    if ( texto.startsWith( char( 65279 ) ) ) texto = mid( texto, 2, len( texto ) )
+    var lineas = texto.replace( char( 13 ), "", "all" ).listToArray( char( 10 ) ).filter( l => len( trim( l ) ) )
+    if ( !lineas.len() ) return { columnas: [], filas: [], separador: ",", comaDecimal: false }
+    var sep = ","; var mejor = 0
+    for ( var cand in [ ",", ";", char( 9 ), "|" ] ) {
+      var n = parsearLinea( lineas[ 1 ], cand ).len()
+      // el separador debe dar el mismo número de columnas en las primeras líneas
+      var estable = lineas.slice( 1, min( 5, lineas.len() ) ).every( l => parsearLinea( l, cand ).len() == n )
+      if ( n > mejor && estable ) { mejor = n; sep = cand }
+    }
+    var filas = []
+    for ( var i = 2; i <= lineas.len(); i++ ) filas.append( parsearLinea( lineas[ i ], sep ) )
+    var comaDecimal = false
+    if ( sep == ";" ) {
+      filas = filas.map( f => f.map( v => {
+        var t = trim( v )
+        if ( t.reFind( "^-?[0-9]{1,3}(\.[0-9]{3})*,[0-9]+$" ) || t.reFind( "^-?[0-9]+,[0-9]+$" ) ) { comaDecimal = true; return t.replace( ".", "", "all" ).replace( ",", "." ) }
+        return v
+      } ) )
+    }
+    return { columnas: parsearLinea( lineas[ 1 ], sep ), filas: filas, separador: sep, comaDecimal: comaDecimal }
+  }
+
+  /**
+   * Excel (.xlsx/.xls) con Apache POI: una tabla por hoja con datos.
+   * El encabezado es la fila con más celdas llenas entre las 10 primeras (salta títulos y filas en blanco).
+   * Fechas -> yyyy-MM-dd, fórmulas -> su valor calculado.
+   */
+  private array function leerExcel( required string archivo ) {
+    // POI usa log4j-api; sin esto imprime un aviso de "no logging implementation"
+    createObject( "java", "java.lang.System" ).setProperty( "log4j2.loggerContextFactory", "org.apache.logging.log4j.simple.SimpleLoggerContextFactory" )
+    var entrada = createObject( "java", "java.io.FileInputStream" ).init( archivo )
+    var libro   = createObject( "java", "org.apache.poi.ss.usermodel.WorkbookFactory" ).create( entrada )
+    var evaluador = libro.getCreationHelper().createFormulaEvaluator()
+    var formato = createObject( "java", "org.apache.poi.ss.usermodel.DataFormatter" ).init()
+    var DateUtil = createObject( "java", "org.apache.poi.ss.usermodel.DateUtil" )
+    var hojas = []
+    try {
+      for ( var s = 0; s < libro.getNumberOfSheets(); s++ ) {
+        var hoja = libro.getSheetAt( s )
+        var crudas = []
+        for ( var r = 0; r <= hoja.getLastRowNum(); r++ ) {
+          var fila = hoja.getRow( r )
+          var valores = []
+          if ( !isNull( fila ) ) {
+            for ( var c = 0; c < max( 0, fila.getLastCellNum() ); c++ ) {
+              var celda = fila.getCell( c )
+              valores.append( isNull( celda ) ? "" : valorCelda( celda, evaluador, formato, DateUtil ) )
+            }
+          }
+          crudas.append( valores )
+        }
+        var llenas = crudas.map( f => f.filter( v => len( trim( v ) ) ).len() )
+        if ( !llenas.len() || llenas.max() == 0 ) continue
+        var enc = 1
+        for ( var i = 1; i <= min( 10, crudas.len() ); i++ ) { if ( llenas[ i ] > llenas[ enc ] ) enc = i }
+        var ancho = crudas[ enc ].len()
+        var filas = crudas.slice( enc + 1, max( 0, crudas.len() - enc ) )
+          .filter( f => f.filter( v => len( trim( v ) ) ).len() )
+          .map( f => { var x = duplicate( f ); while ( x.len() < ancho ) x.append( "" ); return x.slice( 1, ancho ) } )
+        hojas.append( { hoja: hoja.getSheetName(), filaEncabezado: enc, datos: { columnas: crudas[ enc ], filas: filas } } )
+      }
+    } finally {
+      libro.close(); entrada.close()
+    }
+    return hojas
+  }
+
+  private string function valorCelda( celda, evaluador, formato, DateUtil ) {
+    var tipo = celda.getCellType().name()
+    if ( tipo == "FORMULA" ) {
+      var v = evaluador.evaluate( celda )
+      if ( isNull( v ) ) return ""
+      var t = v.getCellType().name()
+      if ( t == "NUMERIC" ) return DateUtil.isCellDateFormatted( celda ) ? dateFormat( DateUtil.getJavaDate( v.getNumberValue() ), "yyyy-MM-dd" ) : numeroTexto( v.getNumberValue() )
+      if ( t == "BOOLEAN" ) return v.getBooleanValue() ? "1" : "0"
+      if ( t == "ERROR" ) return ""
+      return v.getStringValue()
+    }
+    if ( tipo == "NUMERIC" ) return DateUtil.isCellDateFormatted( celda ) ? dateFormat( celda.getDateCellValue(), "yyyy-MM-dd" ) : numeroTexto( celda.getNumericCellValue() )
+    if ( tipo == "BOOLEAN" ) return celda.getBooleanCellValue() ? "1" : "0"
+    if ( tipo == "STRING" ) return celda.getStringCellValue()
+    return ""
+  }
+
+  private string function numeroTexto( required numeric n ) {
+    return createObject( "java", "java.math.BigDecimal" ).init( javaCast( "double", n ) ).stripTrailingZeros().toPlainString()
+  }
+
+  /** JSON: un arreglo de objetos, o un objeto con un arreglo dentro (data, items, results...). Aplana un nivel: dir.ciudad -> dir_ciudad */
+  private struct function leerJSON( required string archivo ) {
+    var d = jsonDeserialize( fileRead( archivo, "utf-8" ) )
+    if ( isStruct( d ) ) {
+      var lista = d.keyArray().filter( k => isArray( d[ k ] ) )
+      if ( !lista.len() ) throw( type: "Catalogo.Formato", message: "El JSON no tiene un arreglo de registros" )
+      d = d[ lista.first() ]
+    }
+    var planos = d.filter( r => isStruct( r ) ).map( r => {
+      var p = [:]
+      r.each( ( k, v ) => {
+        if ( isStruct( v ) ) v.each( ( k2, v2 ) => p[ k & "_" & k2 ] = isSimpleValue( v2 ) ? v2 : jsonSerialize( v2 ) )
+        else p[ k ] = isNull( v ) ? "" : ( isSimpleValue( v ) ? ( isBoolean( v ) && !isNumeric( v ) ? ( v ? "1" : "0" ) : v ) : jsonSerialize( v ) )
+      } )
+      return p
+    } )
+    var cols = []
+    planos.each( p => p.each( ( k, v ) => { if ( !cols.findNoCase( k ) ) cols.append( k ) } ) )
+    return { columnas: cols, filas: planos.map( p => cols.map( c => p[ c ] ?: "" ) ) }
+  }
+
+  /** Separa una línea CSV respetando comillas */
+  private array function parsearLinea( required string linea, string sep = "," ) {
+    var out = []; var actual = createObject( "java", "java.lang.StringBuilder" ).init(); var enComillas = false
+    var chars = linea.toCharArray()
+    for ( var i = 1; i <= chars.len(); i++ ) {
+      var ch = chars[ i ]
+      if ( ch == '"' ) {
+        if ( enComillas && i < chars.len() && chars[ i + 1 ] == '"' ) { actual.append( '"' ); i++ }
+        else { enComillas = !enComillas }
+      } else if ( ch == sep && !enComillas ) {
+        out.append( actual.toString() ); actual.setLength( 0 )
+      } else {
+        actual.append( ch )
+      }
+    }
+    out.append( actual.toString() )
+    return out
+  }
+}

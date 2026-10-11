@@ -1,0 +1,20 @@
+class accessors="true" {
+  property name="titulo" type="string";
+  property name="prioridad" type="numeric" default=1;
+  property name="hecha" type="boolean" default=false;
+
+  function init( required string titulo, numeric prioridad = 1 ) {
+    variables.titulo = arguments.titulo
+    variables.prioridad = arguments.prioridad
+    return this
+  }
+
+  function completar() {
+    variables.hecha = true
+    return this
+  }
+
+  string function resumen() {
+    return "[#hecha ? 'x' : ' '#] #titulo# (p#prioridad#)"
+  }
+}

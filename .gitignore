@@ -1,0 +1,13 @@
+# Secretos: nunca subir keys
+data-miner/config.local.bat
+.env
+*.key
+
+# Generados al correr
+data-miner/tmp_descargas/
+data-miner/informe-*.html
+!data-miner/informe-demo.html
+__pycache__/
+*.pyc
+*.log
+*.bak

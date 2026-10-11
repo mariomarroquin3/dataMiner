@@ -1,0 +1,179 @@
+/**
+ * Estadística descriptiva, correlación, covarianza y métricas financieras.
+ * Trabaja sobre las tablas del Catálogo. Cada resultado se registra como evidencia
+ * y, cuando aplica, agrega una gráfica al Informe.
+ */
+class {
+
+  property name="catalogo";
+  property name="informe";
+
+  function init( required any catalogo, required any informe ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe
+    return this
+  }
+
+  // ------------------------------------------------------------ Descriptiva
+
+  struct function describir( required string tabla, any columnas = "" ) {
+    var q = tablaQ( tabla ); if ( isStruct( q ) ) return q
+    var cols = columnasNumericas( q, columnas )
+    var res = cols.map( c => resumen( c, numeros( q, c ) ) )
+    return registrar( "describir(#tabla#)", { tabla: tabla, columnas: res } )
+  }
+
+  // ------------------------------------------------------------ Correlación / covarianza
+
+  struct function correlacion( required string tabla, any columnas = "", string metodo = "pearson" ) {
+    var q = tablaQ( tabla ); if ( isStruct( q ) ) return q
+    var cols = columnasNumericas( q, columnas )
+    if ( cols.len() < 2 ) return { error: "Se necesitan al menos 2 columnas numéricas" }
+    var datos = {}
+    cols.each( c => datos[ c ] = vector( q, c ) )
+    if ( metodo == "spearman" ) cols.each( c => datos[ c ] = rangos( datos[ c ] ) )
+    var matriz = cols.map( a => cols.map( b => redondear( pearson( datos[ a ], datos[ b ] ), 4 ) ) )
+    var pares = []
+    for ( var i = 1; i <= cols.len(); i++ ) for ( var j = i + 1; j <= cols.len(); j++ ) {
+      pares.append( { a: cols[ i ], b: cols[ j ], r: matriz[ i ][ j ], fuerza: fuerza( matriz[ i ][ j ] ) } )
+    }
+    pares.sort( ( x, y ) => abs( y.r ) - abs( x.r ) > 0 ? 1 : -1 )
+    variables.informe.agregarGrafico( { tipo: "heatmap", titulo: "Correlación (#metodo#) · #tabla#", labels: cols, matriz: matriz } )
+    return registrar( "correlacion(#tabla#, #metodo#)", { tabla: tabla, metodo: metodo, columnas: cols, matriz: matriz, pares_mas_fuertes: pares.slice( 1, min( 10, pares.len() ) ) } )
+  }
+
+  struct function covarianza( required string tabla, any columnas = "" ) {
+    var q = tablaQ( tabla ); if ( isStruct( q ) ) return q
+    var cols = columnasNumericas( q, columnas )
+    var datos = {}
+    cols.each( c => datos[ c ] = vector( q, c ) )
+    var matriz = cols.map( a => cols.map( b => redondear( cov( datos[ a ], datos[ b ] ), 4 ) ) )
+    return registrar( "covarianza(#tabla#)", { tabla: tabla, columnas: cols, matriz: matriz } )
+  }
+
+  // ------------------------------------------------------------ Finanzas
+
+  /**
+   * Métricas de una serie de precios/valores ordenada por fecha.
+   * @periodosAnio 252 (diario bursátil), 12 (mensual), 52 (semanal)
+   */
+  struct function finanzas( required string tabla, required string columnaValor, string columnaFecha = "", numeric periodosAnio = 252, numeric tasaLibreRiesgo = 0.0 ) {
+    var q = tablaQ( tabla ); if ( isStruct( q ) ) return q
+    var filas = []
+    for ( var i = 1; i <= q.recordCount; i++ ) {
+      var v = q[ columnaValor ][ i ]
+      if ( !isNull( v ) && isNumeric( v ) ) filas.append( { f: len( columnaFecha ) ? toString( q[ columnaFecha ][ i ] ) : i, v: val( v ) } )
+    }
+    if ( len( columnaFecha ) ) filas.sort( ( a, b ) => compare( a.f, b.f ) )
+    if ( filas.len() < 3 ) return { error: "Serie demasiado corta" }
+    var valores = filas.map( x => x.v )
+    var rend = []
+    for ( var i = 2; i <= valores.len(); i++ ) if ( valores[ i - 1 ] != 0 ) rend.append( valores[ i ] / valores[ i - 1 ] - 1 )
+    var media = rend.sum() / rend.len()
+    var desv  = desviacion( rend )
+    // Max drawdown
+    var pico = valores[ 1 ]; var mdd = 0
+    valores.each( v => { pico = max( pico, v ); if ( pico > 0 ) mdd = min( mdd, v / pico - 1 ) } )
+    var ordenados = duplicate( rend ).sort( "numeric" )
+    var var95 = ordenados[ max( 1, int( 0.05 * ordenados.len() ) ) ]
+    var anios = valores.len() / periodosAnio
+    var cagr  = ( valores.first() > 0 && anios > 0 ) ? ( valores.last() / valores.first() ) ^ ( 1 / anios ) - 1 : javaCast( "null", "" )
+    var volAnual = desv * sqr( periodosAnio )
+    var res = {
+      tabla: tabla, columna: columnaValor, observaciones: valores.len(),
+      rendimiento_total: redondear( valores.last() / valores.first() - 1, 4 ),
+      rendimiento_medio_periodo: redondear( media, 6 ),
+      volatilidad_periodo: redondear( desv, 6 ),
+      volatilidad_anualizada: redondear( volAnual, 4 ),
+      cagr: isNull( cagr ) ? "n/a" : redondear( cagr, 4 ),
+      sharpe_anualizado: volAnual > 0 ? redondear( ( media * periodosAnio - tasaLibreRiesgo ) / volAnual, 3 ) : "n/a",
+      max_drawdown: redondear( mdd, 4 ),
+      var_95_historico: redondear( var95, 4 )
+    }
+    var paso = max( 1, int( filas.len() / 200 ) )
+    var muestra = filas.filter( ( x, i ) => ( i - 1 ) mod paso == 0 )
+    variables.informe.agregarGrafico( { tipo: "line", titulo: "#columnaValor# · #tabla#", labels: muestra.map( x => x.f ), series: [ { nombre: columnaValor, datos: muestra.map( x => x.v ) } ] } )
+    return registrar( "finanzas(#tabla#.#columnaValor#)", res )
+  }
+
+  // ------------------------------------------------------------ Utilidades
+
+  private any function tablaQ( required string tabla ) {
+    var t = variables.catalogo.getTablas()
+    return t.keyExists( tabla ) ? t[ tabla ] : { error: "No existe la tabla #tabla#. Tablas: #t.keyList()#" }
+  }
+
+  private array function columnasNumericas( required query q, any columnas ) {
+    var pedidas = isArray( columnas ) ? columnas : listToArray( columnas )
+    var todas = q.columnList.listToArray()
+    var base = pedidas.len() ? pedidas.filter( c => todas.findNoCase( c ) ) : todas
+    return base.filter( c => numeros( q, c ).len() > 1 && !c.reFindNoCase( "^id$|_id$" ) )
+  }
+
+  /** Valores numéricos no nulos de una columna */
+  array function numeros( required query q, required string c ) {
+    var out = []
+    q.columnData( c ).each( v => { if ( !isNull( v ) && isNumeric( v ) ) out.append( val( v ) ) } )
+    return out.len() == q.recordCount || out.len() > q.recordCount * 0.5 ? out : []
+  }
+
+  /** Vector alineado por fila (nulos -> media) para correlación */
+  private array function vector( required query q, required string c ) {
+    var nums = numeros( q, c ); var m = nums.sum() / nums.len()
+    return q.columnData( c ).map( v => ( !isNull( v ) && isNumeric( v ) ) ? val( v ) : m )
+  }
+
+  numeric function pearson( required array x, required array y ) {
+    var n = x.len(); var mx = x.sum() / n; var my = y.sum() / n
+    var sxy = 0; var sxx = 0; var syy = 0
+    for ( var i = 1; i <= n; i++ ) { var dx = x[ i ] - mx; var dy = y[ i ] - my; sxy += dx * dy; sxx += dx * dx; syy += dy * dy }
+    return ( sxx == 0 || syy == 0 ) ? 0 : sxy / sqr( sxx * syy )
+  }
+
+  numeric function cov( required array x, required array y ) {
+    var n = x.len(); var mx = x.sum() / n; var my = y.sum() / n; var s = 0
+    for ( var i = 1; i <= n; i++ ) s += ( x[ i ] - mx ) * ( y[ i ] - my )
+    return n > 1 ? s / ( n - 1 ) : 0
+  }
+
+  private array function rangos( required array x ) {
+    var idx = x.map( ( v, i ) => { return { v: v, i: i } } ).sort( ( a, b ) => a.v < b.v ? -1 : ( a.v > b.v ? 1 : 0 ) )
+    var r = []; r.resize( x.len() )
+    var k = 1
+    while ( k <= idx.len() ) {
+      var j = k
+      while ( j < idx.len() && idx[ j + 1 ].v == idx[ k ].v ) j++
+      var promedio = ( k + j ) / 2
+      for ( var m = k; m <= j; m++ ) r[ idx[ m ].i ] = promedio
+      k = j + 1
+    }
+    return r
+  }
+
+  private numeric function desviacion( required array x ) {
+    var m = x.sum() / x.len()
+    return sqr( x.reduce( ( a, v ) => a + ( v - m ) ^ 2, 0 ) / max( 1, x.len() - 1 ) )
+  }
+
+  private struct function resumen( required string c, required array v ) {
+    var s = duplicate( v ).sort( "numeric" ); var n = s.len(); var m = s.sum() / n; var d = desviacion( s )
+    var p = ( q ) => s[ max( 1, ceiling( q * n ) ) ]
+    var asim = d > 0 ? s.reduce( ( a, x ) => a + ( ( x - m ) / d ) ^ 3, 0 ) / n : 0
+    return { columna: c, n: n, media: redondear( m, 4 ), desviacion: redondear( d, 4 ), min: s[ 1 ], p25: p( 0.25 ), mediana: p( 0.5 ), p75: p( 0.75 ), max: s[ n ], asimetria: redondear( asim, 3 ) }
+  }
+
+  private string function fuerza( required numeric r ) {
+    var a = abs( r )
+    return a >= 0.7 ? "fuerte" : a >= 0.4 ? "moderada" : a >= 0.2 ? "débil" : "muy débil"
+  }
+
+  numeric function redondear( required numeric x, numeric d = 4 ) {
+    var f = 10 ^ d
+    return round( x * f ) / f
+  }
+
+  private struct function registrar( required string etiqueta, required struct res ) {
+    variables.catalogo.registrarEvidencia( { sql: etiqueta, filas: "", resultado: [ res ] } )
+    return res
+  }
+}

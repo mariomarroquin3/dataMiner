@@ -1,0 +1,14 @@
+import bxModules.bxai.models.providers.MockService;
+// Cargar documentos propios (carpeta con .md, .txt, .pdf, .csv, .json...)
+docs = aiDocuments( expandPath( "./docs" ) ).load()
+println( "Documentos: " & docs.len() )
+contexto = docs.map( d => d.getContent() ).toList( char( 10 ) )
+
+pregunta = "¿A qué hora abre la biblioteca?"
+msg = aiMessage()
+  .system( "Responde SOLO usando este contexto: ${contexto}" )
+  .user( pregunta )
+  .bind( { contexto: aiFence( contexto, "docs" ) } )
+
+println( aiChat( msg, {}, { provider: "mock", providerOptions: { responses: [ "A las 7am" ] } } ) )
+println( MockService::getRecorded().last().messages.first().content.left( 300 ) )

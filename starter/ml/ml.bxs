@@ -1,0 +1,25 @@
+import org.tribuo.MutableDataset;
+import org.tribuo.provenance.SimpleDataSourceProvenance;
+import org.tribuo.regression.RegressionFactory;
+import org.tribuo.regression.Regressor;
+import org.tribuo.impl.ArrayExample;
+import org.tribuo.regression.sgd.linear.LinearSGDTrainer;
+import org.tribuo.regression.sgd.objectives.SquaredLoss;
+import org.tribuo.math.optimisers.AdaGrad;
+import org.tribuo.regression.evaluation.RegressionEvaluator;
+
+factory = new RegressionFactory()
+ds = new MutableDataset( new SimpleDataSourceProvenance( "sintetico", factory ), factory )
+nombres = javaCast( "String[]", [ "x1", "x2" ] )
+// y = 3*x1 - 2*x2 + ruido
+for ( i = 1; i <= 300; i++ ) {
+  x1 = randRange( 0, 100 ) / 10; x2 = randRange( 0, 100 ) / 10
+  y = 3 * x1 - 2 * x2 + ( rand() - 0.5 ) / 5
+  ds.add( new ArrayExample( new Regressor( "y", y ), nombres, javaCast( "double[]", [ x1, x2 ] ) ) )
+}
+trainer = new LinearSGDTrainer( new SquaredLoss(), new AdaGrad( 0.5 ), 20, 1 )
+modelo = trainer.train( ds )
+eval = new RegressionEvaluator().evaluate( modelo, ds )
+println( "R2: " & eval.r2( new Regressor( "y", 0 ) ) )
+pred = modelo.predict( new ArrayExample( new Regressor( "y", 0 ), nombres, javaCast( "double[]", [ 5, 2 ] ) ) )
+println( "Predicción para (5,2), esperado 11: " & pred.getOutput().getValues()[ 1 ] )

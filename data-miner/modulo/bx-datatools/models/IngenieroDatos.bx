@@ -1,0 +1,314 @@
+/**
+ * Ingeniería de datos sobre tablas desconocidas:
+ *   diagnosticar  -> problemas de calidad con severidad y recomendación (puntaje 0-100)
+ *   fugaDeDatos   -> columnas sospechosas de "leakage" para un objetivo de ML
+ *   esquema       -> DDL SQL propuesto (tipos, NOT NULL, clave primaria, CHECK)
+ *   limpiar       -> crea <tabla>_limpia (trim, categorías unificadas, montos y fechas normalizados, sin duplicados)
+ *   consejos      -> recomendaciones de recolección adaptadas a lo que encontró
+ */
+class {
+
+  property name="catalogo";
+  property name="informe";
+
+  // Patrones (en variables, para que las closures los vean)
+  variables.re = {
+    FECHA_DMY : "^[0-3]?[0-9]/[01]?[0-9]/[0-9]{4}$",
+    FECHA_ISO : "^[0-9]{4}-[01][0-9]-[0-3][0-9]",
+    MONTO     : "^[-+]?[$€£₡]?\s*-?[0-9][0-9.,]*\s*%?$",
+    NO_NEG    : "(stock|precio|monto|unidad|cantidad|edad|total|importe|saldo_inicial|peso)",
+    ID        : "(^id$|^id_|_id$|^codigo|^cod_|^sku$|^dui$|^nit$)",
+    PII       : "(correo|email|mail|telefono|celular|phone|(^|_)dui(_|$)|(^|_)nit(_|$)|direccion|address|apellido)"
+  }
+
+  function init( required any catalogo, any informe ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe ?: javaCast( "null", "" )
+    return this
+  }
+
+  // ------------------------------------------------------------ Diagnóstico de calidad
+
+  /** @silencioso true = no registra evidencia ni gráfica (uso interno) */
+  struct function diagnosticar( required string tabla, boolean silencioso = false ) {
+    var q = variables.catalogo.tabla( tabla )
+    var problemas = []
+    var columnas  = []
+    var n = q.recordCount
+
+    // Filas duplicadas exactas
+    var vistos = {}; var dup = 0
+    for ( var fila in q ) {
+      var k = hash( jsonSerialize( fila ) )
+      if ( vistos.keyExists( k ) ) dup++; else vistos[ k ] = true
+    }
+    if ( dup ) problemas.append( p( "alta", "(tabla)", "Filas duplicadas", "#dup# filas idénticas", "Elimínalas o define una clave única en el origen para que no se repitan al exportar" ) )
+
+    for ( var c in q.columnList.listToArray() ) {
+      var crudos = q.columnData( c ).map( v => isNull( v ) ? "" : toString( v ) )
+      var llenos = crudos.filter( v => len( trim( v ) ) )
+      var nulos  = n - llenos.len()
+      var numerica = esNumerica( q, c )
+      var distintos = llenos.toList( char( 31 ) ).listRemoveDuplicates( char( 31 ) ).listLen( char( 31 ) )
+      var nombreL = c.lCase()
+      columnas.append( { columna: c, tipo: numerica ? "numérico" : "texto", nulos_pct: n ? redondear( nulos / n * 100, 1 ) : 0, distintos: distintos } )
+
+      if ( nulos ) {
+        var pct = nulos / n * 100
+        problemas.append( p( pct > 30 ? "alta" : pct > 5 ? "media" : "baja", c, "Valores vacíos", "#nulos# de #n# (#redondear( pct, 1 )#%)",
+          pct > 30 ? "Revisa si el campo es opcional en el formulario; si es importante hazlo obligatorio en la captura" : "Imputa (mediana/moda) o marca como 'desconocido'; documenta por qué faltan" ) )
+      }
+      if ( llenos.len() && distintos == 1 ) problemas.append( p( "baja", c, "Columna constante", "Siempre vale '#llenos.first()#'", "No aporta información para análisis ni ML; puedes quitarla" ) )
+
+      if ( numerica ) {
+        var nums = llenos.map( v => val( v ) ).sort( "numeric" )
+        if ( nums.len() >= 8 ) {
+          var q1 = cuantil( nums, 0.25 ); var q3 = cuantil( nums, 0.75 ); var iqr = q3 - q1
+          var atip = nums.filter( x => iqr > 0 && ( x < q1 - 3 * iqr || x > q3 + 3 * iqr ) )
+          if ( atip.len() ) problemas.append( p( "media", c, "Valores atípicos extremos", "#atip.len()# fuera de 3×IQR, ej: #atip.slice( 1, min( 3, atip.len() ) ).toList( ', ' )#", "Confirma si son errores de digitación (validación de rango en la captura) o casos reales" ) )
+        }
+        if ( nombreL.reFind( variables.re.NO_NEG ) ) {
+          var neg = nums.filter( x => x < 0 ).len()
+          if ( neg ) problemas.append( p( "alta", c, "Valores imposibles", "#neg# negativos en una columna que no debería tenerlos", "Agrega una regla CHECK (#c# >= 0) o validación en el formulario" ) )
+        }
+      } else if ( llenos.len() ) {
+        var conEspacios = llenos.filter( v => v != trim( v ) ).len()
+        if ( conEspacios ) problemas.append( p( "media", c, "Espacios sobrantes", "#conEspacios# valores con espacios al inicio o final", "Aplica trim al capturar; rompe agrupaciones y JOINs" ) )
+
+        var variantes = variantesCategoria( llenos )
+        if ( variantes.len() ) problemas.append( p( "media", c, "Categorías escritas de varias formas", variantes.slice( 1, min( 3, variantes.len() ) ).toList( " · " ), "Usa una lista desplegable (catálogo controlado) en vez de texto libre" ) )
+
+        var montos = llenos.filter( v => trim( v ).reFind( variables.re.MONTO ) && !isNumeric( trim( v ) ) ).len()
+        if ( montos >= llenos.len() * 0.8 ) problemas.append( p( "media", c, "Número guardado como texto", "Tiene símbolos de moneda, % o separadores de miles (ej: #llenos.first()#)", "Guarda el número sin formato y la moneda en otra columna" ) )
+
+        var dmy = llenos.filter( v => trim( v ).reFind( variables.re.FECHA_DMY ) ).len()
+        var iso = llenos.filter( v => trim( v ).reFind( variables.re.FECHA_ISO ) ).len()
+        if ( dmy && iso ) problemas.append( p( "media", c, "Formatos de fecha mezclados", "#dmy# como dd/mm/aaaa y #iso# como aaaa-mm-dd", "Estandariza en ISO 8601 (aaaa-mm-dd) desde el sistema de origen" ) )
+        else if ( dmy >= llenos.len() * 0.8 ) problemas.append( p( "baja", c, "Fecha en formato local", "dd/mm/aaaa (ej: #llenos.first()#)", "Usa ISO 8601 (aaaa-mm-dd): evita confundir día y mes al cruzar sistemas" ) )
+      }
+
+      if ( nombreL.reFind( variables.re.ID ) ) {
+        if ( distintos < llenos.len() ) problemas.append( p( "alta", c, "Identificador repetido", "#llenos.len() - distintos# IDs repetidos", "Un ID debe ser único: genera el ID en el sistema (no a mano) y valida unicidad" ) )
+      }
+      // "nombre" solo cuenta como dato personal si la tabla también tiene datos de contacto
+      var yaAnonimizada = ( variables.catalogo.origen( tabla ).anonimizacion ?: [] ).some( a => a.columna == c )
+      if ( !yaAnonimizada && ( nombreL.reFind( variables.re.PII ) || ( nombreL.reFind( "^(nombre|name)" ) && q.columnList.lCase().reFind( variables.re.PII ) ) ) ) {
+        problemas.append( p( "baja", c, "Dato personal", "Posible dato personal identificable", "Pide consentimiento, limita el acceso y anonimiza antes de compartir o entrenar modelos" ) )
+      }
+    }
+
+    var peso = { alta: 15, media: 7, baja: 2 }
+    var puntaje = max( 0, 100 - problemas.reduce( ( a, x ) => a + peso[ x.severidad ], 0 ) )
+    var orden = { alta: 1, media: 2, baja: 3 }
+    problemas.sort( ( a, b ) => orden[ a.severidad ] - orden[ b.severidad ] )
+    var res = {
+      tabla: tabla, filas: n, origen: variables.catalogo.origen( tabla ).filter( ( k, v ) => k != "archivo" ),
+      puntaje_calidad: puntaje,
+      nivel: puntaje >= 85 ? "buena" : puntaje >= 60 ? "aceptable" : "mala",
+      problemas: problemas, columnas: columnas
+    }
+    if ( silencioso ) return res
+    if ( !isNull( variables.informe ) ) {
+      variables.informe.agregarGrafico( { tipo: "bar", titulo: "Calidad · % de vacíos por columna · #tabla# (puntaje #puntaje#/100)",
+        labels: columnas.map( x => x.columna ), series: [ { nombre: "% vacíos", datos: columnas.map( x => x.nulos_pct ) } ] } )
+    }
+    return registrar( "calidad(#tabla#)", res, n )
+  }
+
+  // ------------------------------------------------------------ Fuga de datos (leakage) para ML
+
+  struct function fugaDeDatos( required string tabla, required string objetivo ) {
+    var q = variables.catalogo.tabla( tabla )
+    if ( !q.columnList.listFindNoCase( objetivo ) ) return { error: "No existe la columna #objetivo# en #tabla#" }
+    var y = vector( q, objetivo )
+    var alertas = []
+    for ( var c in q.columnList.listToArray() ) {
+      if ( c == objetivo ) continue
+      if ( esNumerica( q, c ) ) {
+        var r = pearson( vector( q, c ), y )
+        if ( abs( r ) >= 0.8 ) alertas.append( { columna: c, motivo: "Correlación #redondear( r, 3 )# con #objetivo#: casi lo predice sola", consejo: "Verifica si este dato se conoce ANTES del momento de predecir. Si se registra después (por ejemplo días de mora para predecir impago), quítalo del modelo" } )
+      }
+      if ( c.lCase().reFind( "(mora|pago|cobr|resultado|estado|cancel|cierre|final)" ) && !alertas.some( a => a.columna == c ) ) {
+        alertas.append( { columna: c, motivo: "El nombre sugiere un dato que ocurre después del evento", consejo: "Confirma la fecha en que se captura este campo respecto al objetivo" } )
+      }
+    }
+    return registrar( "fuga(#tabla#.#objetivo#)", { tabla: tabla, objetivo: objetivo, alertas: alertas,
+      resumen: alertas.len() ? "Hay #alertas.len()# columnas sospechosas de fuga de datos" : "No se detectó fuga de datos evidente" }, alertas.len() )
+  }
+
+  // ------------------------------------------------------------ Esquema SQL propuesto
+
+  struct function esquema( required string tabla, string motor = "postgres" ) {
+    var q = variables.catalogo.tabla( tabla )
+    var defs = []; var pk = ""
+    for ( var c in q.columnList.listToArray() ) {
+      var llenos = q.columnData( c ).filter( v => !isNull( v ) && len( trim( toString( v ) ) ) ).map( v => trim( toString( v ) ) )
+      var tipo = "TEXT"
+      if ( llenos.len() ) {
+        if ( c.lCase().reFind( "(telefono|celular|phone|dui|nit|codigo|cod_|zip|postal)" ) ) {
+          tipo = "VARCHAR(20)  /* código o teléfono: texto para no perder ceros a la izquierda */"
+        } else if ( llenos.every( v => isNumeric( v ) ) ) {
+          tipo = llenos.every( v => val( v ) == int( val( v ) ) ) ? ( llenos.every( v => abs( val( v ) ) < 2147483647 ) ? "INTEGER" : "BIGINT" ) : "NUMERIC(14,4)"
+        } else if ( llenos.every( v => v.reFind( variables.re.FECHA_ISO ) ) ) {
+          tipo = "DATE"
+        } else if ( llenos.every( v => v.reFind( variables.re.FECHA_DMY ) ) ) {
+          tipo = "DATE  /* hoy viene como dd/mm/aaaa: conviértela al cargar */"
+        } else if ( llenos.every( v => listFindNoCase( "true,false,si,no,sí,1,0", v ) ) ) {
+          tipo = "BOOLEAN"
+        } else {
+          var largo = llenos.map( v => len( v ) ).max()
+          tipo = largo <= 255 ? "VARCHAR(#max( 10, ceiling( largo * 1.5 / 10 ) * 10 )#)" : "TEXT"
+        }
+      }
+      var nn = llenos.len() == q.recordCount ? " NOT NULL" : ""
+      var unico = llenos.len() == q.recordCount && llenos.toList( char( 31 ) ).listRemoveDuplicates( char( 31 ) ).listLen( char( 31 ) ) == q.recordCount
+      if ( !len( pk ) && unico && c.lCase().reFind( variables.re.ID ) ) pk = c
+      var chk = ( tipo.reFind( "^(INTEGER|BIGINT|NUMERIC)" ) && c.lCase().reFind( variables.re.NO_NEG ) ) ? " CHECK (#c.lCase()# >= 0)" : ""
+      defs.append( "  #c.lCase()# #tipo##nn##chk#" )
+    }
+    if ( len( pk ) ) defs.append( "  PRIMARY KEY (#pk.lCase()#)" )
+    var ddl = "CREATE TABLE #tabla# (#char( 10 )##defs.toList( ',' & char( 10 ) )##char( 10 )#);"
+    return registrar( "esquema(#tabla#)", { tabla: tabla, motor: motor, ddl: ddl,
+      clave_primaria: len( pk ) ? pk : "ninguna columna sirve: agrega un ID único generado por el sistema" }, "" )
+  }
+
+  // ------------------------------------------------------------ Limpieza
+
+  struct function limpiar( required string tabla, string nuevaTabla = "" ) {
+    var q = variables.catalogo.tabla( tabla )
+    var cols = q.columnList.listToArray()
+    var cambios = []
+    var filas = []
+    for ( var f in q ) filas.append( cols.map( c => isNull( f[ c ] ) ? "" : toString( f[ c ] ) ) )
+
+    cols.each( ( c, i ) => {
+      if ( esNumerica( q, c ) ) return;
+      var llenos = filas.map( f => f[ i ] ).filter( v => len( trim( v ) ) )
+      if ( !llenos.len() ) return;
+      // trim
+      var t = 0
+      filas.each( f => { if ( f[ i ] != trim( f[ i ] ) ) { f[ i ] = trim( f[ i ] ); t++ } } )
+      if ( t ) cambios.append( "#c#: quité espacios sobrantes en #t# valores" )
+      // categorías: la variante más frecuente gana
+      // Los structs no distinguen mayúsculas, así que las variantes se cuentan en un arreglo
+      var grupos = {}
+      filas.each( f => {
+        if ( !len( f[ i ] ) ) return;
+        var k = f[ i ].lCase()
+        if ( !grupos.keyExists( k ) ) grupos[ k ] = []
+        var pos = grupos[ k ].find( x => x.valor.compare( f[ i ] ) == 0 )
+        if ( pos ) grupos[ k ][ pos ].n++; else grupos[ k ].append( { valor: f[ i ], n: 1 } )
+      } )
+      var u = 0; var unificados = []
+      grupos.each( ( k, vs ) => {
+        if ( vs.len() < 2 ) return;
+        // gana la forma "Título" (Norte) si existe; si no, la más frecuente
+        var titulo = vs.filter( x => x.valor.compare( uCase( left( x.valor, 1 ) ) & lCase( mid( x.valor, 2, len( x.valor ) ) ) ) == 0 )
+        var ganador = ( titulo.len() ? titulo : vs ).sort( ( a, b ) => b.n - a.n ).first().valor
+        unificados.append( vs.map( x => x.valor ).toList( "/" ) & " → " & ganador )
+        filas.each( f => { if ( f[ i ].lCase() == k && f[ i ].compare( ganador ) != 0 ) { f[ i ] = ganador; u++ } } )
+      } )
+      if ( u ) {
+        cambios.append( "#c#: unifiqué #u# valores escritos de otra forma (#unificados.toList( '; ' )#)" )
+      }
+      // montos como texto -> número
+      if ( llenos.filter( v => trim( v ).reFind( variables.re.MONTO ) ).len() >= llenos.len() * 0.8 && !llenos.every( v => isNumeric( trim( v ) ) ) ) {
+        filas.each( f => { if ( len( f[ i ] ) ) f[ i ] = aNumero( f[ i ] ) } )
+        cambios.append( "#c#: convertí texto con formato de moneda/miles a número" )
+      }
+      // fechas dd/mm/aaaa -> ISO
+      var dmy = llenos.filter( v => trim( v ).reFind( variables.re.FECHA_DMY ) ).len()
+      if ( dmy && dmy + llenos.filter( v => trim( v ).reFind( variables.re.FECHA_ISO ) ).len() >= llenos.len() * 0.8 ) {
+        filas.each( f => { if ( f[ i ].reFind( variables.re.FECHA_DMY ) ) { var pz = f[ i ].listToArray( "/" ); f[ i ] = "#pz[ 3 ]#-#numberFormat( pz[ 2 ], '00' )#-#numberFormat( pz[ 1 ], '00' )#" } } )
+        cambios.append( "#c#: pasé #dmy# fechas dd/mm/aaaa a aaaa-mm-dd" )
+      }
+    } )
+
+    // duplicados exactos
+    var vistos = {}; var unicas = []
+    filas.each( f => { var k = hash( f.toList( char( 31 ) ) ); if ( !vistos.keyExists( k ) ) { vistos[ k ] = true; unicas.append( f ) } } )
+    if ( unicas.len() < filas.len() ) cambios.append( "Eliminé #filas.len() - unicas.len()# filas duplicadas" )
+
+    var nombre = variables.catalogo.registrarFilas( len( nuevaTabla ) ? nuevaTabla : tabla & "_limpia", cols, unicas, "limpieza de #tabla#" )
+    return registrar( "limpiar(#tabla# -> #nombre#)", { tabla_original: tabla, tabla_limpia: nombre, filas_antes: filas.len(), filas_despues: unicas.len(),
+      cambios: cambios.len() ? cambios : [ "No encontré nada que limpiar automáticamente" ] }, unicas.len() )
+  }
+
+  // ------------------------------------------------------------ Consejos de recolección
+
+  struct function consejos( required string tabla, string objetivo = "" ) {
+    var d = diagnosticar( tabla, true )
+    var especificos = d.problemas.filter( x => x.severidad != "baja" ).map( x => "#x.columna#: #x.recomendacion#" )
+    var cols = d.columnas.map( x => x.columna.lCase() ).toList()
+    var generales = []
+    if ( !cols.reFind( "(^|,)(id|[a-z_]*_id|codigo|sku)(,|$)" ) ) generales.append( "Agrega un identificador único por registro, generado por el sistema" )
+    if ( !cols.reFind( "fecha|date|creado|timestamp|periodo" ) ) generales.append( "Registra la fecha y hora de captura de cada registro (permite ver tendencias y evitar fuga de datos)" )
+    generales.append( "Define un diccionario de datos: qué significa cada columna, su unidad (USD, kg, días) y quién la llena" )
+    generales.append( "Valida en el punto de captura (formularios con listas desplegables, rangos y campos obligatorios): es más barato que limpiar después" )
+    generales.append( "Guarda los datos crudos sin modificar y transforma en una copia (capas raw → limpia → analítica)" )
+    generales.append( "Versiona los archivos o usa una base de datos en vez de Excel enviado por correo; un Excel con títulos, celdas combinadas o totales dentro de la tabla dificulta la carga" )
+    if ( len( objetivo ) ) {
+      var f = fugaDeDatos( tabla, objetivo )
+      if ( !f.keyExists( "error" ) ) f.alertas.each( a => especificos.append( "#a.columna#: #a.consejo#" ) )
+      generales.append( "Para predecir #objetivo#: guarda una 'foto' de las variables en el momento de la decisión y el resultado después, con su fecha" )
+      generales.append( "Junta suficientes casos de cada clase del objetivo (idealmente cientos) y registra también los casos rechazados, no solo los aprobados" )
+    }
+    if ( d.problemas.some( x => x.problema == "Dato personal" ) ) generales.append( "Hay datos personales: aplica consentimiento informado, mínimo acceso y anonimización (Ley de Protección de Datos Personales)" )
+    return registrar( "consejos(#tabla#)", { tabla: tabla, puntaje_calidad: d.puntaje_calidad, especificos: especificos, generales: generales }, "" )
+  }
+
+  // ------------------------------------------------------------ utilidades
+
+  private boolean function esNumerica( required query q, required string c ) {
+    return getMetadata( q ).columnMetadata[ c ].type == "numeric"
+  }
+
+  private struct function p( sev, col, problema, detalle, recomendacion ) {
+    return { severidad: sev, columna: col, problema: problema, detalle: detalle, recomendacion: recomendacion }
+  }
+
+  /** "Norte", "norte ", "NORTE" -> una sola categoría con 3 variantes */
+  private array function variantesCategoria( required array valores ) {
+    var g = {}
+    valores.each( v => {
+      var k = trim( v ).lCase()
+      if ( !g.keyExists( k ) ) g[ k ] = []
+      if ( !g[ k ].some( x => x.compare( v ) == 0 ) ) g[ k ].append( v )
+    } )
+    return g.keyArray().filter( k => g[ k ].len() > 1 ).map( k => g[ k ].map( v => "'#v#'" ).toList( "/" ) )
+  }
+
+  private string function aNumero( required string v ) {
+    var s = trim( v ).reReplace( "[^0-9.,\-]", "", "all" )
+    // 1.234,56 (coma decimal) vs 1,234.56 (punto decimal)
+    if ( s.reFind( ",[0-9]{1,2}$" ) && s.find( "." ) ) s = s.replace( ".", "", "all" ).replace( ",", "." )
+    else if ( s.reFind( ",[0-9]{1,2}$" ) ) s = s.replace( ",", "." )
+    else s = s.replace( ",", "", "all" )
+    return isNumeric( s ) ? s : ""
+  }
+
+  private numeric function cuantil( required array orden, required numeric p ) {
+    var pos = ( orden.len() - 1 ) * p + 1
+    var lo = int( pos ); var hi = min( lo + 1, orden.len() )
+    return orden[ lo ] + ( orden[ hi ] - orden[ lo ] ) * ( pos - lo )
+  }
+
+  private array function vector( required query q, required string c ) {
+    return q.columnData( c ).map( v => ( !isNull( v ) && isNumeric( v ) ) ? val( v ) : 0 )
+  }
+
+  private numeric function pearson( required array x, required array y ) {
+    var n = x.len(); if ( n < 3 ) return 0
+    var mx = x.sum() / n; var my = y.sum() / n
+    var sxy = 0; var sxx = 0; var syy = 0
+    for ( var i = 1; i <= n; i++ ) { sxy += ( x[ i ] - mx ) * ( y[ i ] - my ); sxx += ( x[ i ] - mx ) ^ 2; syy += ( y[ i ] - my ) ^ 2 }
+    return ( sxx && syy ) ? sxy / sqr( sxx * syy ) : 0
+  }
+
+  private numeric function redondear( required numeric x, numeric d = 2 ) { var f = 10 ^ d; return round( x * f ) / f }
+
+  private struct function registrar( required string etiqueta, required struct res, any filas = "" ) {
+    variables.catalogo.registrarEvidencia( { sql: etiqueta, filas: filas, resultado: [ res ] } )
+    return res
+  }
+}

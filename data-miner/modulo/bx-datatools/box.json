@@ -1,0 +1,11 @@
+{
+  "name": "BoxLang Data Tools",
+  "version": "0.1.0",
+  "slug": "bx-datatools",
+  "type": "boxlang-modules",
+  "shortDescription": "Tools seguras de datos para agentes BoxLang AI: anonimización, SQL de solo lectura, calidad de datos, limpieza y bases de datos vía MCP",
+  "keywords": [ "boxlang", "bx-ai", "agents", "tools", "sql", "data-quality", "anonymization", "mcp" ],
+  "boxlang": { "minimumVersion": "1.18.0", "moduleName": "bxdatatools" },
+  "dependencies": { "bx-ai": "^3.6.0" },
+  "license": [ { "type": "Apache-2.0", "URL": "https://www.apache.org/licenses/LICENSE-2.0" } ]
+}

@@ -1,0 +1,224 @@
+/**
+ * Machine learning tabular con Tribuo (Oracle, Java) desde BoxLang.
+ * Modelos: lineal, ridge, lasso, polinomial, logistica, arbol, random_forest.
+ * Hace one-hot de columnas de texto, imputa nulos con la media y separa train/test.
+ */
+import org.tribuo.MutableDataset;
+import org.tribuo.provenance.SimpleDataSourceProvenance;
+import org.tribuo.impl.ArrayExample;
+import org.tribuo.regression.RegressionFactory;
+import org.tribuo.regression.Regressor;
+import org.tribuo.regression.evaluation.RegressionEvaluator;
+import org.tribuo.classification.LabelFactory;
+import org.tribuo.classification.Label;
+import org.tribuo.classification.evaluation.LabelEvaluator;
+
+class {
+
+  property name="catalogo";
+  property name="informe";
+  property name="modelos";   // nombre -> { modelo, tarea, features, codificador }
+
+  function init( required any catalogo, required any informe ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe
+    variables.modelos  = [:]
+    // Silenciar el log de entrenamiento de Tribuo (se guarda la referencia para que no se pierda)
+    variables.logTribuo = createObject( "java", "java.util.logging.Logger" ).getLogger( "org.tribuo" )
+    variables.logTribuo.setLevel( createObject( "java", "java.util.logging.Level" ).WARNING )
+    return this
+  }
+
+  /**
+   * Entrena y evalúa un modelo.
+   * @tipo lineal | ridge | lasso | polinomial | logistica | arbol | random_forest
+   * @features lista de columnas (vacío = todas menos el objetivo y los id)
+   */
+  struct function entrenar( required string tabla, required string objetivo, string tipo = "random_forest", any features = "", struct opciones = {} ) {
+    var t = variables.catalogo.getTablas()
+    if ( !t.keyExists( tabla ) ) return { error: "No existe la tabla #tabla#" }
+    var q = t[ tabla ]
+    if ( !q.columnList.listFindNoCase( objetivo ) ) return { error: "No existe la columna objetivo #objetivo#" }
+    var op = { test: 0.2, arboles: 50, profundidad: 8, alpha: 0.1, grado: 2, semilla: 42 }.append( opciones )
+
+    // Columnas de entrada
+    var pedidas = isArray( features ) ? features : listToArray( features )
+    var cols = ( pedidas.len() ? pedidas : q.columnList.listToArray() )
+      .filter( c => c != objetivo && q.columnList.listFindNoCase( c ) && !c.reFindNoCase( "^id$|_id$" ) )
+    if ( !cols.len() ) return { error: "No hay columnas de entrada" }
+
+    // Tarea: clasificación si el objetivo es texto o tiene pocas categorías enteras
+    var valoresObj = q.columnData( objetivo ).filter( v => !isNull( v ) && len( toString( v ) ) )
+    var distintos  = valoresObj.map( v => toString( v ) ).toList( char( 31 ) ).listRemoveDuplicates( char( 31 ) ).listLen( char( 31 ) )
+    var esTexto    = !valoresObj.every( v => isNumeric( v ) )
+    var tarea = [ "logistica" ].contains( tipo ) ? "clasificacion"
+      : [ "lineal", "ridge", "lasso", "polinomial" ].contains( tipo ) ? "regresion"
+      : ( esTexto || ( distintos <= 10 && valoresObj.every( v => isNumeric( v ) && int( v ) == v ) ) ) ? "clasificacion" : "regresion"
+    if ( tarea == "regresion" && esTexto ) return { error: "El objetivo #objetivo# es texto: usa logistica, arbol o random_forest" }
+
+    var cod = codificador( q, cols, tipo == "polinomial" ? op.grado : 1 )
+
+    // Split train/test reproducible
+    var idx = []; for ( var i = 1; i <= q.recordCount; i++ ) if ( !isNull( q[ objetivo ][ i ] ) && len( toString( q[ objetivo ][ i ] ) ) ) idx.append( i )
+    var rnd = createObject( "java", "java.util.Random" ).init( javaCast( "long", op.semilla ) )
+    var lista = createObject( "java", "java.util.ArrayList" ).init( idx )
+    createObject( "java", "java.util.Collections" ).shuffle( lista, rnd )
+    idx = lista.toArray().map( v => v )
+    var nTest = max( 1, int( idx.len() * op.test ) )
+    var idxTest = idx.slice( 1, nTest ); var idxTrain = idx.slice( nTest + 1, idx.len() - nTest )
+
+    var factory = tarea == "regresion" ? new RegressionFactory() : new LabelFactory()
+    var train = new MutableDataset( new SimpleDataSourceProvenance( tabla & "-train", factory ), factory )
+    var test  = new MutableDataset( new SimpleDataSourceProvenance( tabla & "-test", factory ), factory )
+    idxTrain.each( i => train.add( ejemplo( q, i, objetivo, tarea, cod ) ) )
+    idxTest.each( i => test.add( ejemplo( q, i, objetivo, tarea, cod ) ) )
+
+    var modelo = entrenador( tipo, tarea, op ).train( train )
+
+    // Evaluación
+    var res = { modelo: tipo, tarea: tarea, tabla: tabla, objetivo: objetivo, features: cols, n_train: idxTrain.len(), n_test: idxTest.len() }
+    if ( tarea == "regresion" ) {
+      var ev = new RegressionEvaluator().evaluate( modelo, test )
+      var dim = new Regressor( objetivo, 0 )
+      res.metricas = { r2: redondear( ev.r2( dim ) ), rmse: redondear( ev.rmse( dim ) ), mae: redondear( ev.mae( dim ) ) }
+      var preds = modelo.predict( test )
+      var puntos = []
+      for ( var k = 1; k <= min( 300, preds.size() ); k++ ) {
+        puntos.append( { x: redondear( preds.get( k - 1 ).getExample().getOutput().getValues()[ 1 ] ), y: redondear( preds.get( k - 1 ).getOutput().getValues()[ 1 ] ) } )
+      }
+      variables.informe.agregarGrafico( { tipo: "scatter", titulo: "#tipo#: real vs predicho (#objetivo#) · R²=#res.metricas.r2#", ejes: [ "real", "predicho" ], puntos: puntos } )
+    } else {
+      var ev = new LabelEvaluator().evaluate( modelo, test )
+      res.metricas = { accuracy: redondear( ev.accuracy() ), f1_macro: redondear( ev.macroAveragedF1() ), auc: "" }
+      // Línea base: predecir siempre la clase mayoritaria
+      var conteo = {}; idxTest.each( i => { var k = toString( q[ objetivo ][ i ] ); conteo[ k ] = ( conteo[ k ] ?: 0 ) + 1 } )
+      res.metricas.accuracy_linea_base = redondear( conteo.reduce( ( a, k, v ) => max( a, v ), 0 ) / idxTest.len() )
+      try { res.metricas.auc = redondear( ev.averageAUCROC( false ) ) } catch ( any e ) { res.metricas.delete( "auc" ) }
+    }
+
+    // Importancia / coeficientes
+    try {
+      var top = modelo.getTopFeatures( 10 )
+      // En clasificación binaria, mostrar los pesos de la clase positiva ("1") y no los de la primera que venga
+      var lista = top.values().iterator().next()
+      var it = top.entrySet().iterator()
+      while ( it.hasNext() ) {
+        var par = it.next()
+        if ( toString( par.getKey() ).reFind( "^(1|1\.0|si|sí|yes|true)$" ) ) { lista = par.getValue(); }
+      }
+      res.importancia = []
+      for ( var p in lista ) if ( p.getA() != "BIAS" ) res.importancia.append( { feature: p.getA(), peso: redondear( p.getB() ) } )
+      if ( res.importancia.len() ) {
+        variables.informe.agregarGrafico( { tipo: "bar", titulo: "#tipo#: variables más importantes (#objetivo#)", labels: res.importancia.map( x => x.feature ), series: [ { nombre: "peso", datos: res.importancia.map( x => x.peso ) } ] } )
+      }
+    } catch ( any e ) {
+      res.importancia = []; res.error_importancia = e.message
+    }
+
+    var nombre = "#tipo#_#objetivo#"
+    variables.modelos[ nombre ] = { modelo: modelo, tarea: tarea, objetivo: objetivo, cod: cod }
+    res.nombre_modelo = nombre
+    variables.catalogo.registrarEvidencia( { sql: "ml.entrenar(#tipo#, #tabla#.#objetivo#)", filas: idx.len(), resultado: [ { metricas: res.metricas } ] } )
+    return res
+  }
+
+  /** Compara varios modelos con el mismo objetivo y devuelve el ranking */
+  struct function comparar( required string tabla, required string objetivo, any tipos = "", any features = "" ) {
+    var lista = isArray( tipos ) ? tipos : listToArray( tipos )
+    var resultados = lista.map( t => entrenar( tabla, objetivo, t, features ) ).filter( r => !r.keyExists( "error" ) )
+    if ( !resultados.len() ) return { error: "Ningún modelo pudo entrenarse" }
+    var clave = resultados[ 1 ].tarea == "regresion" ? "r2" : "accuracy"
+    resultados.sort( ( a, b ) => b.metricas[ clave ] - a.metricas[ clave ] > 0 ? 1 : -1 )
+    variables.informe.agregarGrafico( { tipo: "bar", titulo: "Comparación de modelos (#clave#) · #objetivo#", labels: resultados.map( r => r.modelo ), series: [ { nombre: clave, datos: resultados.map( r => r.metricas[ clave ] ) } ] } )
+    return { metrica: clave, ranking: resultados.map( r => { return { modelo: r.modelo, metricas: r.metricas, importancia: ( r.importancia ?: [] ).slice( 1, min( 5, ( r.importancia ?: [] ).len() ) ) } } ) }
+  }
+
+  /** Predice con un modelo entrenado. valores: struct columna -> valor */
+  struct function predecir( required string nombreModelo, required struct valores ) {
+    if ( !variables.modelos.keyExists( nombreModelo ) ) return { error: "No existe el modelo. Disponibles: #variables.modelos.keyList()#" }
+    var m = variables.modelos[ nombreModelo ]
+    var f = vectorizar( valores, m.cod )
+    var salida = m.tarea == "regresion" ? new Regressor( m.objetivo, 0 ) : new Label( "?" )
+    var p = m.modelo.predict( new ArrayExample( salida, javaCast( "String[]", f.nombres ), javaCast( "double[]", f.valores ) ) )
+    return m.tarea == "regresion"
+      ? { prediccion: redondear( p.getOutput().getValues()[ 1 ] ) }
+      : { prediccion: p.getOutput().getLabel(), probabilidades: p.hasProbabilities() ? p.getOutputScores().map( ( k, v ) => redondear( v.getScore() ) ) : {} }
+  }
+
+  // ------------------------------------------------------------ internos
+
+  private any function entrenador( required string tipo, required string tarea, required struct op ) {
+    var semilla = javaCast( "long", op.semilla )
+    switch ( tipo ) {
+      case "lineal": case "polinomial":
+        return createObject( "java", "org.tribuo.regression.slm.SLMTrainer" ).init( javaCast( "boolean", true ) )
+      case "ridge":
+        return createObject( "java", "org.tribuo.regression.slm.ElasticNetCDTrainer" ).init( javaCast( "double", op.alpha ), javaCast( "double", 0.01 ), semilla )
+      case "lasso":
+        return createObject( "java", "org.tribuo.regression.slm.ElasticNetCDTrainer" ).init( javaCast( "double", op.alpha ), javaCast( "double", 1.0 ), semilla )
+      case "logistica":
+        return createObject( "java", "org.tribuo.classification.sgd.linear.LogisticRegressionTrainer" ).init()
+      case "arbol":
+        return tarea == "regresion"
+          ? createObject( "java", "org.tribuo.regression.rtree.CARTRegressionTrainer" ).init( javaCast( "int", op.profundidad ) )
+          : createObject( "java", "org.tribuo.classification.dtree.CARTClassificationTrainer" ).init( javaCast( "int", op.profundidad ) )
+      case "random_forest":
+        var arbol = tarea == "regresion"
+          ? createObject( "java", "org.tribuo.regression.rtree.CARTRegressionTrainer" ).init( javaCast( "int", op.profundidad ), javaCast( "float", 5 ), javaCast( "float", 0 ), javaCast( "float", 0.7 ), javaCast( "boolean", false ), createObject( "java", "org.tribuo.regression.rtree.impurity.MeanSquaredError" ).init(), semilla )
+          : createObject( "java", "org.tribuo.classification.dtree.CARTClassificationTrainer" ).init( javaCast( "int", op.profundidad ), javaCast( "float", 0.7 ), javaCast( "boolean", false ), semilla )
+        var comb = tarea == "regresion"
+          ? createObject( "java", "org.tribuo.regression.ensemble.AveragingCombiner" ).init()
+          : createObject( "java", "org.tribuo.classification.ensemble.VotingCombiner" ).init()
+        return createObject( "java", "org.tribuo.common.tree.RandomForestTrainer" ).init( arbol, comb, javaCast( "int", op.arboles ), semilla )
+      default:
+        throw( type: "ML.TipoInvalido", message: "Tipo #tipo# no soportado. Usa lineal, ridge, lasso, polinomial, logistica, arbol o random_forest" )
+    }
+  }
+
+  /** Define cómo convertir cada fila en features numéricas */
+  private struct function codificador( required query q, required array cols, numeric grado = 1 ) {
+    // Las numéricas se estandarizan (z-score): ayuda a la logística y hace comparables los coeficientes
+    var cod = { numericas: [], medias: {}, desv: {}, categorias: {}, grado: grado }
+    for ( var c in cols ) {
+      var vals = q.columnData( c ).filter( v => !isNull( v ) && len( toString( v ) ) )
+      if ( vals.len() && vals.every( v => isNumeric( v ) ) ) {
+        cod.numericas.append( c )
+        var nums = vals.map( v => val( v ) )
+        var m = nums.sum() / nums.len()
+        cod.medias[ c ] = m
+        cod.desv[ c ] = max( 1e-9, sqr( nums.reduce( ( a, x ) => a + ( x - m ) ^ 2, 0 ) / nums.len() ) )
+      } else {
+        // top 20 categorías -> one-hot
+        var freq = {}
+        vals.each( v => freq[ toString( v ) ] = ( freq[ toString( v ) ] ?: 0 ) + 1 )
+        var top = freq.keyArray().sort( ( a, b ) => freq[ b ] - freq[ a ] )
+        cod.categorias[ c ] = top.slice( 1, min( 20, top.len() ) )
+      }
+    }
+    return cod
+  }
+
+  private struct function vectorizar( required any fila, required struct cod ) {
+    var nombres = []; var valores = []
+    for ( var c in cod.numericas ) {
+      var v = fila[ c ] ?: ""
+      var x = ( ( !isNull( v ) && isNumeric( v ) ) ? val( v ) - cod.medias[ c ] : 0 ) / cod.desv[ c ]
+      nombres.append( c ); valores.append( x )
+      if ( cod.grado >= 2 ) { nombres.append( c & "^2" ); valores.append( x * x ) }
+    }
+    for ( var c in cod.categorias ) {
+      var v = toString( fila[ c ] ?: "" )
+      if ( cod.categorias[ c ].contains( v ) ) { nombres.append( c & "=" & v ); valores.append( 1 ) }
+    }
+    return { nombres: nombres, valores: valores }
+  }
+
+  private any function ejemplo( required query q, required numeric i, required string objetivo, required string tarea, required struct cod ) {
+    var f = vectorizar( q.getRow( i ), cod )
+    var y = q[ objetivo ][ i ]
+    var salida = tarea == "regresion" ? new Regressor( objetivo, val( y ) ) : new Label( toString( y ) )
+    return new ArrayExample( salida, javaCast( "String[]", f.nombres ), javaCast( "double[]", f.valores ) )
+  }
+
+  private numeric function redondear( required numeric x ) { return round( x * 10000 ) / 10000 }
+}
