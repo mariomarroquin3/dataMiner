@@ -2,7 +2,7 @@
   // Sube uno o varios archivos (CSV, TSV, TXT, Excel, JSON o ZIP) y los carga como tablas de la sesión
   bx:header name="Content-Type" value="application/json";
   try {
-    carpeta = getTempDirectory() & "dataminer/" & session.sessionid & "/subidas/"
+    carpeta = getTempDirectory() & "dataminer/" & reReplace( session.sessionid, "[^A-Za-z0-9_-]", "_", "all" ) & "/subidas/"
     if ( !directoryExists( carpeta ) ) directoryCreate( carpeta )
     // accept "*": el filtro de formatos lo hacemos abajo. overwrite: volver a subir un archivo reemplaza su tabla
     subidos = fileUploadAll( destination: carpeta, accept: "*", nameConflict: "overwrite", strict: false )
