@@ -120,6 +120,12 @@
   .alta{background:var(--badbg);color:var(--bad)} .media{background:var(--warnbg);color:var(--warn)} .baja{background:var(--bg2);color:var(--mut)}
   .anon{margin:8px 0 2px;padding:8px 10px;border-radius:10px;background:var(--privbg);color:var(--priv);font-size:.8rem}
   .anon code{font-size:.78rem;font-weight:600}
+  .alerta{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .alerta-btns{display:flex;flex-wrap:wrap;gap:8px}
+  .abtn{background:var(--panel);border:1px solid var(--line);color:var(--txt2);padding:7px 12px;border-radius:999px;font-size:.83rem;cursor:pointer}
+  .abtn:hover{border-color:var(--acc);color:var(--acctx);background:var(--accbg)}
+  .abtn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+  #salidaAlerta{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--txt2);font-size:.8rem;white-space:pre-wrap;max-height:320px;overflow:auto}
   .norm{margin:10px 0 2px;padding:8px 10px;border-radius:10px;background:var(--accbg);color:var(--acctx);font-size:.8rem}
   .norm ul{margin:6px 0 0}.norm li{color:var(--txt2)}
 
@@ -248,6 +254,13 @@
         <button>Descarga https://docs.google.com/spreadsheets/d/TU_ID/edit y resúmelo</button>
       </div>
       <button class="more" id="masEj">Ver todos los ejemplos ▾</button>
+      <div class="alerta">
+        <div class="alerta-btns">
+          <button type="button" class="abtn" id="btnAlertaVer">🛒 Revisar stock en MySQL</button>
+          <button type="button" class="abtn pri" id="btnAlerta">Avisar por Slack</button>
+        </div>
+        <pre id="salidaAlerta" hidden></pre>
+      </div>
     </section>
     <div class="vacio" id="vacio"><b>Aún no hay resultados</b>Sube un archivo o elige un ejemplo y pulsa «Ejecutar misión».</div>
     <div id="out"></div>
@@ -365,6 +378,17 @@ async function run() {
 $('#go').onclick = run;
 $('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) run(); });
 document.querySelectorAll('#ej button').forEach(b => b.onclick = () => { $('#q').value = b.textContent; $('#q').focus(); });
+// Alerta de compras (sin IA): lee MySQL, calcula el pronóstico y, con enviar=1, avisa por Slack
+async function alertaStock(enviar) {
+  const out = $('#salidaAlerta'); out.hidden = false; out.textContent = 'Calculando…';
+  try {
+    const r = await (await fetch('api/alerta-stock.bxm' + (enviar ? '?enviar=1' : ''))).json();
+    out.textContent = r.ok ? r.texto.replace(/\*/g, '') + (enviar ? '\n\nSlack: ' + (r.slack?.motivo || '') : '') + '\n' + (r.mysql || '')
+      : '⚠️ ' + (r.error || 'Error') + '\nConfigura MYSQL_* y SLACK_WEBHOOK_URL en config.local.bat';
+  } catch (e) { out.textContent = '⚠️ ' + e.message; }
+}
+$('#btnAlertaVer').onclick = () => alertaStock(false);
+$('#btnAlerta').onclick = () => alertaStock(true);
 $('#masEj').onclick = () => { const a = $('#ej').classList.toggle('abierto'); $('#masEj').textContent = a ? 'Ver menos ▴' : 'Ver todos los ejemplos ▾'; };
 </script>
 </body>

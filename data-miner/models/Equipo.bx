@@ -167,6 +167,17 @@ con su SQL; nunca inventes montos. Si no se puede expresar en dólares, pon impa
       variables.db = new ConectorMCP( arguments.mcpUrl, cat )
       t_db = variables.db.tools()
     }
+    // MySQL directo (JDBC). 3 tools: ver esquema (1 llamada), traer al catálogo, alerta de compras por Slack
+    var mysql = new ConectorSQL()
+    if ( mysql.configurado() ) {
+      variables.alertaStock = new AlertaStock( cat, variables.informe )
+      var al = variables.alertaStock
+      t_db.append( aiTool( "mysql_esquema", "Tablas y columnas de la base MySQL de la empresa, en una sola llamada", () => mysql.esquema() ) )
+      t_db.append( aiTool( "mysql_importar", "Trae una tabla de MySQL (o el resultado de un SELECT) a las tablas cargadas; después usa ejecutar_sql, pronostico_stock, etc. sobre la tabla mysql_<nombre>", ( origen ) => mysql.importar( cat, origen ) )
+        .describeArg( "origen", "Nombre de la tabla o un SELECT" ) )
+      t_db.append( aiTool( "alerta_stock", "Revisa en MySQL qué productos se van a acabar antes de que llegue un pedido nuevo, actualiza la tabla pronostico_stock en MySQL y, si enviar es true, avisa por Slack qué comprar", ( enviar ) => al.revisar( enviar ?: false ) )
+        .describeArg( "enviar", "true para mandar el aviso a Slack" ) )
+    }
     // Quita tools repetidas (listar_tablas y graficar_sql aparecen en varios grupos)
     var unir = ( listas ) => {
       var vistos = {}; var out = []
@@ -223,7 +234,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
       if ( t_db.len() ) {
         equipo.append( aiAgent( middleware: [ reintento, bitacora ], options: limites, name: "AnalistaDB",
           description : "Explora y consulta la base de datos remota conectada por MCP",
-          instructions: "Exploras una base de datos desconocida vía MCP: primero lista tablas, luego describe las relevantes, luego consulta. Solo SELECT. Devuelve cifras con la consulta usada.",
+          instructions: "Exploras una base de datos desconocida vía MCP: primero lista tablas, luego describe las relevantes, luego consulta. Solo SELECT. Devuelve cifras con la consulta usada. Si hay tools mysql_*: para preguntas de la base de la empresa usa mysql_esquema una vez y luego mysql_importar solo las tablas necesarias. Si preguntan qué comprar o cuándo se acaba el stock en la base, usa alerta_stock (enviar=true solo si piden avisar por Slack) y cita la tabla pronostico_stock.",
           model: modelo( "analista_db" ), tools: t_db ) )
       }
       plan = "1) si faltan datos, delega a Adquisicion; 2) delega a Perfilador para entender las tablas y a IngenieroDatos para revisar su calidad (si la calidad es mala pide limpiar y usa la tabla _limpia; si piden consejos de recolección, esquema o hay un objetivo de ML, también a IngenieroDatos); 3) delega preguntas a AnalistaCSV y/o AnalistaDB; 4) para relaciones entre variables o finanzas delega a Estadistico; 5) para predecir o explicar una variable, o priorizar ventas, delega a CientificoML; para quiebre de stock y reabastecimiento, a Estadistico; 6) pide al menos una gráfica; 7) integra los resultados."
@@ -241,7 +252,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
         model: modelo( "datos" ), tools: unir( [ t_adquisicion, t_perfilador, t_ingeniero ] ) ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora ], options: limites, name: "Analista",
         description : "Responde preguntas con SQL (tablas cargadas y, si hay, la base remota vía MCP), estadística descriptiva, correlaciones, covarianza, métricas financieras, pronóstico de quiebre de stock y gráficas",
-        instructions: "Eres analista de datos y estadístico. Solo SELECT; toda cifra debe salir de una tool, nunca calcules a mano ni inventes números. Para la base remota usa las tools db_*. Si preguntan cuándo se acaba el stock, qué reabastecer o cuánto pedir, usa pronostico_stock y cita su tabla pronostico_stock en el SQL de los hechos. Si preguntan por quiebre de stock, prefiere pronostico_stock_cuantiles (cita pronostico_stock_cuantiles en el SQL de los hechos) y menciona la calibración que devuelve. Para relaciones entre variables usa correlacion (explica fuerza y signo; correlación no implica causalidad); para series de precios o caja usa metricas_financieras. Crea al menos una gráfica. Devuelve las cifras junto con la consulta usada.",
+        instructions: "Eres analista de datos y estadístico. Solo SELECT; toda cifra debe salir de una tool, nunca calcules a mano ni inventes números. Para la base remota usa las tools db_*. Si hay tools mysql_*: para preguntas de la base de la empresa usa mysql_esquema una vez y luego mysql_importar solo las tablas necesarias. Si preguntan qué comprar o cuándo se acaba el stock en la base, usa alerta_stock (enviar=true solo si piden avisar por Slack) y cita la tabla pronostico_stock. Si preguntan cuándo se acaba el stock, qué reabastecer o cuánto pedir, usa pronostico_stock y cita su tabla pronostico_stock en el SQL de los hechos. Si preguntan por quiebre de stock, prefiere pronostico_stock_cuantiles (cita pronostico_stock_cuantiles en el SQL de los hechos) y menciona la calibración que devuelve. Para relaciones entre variables usa correlacion (explica fuerza y signo; correlación no implica causalidad); para series de precios o caja usa metricas_financieras. Crea al menos una gráfica. Devuelve las cifras junto con la consulta usada.",
         model: modelo( "analista" ), tools: unir( [ t_analistaCsv, t_estadistico, t_db, [ guia ] ] ) ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora ], options: limites, name: "CientificoML",
         description : "Entrena y compara modelos de ML tabular (regresión lineal, ridge, lasso, polinomial, logística, árbol, Random Forest), predice con ellos y prioriza oportunidades de venta por ganancia esperada",

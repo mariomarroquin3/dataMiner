@@ -1,0 +1,25 @@
+/**
+ * Alerta de compras por Slack, sin IA: boxlang alerta-stock.bxs [preview] [forzar]
+ *   preview = calcula y muestra el mensaje sin mandarlo
+ *   forzar  = manda aunque hoy ya se haya mandado la misma alerta
+ * Lee MySQL (MYSQL_*), escribe pronostico_stock en MySQL y salidas/pronostico_stock.csv, y avisa a SLACK_WEBHOOK_URL.
+ */
+import models.Catalogo
+import models.Informe
+import models.AlertaStock
+
+args = ( CLIGetArgs().positionals ?: [] ).map( a => lCase( a ) )
+alerta = new AlertaStock( new Catalogo( false ), new Informe() )
+r = alerta.revisar( !args.contains( "preview" ), args.contains( "forzar" ) )
+if ( !r.ok ) {
+  println( "[ERROR] " & r.error )
+  // código de salida 1 para que el Programador de tareas marque el error
+  createObject( "java", "java.lang.System" ).exit( 1 )
+}
+println( "============================================================" )
+println( r.texto )
+println( "============================================================" )
+println( "Agotados #r.resumen.agotados# · críticos #r.resumen.criticos# · pronto #r.resumen.pronto# · ok #r.resumen.ok#  (#r.ms# ms)" )
+println( "Slack: " & r.slack.motivo )
+println( "MySQL: " & r.mysql )
+println( "CSV  : " & r.csv )

@@ -1,0 +1,166 @@
+/**
+ * Alerta de compras: lee ventas e inventario de MySQL, calcula cuándo se acaba cada producto
+ * y avisa por Slack qué hay que pedir hoy. Todo determinista: no usa el LLM ni gasta cuota de IA.
+ *
+ * Método: StockCuantiles (P90, si models/StockCuantiles.bx existe) o Operaciones.quiebreStock (z·σ·√días).
+ * Resultado: tabla pronostico_stock en MySQL (para Workbench y Power BI) + salidas/pronostico_stock.csv.
+ *
+ * Variables (config.bat / config.local.bat):
+ *   SLACK_WEBHOOK_URL   https://hooks.slack.com/services/... (sin ella solo imprime el mensaje)
+ *   ALERTA_VENTAS       tabla o SELECT de ventas diarias (fecha, sku, unidades)   [ventas_diarias]
+ *   ALERTA_INVENTARIO   tabla o SELECT de inventario (sku, producto, stock, días de entrega) [productos]
+ *   ALERTA_NIVEL        0.90 / 0.95 ...                                            [0.90]
+ *   ALERTA_INCLUIR_PRONTO si = también avisa los que se acaban en la semana siguiente a la entrega [si]
+ */
+class {
+
+  function init( required any catalogo, any informe, struct opciones = {} ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe ?: new Informe()
+    var o = arguments.opciones
+    var e = ( k, d ) => o.keyExists( k ) ? o[ k ] : getSystemSetting( k, d )
+    variables.webhook    = e( "SLACK_WEBHOOK_URL", "" )
+    variables.ventas     = e( "ALERTA_VENTAS", "ventas_diarias" )
+    variables.inventario = e( "ALERTA_INVENTARIO", "productos" )
+    variables.nivel      = val( e( "ALERTA_NIVEL", "0.90" ) )
+    variables.pronto     = e( "ALERTA_INCLUIR_PRONTO", "si" ).lCase() != "no"
+    variables.raiz       = getCanonicalPath( getDirectoryFromPath( getCurrentTemplatePath() ) & "../" )
+    variables.sql        = new ConectorSQL( o )
+    return this
+  }
+
+  /**
+   * @enviar  false = calcula y arma el mensaje sin mandarlo a Slack (vista previa)
+   * @forzar  true = manda aunque hoy ya se haya mandado la misma alerta
+   */
+  struct function revisar( boolean enviar = true, boolean forzar = false ) {
+    var ini = getTickCount()
+    // 1) Datos de MySQL al catálogo
+    var v = variables.sql.importar( variables.catalogo, variables.ventas, "alerta_ventas" )
+    if ( len( v.error ?: "" ) ) return { ok: false, error: "Ventas: " & v.error }
+    var i = variables.sql.importar( variables.catalogo, variables.inventario, "alerta_inventario" )
+    if ( len( i.error ?: "" ) ) return { ok: false, error: "Inventario: " & i.error }
+
+    // 2) Pronóstico
+    var filas = []; var metodo = ""; var fechaCorte = ""
+    if ( fileExists( variables.raiz & "models/StockCuantiles.bx" ) ) {
+      var sc = new StockCuantiles( variables.catalogo, variables.informe )
+      var r = sc.pronosticoStock( v.tabla, i.tabla, variables.nivel )
+      if ( len( r.error ?: "" ) ) return { ok: false, error: r.error }
+      var et = "p" & round( min( 0.99, max( 0.6, variables.nivel ) ) * 100 )
+      metodo = "regresión por cuantiles (#uCase( et )#)"
+      fechaCorte = r.fecha_corte
+      for ( var f in variables.catalogo.tabla( r.tabla_resultado ) ) {
+        filas.append( { sku: f.producto, producto: f.descripcion, stock: f.stock, dias_entrega: f.dias_entrega,
+          dias_restantes: f[ "dias_restantes_" & et ], fecha_agotamiento: f[ "fecha_agotamiento_" & et ],
+          punto_reorden: f.punto_reorden, pedir_unidades: f.pedir_unidades, estado: f.estado } )
+      }
+    } else {
+      var op = new Operaciones( variables.catalogo, variables.informe )
+      var r = op.quiebreStock( v.tabla, i.tabla, 56, variables.nivel )
+      if ( len( r.error ?: "" ) ) return { ok: false, error: r.error }
+      metodo = "promedio 14 días + tendencia, stock de seguridad al #round( variables.nivel * 100 )#%"
+      fechaCorte = r.fecha_corte
+      for ( var f in variables.catalogo.tabla( r.tabla_resultado ) ) {
+        filas.append( { sku: f.producto, producto: f.descripcion, stock: f.stock, dias_entrega: f.dias_entrega,
+          dias_restantes: f.dias_restantes, fecha_agotamiento: f.fecha_agotamiento,
+          punto_reorden: f.punto_reorden, pedir_unidades: f.pedir_unidades, estado: f.estado } )
+      }
+    }
+
+    // 3) Resultado de vuelta a MySQL y a CSV (Workbench / Power BI)
+    var cols = [ "sku", "producto", "stock", "dias_entrega", "dias_restantes", "fecha_agotamiento", "punto_reorden", "pedir_unidades", "estado", "fecha_corte" ]
+    for ( var f in filas ) f.fecha_corte = fechaCorte
+    var matriz = filas.map( f => cols.map( c => f[ c ] ) )
+    var g = variables.sql.guardarTabla( "pronostico_stock", cols, matriz )
+    var csv = guardarCSV( cols, matriz )
+
+    // 4) Mensaje
+    var avisar = filas.filter( f => f.estado == "agotado" || f.estado == "crítico" || ( variables.pronto && f.estado == "pronto" ) )
+    var msg = mensaje( avisar, fechaCorte, metodo, filas.len() )
+
+    // 5) Slack (una vez al día por la misma lista, salvo forzar)
+    var envio = { enviado: false, motivo: "" }
+    var firma = dateFormat( now(), "yyyy-MM-dd" ) & "|" & avisar.map( f => f.sku & ":" & f.estado ).toList()
+    var marca = variables.raiz & "salidas/ultima-alerta.txt"
+    if ( !avisar.len() ) envio.motivo = "Nada que pedir hoy"
+    else if ( !enviar ) envio.motivo = "Vista previa (no se envió)"
+    else if ( !len( variables.webhook ) ) envio.motivo = "Falta SLACK_WEBHOOK_URL: el mensaje solo se muestra aquí"
+    else if ( !forzar && fileExists( marca ) && fileRead( marca ) == firma ) envio.motivo = "Ya se envió hoy esta misma alerta"
+    else {
+      envio = enviarSlack( msg )
+      if ( envio.enviado ) fileWrite( marca, firma )
+    }
+
+    return {
+      ok: true, fecha_corte: fechaCorte, metodo: metodo, productos: filas.len(),
+      resumen: { agotados: filas.filter( f => f.estado == "agotado" ).len(), criticos: filas.filter( f => f.estado == "crítico" ).len(),
+                 pronto: filas.filter( f => f.estado == "pronto" ).len(), ok: filas.filter( f => f.estado == "ok" ).len() },
+      avisar: avisar, texto: msg.text, slack: envio,
+      mysql: len( g.error ?: "" ) ? "No pude guardar pronostico_stock: " & g.error : "Tabla pronostico_stock actualizada (#g.filas# filas)",
+      csv: csv, ms: getTickCount() - ini
+    }
+  }
+
+  // ============================================================== Slack
+
+  private struct function mensaje( required array avisar, required string fechaCorte, required string metodo, required numeric total ) {
+    var icono = { "agotado": "⚫", "crítico": "🔴", "pronto": "🟡" }
+    var lineas = avisar.map( f => linea( f, icono[ f.estado ] ?: "•" ) )
+    var titulo = avisar.len() ? "🛒 Data Miner: #avisar.len()# producto#avisar.len() == 1 ? '' : 's'# para pedir" : "✅ Data Miner: inventario al día"
+    var pie = "Ventas hasta #fechaCorte# · #total# productos revisados · #metodo# · detalle en la tabla pronostico_stock"
+    var cuerpo = avisar.len() ? lineas.toList( char( 10 ) ) : "Ningún producto se acaba antes de que llegue un pedido nuevo."
+    return {
+      text: titulo & char( 10 ) & cuerpo & char( 10 ) & "_" & pie & "_",
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: titulo, emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: cuerpo.left( 2900 ) } },
+        { type: "context", elements: [ { type: "mrkdwn", text: pie } ] }
+      ]
+    }
+  }
+
+  private string function linea( required struct f, required string icono ) {
+    var margen = val( f.dias_restantes ) - val( f.dias_entrega )
+    var cuanto = val( f.pedir_unidades ) > 0 ? " #numberFormat( f.pedir_unidades )# u" : ""
+    var pedir = ( margen <= 0 || f.estado == "crítico" ) ? " → *pide#cuanto# hoy*" : " → pide#cuanto# a más tardar en #margen# día#margen == 1 ? '' : 's'#"
+    if ( f.estado == "agotado" ) return "#icono# *#f.producto#* (#f.sku#): agotado. El proveedor tarda #f.dias_entrega# días#pedir#"
+    var d = val( f.dias_restantes )
+    var cuando = d <= 0 ? "se acaba hoy" : d == 1 ? "se acaba mañana" : "se acaba en ~#d# días (#fechaCorta( f.fecha_agotamiento )#)"
+    return "#icono# *#f.producto#* (#f.sku#): quedan #numberFormat( f.stock )# u, #cuando#; el proveedor tarda #f.dias_entrega# días#pedir#"
+  }
+
+  private string function fechaCorta( required string iso ) {
+    if ( !iso.reFind( "^\d{4}-\d{2}-\d{2}" ) ) return iso
+    var m = [ "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic" ]
+    return val( iso.mid( 9, 2 ) ) & " " & m[ val( iso.mid( 6, 2 ) ) ]
+  }
+
+  private struct function enviarSlack( required struct msg ) {
+    try {
+      // HttpClient de Java: respeta el proxy del sistema y no depende de módulos extra
+      var HttpRequest = createObject( "java", "java.net.http.HttpRequest" )
+      var cliente = createObject( "java", "java.net.http.HttpClient" ).newBuilder()
+        .connectTimeout( createObject( "java", "java.time.Duration" ).ofSeconds( 10 ) )
+        .proxy( createObject( "java", "java.net.ProxySelector" ).getDefault() ).build()
+      var req = HttpRequest.newBuilder( createObject( "java", "java.net.URI" ).create( variables.webhook ) )
+        .header( "Content-Type", "application/json; charset=utf-8" )
+        .POST( createObject( "java", "java.net.http.HttpRequest$BodyPublishers" ).ofString( jsonSerialize( msg ), createObject( "java", "java.nio.charset.StandardCharsets" ).UTF_8 ) )
+        .build()
+      var r = cliente.send( req, createObject( "java", "java.net.http.HttpResponse$BodyHandlers" ).ofString() )
+      return r.statusCode() == 200 ? { enviado: true, motivo: "Enviado a Slack" } : { enviado: false, motivo: "Slack respondió #r.statusCode()#: #r.body()#" }
+    } catch ( any e ) {
+      return { enviado: false, motivo: "No pude llegar a Slack: #e.message#" }
+    }
+  }
+
+  private string function guardarCSV( required array cols, required array filas ) {
+    var dir = variables.raiz & "salidas/"
+    if ( !directoryExists( dir ) ) directoryCreate( dir )
+    var q = ( v ) => '"' & toString( v ).replace( '"', '""', "all" ) & '"'
+    var txt = cols.toList() & char( 13 ) & char( 10 ) & filas.map( f => f.map( v => q( v ) ).toList() ).toList( char( 13 ) & char( 10 ) )
+    // BOM para que Excel y Power BI lean bien las tildes
+    fileWrite( dir & "pronostico_stock.csv", char( 65279 ) & txt, "utf-8" )
+    return dir & "pronostico_stock.csv"
+  }
+}

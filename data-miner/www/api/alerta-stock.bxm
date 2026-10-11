@@ -1,0 +1,12 @@
+<bx:script>
+// Alerta de compras (sin IA): GET /api/alerta-stock.bxm?enviar=1  (sin enviar = vista previa)
+// Lee MySQL, calcula el pronóstico, actualiza pronostico_stock y, si enviar=1, avisa a Slack.
+bx:header name="Content-Type" value="application/json; charset=utf-8";
+try {
+  alerta = new models.AlertaStock( new models.Catalogo( false ), new models.Informe() )
+  r = alerta.revisar( ( url.enviar ?: "0" ) == "1", ( url.forzar ?: "0" ) == "1" )
+} catch ( any e ) {
+  r = { ok: false, error: e.message }
+}
+writeOutput( jsonSerialize( r ) )
+</bx:script>
