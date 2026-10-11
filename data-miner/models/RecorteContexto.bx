@@ -1,0 +1,78 @@
+/**
+ * Mantiene el contexto que se manda al modelo dentro de un tamaño razonable.
+ *
+ * Cada resultado de tool queda en la conversación del agente y se reenvía en cada llamada siguiente.
+ * Con varias tablas grandes (y la memoria de misiones anteriores) el prompt crecía hasta pasar el
+ * máximo de Claude (1M tokens). Antes de cada llamada:
+ *   - cada resultado de tool se recorta a LIMITE_RESULTADO caracteres (con aviso al final);
+ *   - si el total sigue alto, los resultados más viejos se reducen a un resumen corto;
+ *   - deja en logs/ai.log cuántos caracteres (~tokens) lleva cada llamada.
+ */
+import bxModules.bxai.models.middleware.AiMiddlewareResult;
+
+class extends="bxModules.bxai.models.middleware.BaseAiMiddleware" {
+
+  function init( numeric limiteResultado = 6000, numeric limiteTotal = 240000, numeric limiteViejo = 600 ) {
+    super.init()
+    variables.limiteResultado = arguments.limiteResultado
+    variables.limiteTotal     = arguments.limiteTotal
+    variables.limiteViejo     = arguments.limiteViejo
+    return this
+  }
+
+  AiMiddlewareResult function beforeLLMCall( required struct context ) {
+    // La memoria de bx-ai agrega "timestamp" a cada mensaje y el servicio de Claude lo manda tal cual:
+    // Anthropic responde "messages.0.timestamp: Extra inputs are not permitted". Se mandan copias solo con
+    // los campos que aceptan las APIs (la memoria del agente no se toca).
+    if ( isArray( context.dataPacket.messages ?: "" ) ) {
+      context.dataPacket.messages = context.dataPacket.messages.map( m => isStruct( m ) ? limpio( m ) : m )
+    }
+    var mensajes = context.dataPacket.messages ?: context.chatRequest.getMessages()
+    // 1) Ningún resultado de tool pasa del límite
+    var bloques = resultados( mensajes )
+    bloques.each( b => recortar( b, variables.limiteResultado ) )
+    // 2) Si el total sigue alto, los resultados más viejos quedan como resumen (los 4 últimos se respetan)
+    var total = len( jsonSerialize( mensajes ) )
+    if ( total > variables.limiteTotal ) {
+      for ( var i = 1; i <= bloques.len() - 4 && total > variables.limiteTotal; i++ ) {
+        recortar( bloques[ i ], variables.limiteViejo )
+        total = len( jsonSerialize( mensajes ) )
+      }
+    }
+    writeLog( text: "Contexto: #mensajes.len()# mensajes, #numberFormat( total, ',' )# caracteres (~#numberFormat( total / 4, ',' )# tokens)", type: "information", log: "ai" )
+    return AiMiddlewareResult.continue()
+  }
+
+  /** Copia del mensaje solo con los campos válidos (role, content y los de tool calling de OpenAI) */
+  private struct function limpio( required struct m ) {
+    var c = {}
+    for ( var k in [ "role", "content", "tool_calls", "tool_call_id", "name" ] ) {
+      if ( m.keyExists( k ) ) c[ k ] = isArray( m[ k ] ) ? duplicate( m[ k ] ) : m[ k ]
+    }
+    return c
+  }
+
+  /** Referencias a los contenidos de resultados de tools: { obj, clave } para poder reescribirlos */
+  private array function resultados( required array mensajes ) {
+    var out = []
+    for ( var m in mensajes ) {
+      if ( !isStruct( m ) ) continue;
+      // OpenAI / Gemini: { role: "tool", content: "..." }
+      if ( ( m.role ?: "" ) == "tool" && isSimpleValue( m.content ?: "" ) ) { out.append( { obj: m, clave: "content" } ); continue; }
+      // Claude: { role: "user", content: [ { type: "tool_result", content: "..." } ] }
+      if ( isArray( m.content ?: "" ) ) {
+        for ( var b in m.content ) {
+          if ( isStruct( b ) && ( b.type ?: "" ) == "tool_result" && isSimpleValue( b.content ?: "" ) ) out.append( { obj: b, clave: "content" } )
+        }
+      }
+    }
+    return out
+  }
+
+  private void function recortar( required struct ref, required numeric limite ) {
+    var t = toString( ref.obj[ ref.clave ] ?: "" )
+    if ( len( t ) <= limite ) return;
+    ref.obj[ ref.clave ] = left( t, limite ) & " … [recortado: el resultado tenía #numberFormat( len( t ), ',' )# caracteres; pide una consulta más específica si necesitas el resto]"
+  }
+
+}
