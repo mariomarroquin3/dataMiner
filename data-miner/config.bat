@@ -12,12 +12,13 @@ rem   Anthropic: https://console.anthropic.com/settings/keys
 rem   Gemini:    https://aistudio.google.com/apikey
 set "ANTHROPIC_API_KEY=PEGA_AQUI_TU_KEY_DE_ANTHROPIC"
 set "GEMINI_API_KEY=PEGA_AQUI_TU_KEY_DE_GEMINI"
-rem Modelo principal (Coordinador, Analista, Cientifico ML) y modelo ligero (agente Datos).
-rem   Con claude: claude-sonnet-5-5 y claude-haiku-5-5
+rem Con claude: AI_MODEL = orquestador (Coordinador) y AI_MODEL_LIGERO = todos los subagentes (Datos, Analista, Cientifico ML).
+rem Con gemini: AI_MODEL = principal y AI_MODEL_LIGERO = agente Datos.
+rem   Con claude: claude-sonnet-5-5 y claude-haiku-4-5
 rem   Con gemini: gemini-3.7-flash y gemini-3.5-flash-lite (si uno se queda sin cuota, pasa solo al siguiente)
 set "AI_MODEL=claude-sonnet-5-5"
-set "AI_MODEL_LIGERO=claude-haiku-5-5"
-rem Esfuerzo de Claude (low / medium / high). Vacio = medium en Sonnet y low en Haiku. Mas alto = mas lento y caro
+set "AI_MODEL_LIGERO=claude-haiku-4-5"
+rem Esfuerzo de los modelos Claude 5.x (low / medium / high). Vacio = medium. Haiku 4.5 no lo usa
 set "AI_ESFUERZO="
 rem compacto = coordinador + 3 agentes (recomendado) / completo = 7 agentes
 set "EQUIPO_MODO=compacto"

@@ -97,18 +97,21 @@
             return new AiModel( svc ).withParams( { model: m } )
           }
           if ( application.provider == "claude" || application.provider == "anthropic" ) {
-            // Anthropic: Sonnet para coordinar y analizar, Haiku para el agente Datos (más rápido y barato).
+            // Anthropic: el orquestador (Coordinador y el formateador del reporte) usa AI_MODEL (Sonnet);
+            // todos los subagentes usan AI_MODEL_LIGERO (Haiku 4.5: rápido y barato).
             // max_tokens alto: el reporte final en JSON no cabe en los 1024 que bx-ai pone por defecto
-            if ( !len( m ) ) {
-              m = listFindNoCase( "adquisicion,perfilador,analista_csv,analista_db,datos", nombre ) ? "claude-haiku-5-5" : "claude-sonnet-5-5"
+            m = listFindNoCase( "coordinador,formateador", nombre )
+              ? ( len( application.model ) ? application.model : "claude-sonnet-5-5" )
+              : ( len( application.modelLigero ) ? application.modelLigero : "claude-haiku-4-5" )
+            var params = { model: m, max_tokens: 8192 }
+            // Haiku 4.5 y anteriores no razonan si no se pide y no aceptan "effort": van sin esos parámetros.
+            // Los modelos 5.x razonan por defecto: con thinking adaptativo cada turno traía bloques de 50k-125k
+            // caracteres que se reenvían en cada llamada. Sonnet 5.5 lo apaga con "between_tools"; Haiku 5.5 con "disabled".
+            if ( m.reFindNoCase( "^claude-[a-z]+-5" ) ) {
+              var esHaiku = m.findNoCase( "haiku" ) > 0
+              params.thinking = esHaiku ? { type: "disabled" } : { type: "between_tools" }
+              params.output_config = { effort: getSystemSetting( "AI_ESFUERZO", esHaiku ? "low" : "medium" ) }
             }
-            // Sin razonamiento extendido: con thinking adaptativo (el default) cada turno del agente traía bloques
-            // de 50k-125k caracteres que se reenvían en cada llamada; la misión tardaba minutos y el contexto llegaba
-            // a cientos de miles de tokens. Sonnet 5.5 lo apaga con "between_tools"; Haiku 5.5 con "disabled".
-            var esHaiku = m.findNoCase( "haiku" ) > 0
-            var params = { model: m, max_tokens: 8192,
-              thinking: esHaiku ? { type: "disabled" } : { type: "between_tools" },
-              output_config: { effort: getSystemSetting( "AI_ESFUERZO", esHaiku ? "low" : "medium" ) } }
             return aiModel( provider: "claude", apiKey: getSystemSetting( "ANTHROPIC_API_KEY", getSystemSetting( "CLAUDE_API_KEY", "" ) ), params: params )
           }
           return aiModel( provider: application.provider, params: len( m ) ? { model: m } : {} )

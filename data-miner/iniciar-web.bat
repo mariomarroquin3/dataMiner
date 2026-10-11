@@ -7,7 +7,7 @@ if /i "%AI_PROVIDER%"=="mock" (
   echo  Data Miner en MODO DEMO ^(sin IA real^)
 ) else (
   echo  Proveedor : %AI_PROVIDER%
-  echo  Modelos   : %AI_MODEL% ^(principal^) / %AI_MODEL_LIGERO% ^(agente Datos^)
+  echo  Modelos   : %AI_MODEL% ^(orquestador^) / %AI_MODEL_LIGERO% ^(subagentes^)
   echo  Key       : de %KEY_ORIGEN% ^(termina en ...%KEY_ACTIVA:~-4%^)
 )
 echo  Modo      : %EQUIPO_MODO%   Anonimizar: %ANONIMIZAR%
