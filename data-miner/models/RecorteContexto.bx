@@ -56,6 +56,18 @@ class extends="bxModules.bxai.models.middleware.BaseAiMiddleware" {
     for ( var k in [ "role", "content", "tool_calls", "tool_call_id", "name" ] ) {
       if ( m.keyExists( k ) ) c[ k ] = isArray( m[ k ] ) ? duplicate( m[ k ] ) : m[ k ]
     }
+    // bx-ai inyecta "_chatRequest" (el objeto completo de la petición, 25k+ caracteres y creciendo) dentro del
+    // input de cada tool_use al ejecutar la tool, y ese input queda en el historial: cada llamada lo reenviaba.
+    // Se quitan las claves internas (las que empiezan con "_") de los inputs.
+    if ( isArray( c.content ?: "" ) ) {
+      c.content = c.content.map( b => {
+        if ( !isStruct( b ) || ( b.type ?: "" ) != "tool_use" || !isStruct( b.input ?: "" ) ) return b
+        var copia = {}
+        for ( var k in b ) copia[ k ] = b[ k ]
+        copia.input = b.input.filter( ( k, v ) => left( k, 1 ) != "_" )
+        return copia
+      } )
+    }
     return c
   }
 
