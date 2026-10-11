@@ -17,6 +17,8 @@ rem   Con claude: claude-sonnet-5-5 y claude-haiku-5-5
 rem   Con gemini: gemini-3.7-flash y gemini-3.5-flash-lite (si uno se queda sin cuota, pasa solo al siguiente)
 set "AI_MODEL=claude-sonnet-5-5"
 set "AI_MODEL_LIGERO=claude-haiku-5-5"
+rem Esfuerzo de Claude (low / medium / high). Vacio = medium en Sonnet y low en Haiku. Mas alto = mas lento y caro
+set "AI_ESFUERZO="
 rem compacto = coordinador + 3 agentes (recomendado) / completo = 7 agentes
 set "EQUIPO_MODO=compacto"
 rem Tablas de ejemplo (creditos, precios, clientes_sv, operaciones_sv): auto = solo en modo demo / si / no

@@ -102,7 +102,14 @@
             if ( !len( m ) ) {
               m = listFindNoCase( "adquisicion,perfilador,analista_csv,analista_db,datos", nombre ) ? "claude-haiku-5-5" : "claude-sonnet-5-5"
             }
-            return aiModel( provider: "claude", apiKey: getSystemSetting( "ANTHROPIC_API_KEY", getSystemSetting( "CLAUDE_API_KEY", "" ) ), params: { model: m, max_tokens: 8192 } )
+            // Sin razonamiento extendido: con thinking adaptativo (el default) cada turno del agente traía bloques
+            // de 50k-125k caracteres que se reenvían en cada llamada; la misión tardaba minutos y el contexto llegaba
+            // a cientos de miles de tokens. Sonnet 5.5 lo apaga con "between_tools"; Haiku 5.5 con "disabled".
+            var esHaiku = m.findNoCase( "haiku" ) > 0
+            var params = { model: m, max_tokens: 8192,
+              thinking: esHaiku ? { type: "disabled" } : { type: "between_tools" },
+              output_config: { effort: getSystemSetting( "AI_ESFUERZO", esHaiku ? "low" : "medium" ) } }
+            return aiModel( provider: "claude", apiKey: getSystemSetting( "ANTHROPIC_API_KEY", getSystemSetting( "CLAUDE_API_KEY", "" ) ), params: params )
           }
           return aiModel( provider: application.provider, params: len( m ) ? { model: m } : {} )
         }
