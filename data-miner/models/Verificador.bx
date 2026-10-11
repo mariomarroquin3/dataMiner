@@ -1,0 +1,170 @@
+/**
+ * Verificación de hechos más estricta (sin IA, 0 llamadas al LLM):
+ *   contrastar     -> compara las cifras que dice la afirmación con lo que devuelve su SQL (±1%, o redondeo, o % vs fracción).
+ *                     Hoy solo se revisa que el SQL corra y traiga filas; con esto "ventas = 12,500" y un SQL que da 9,800 sale ⚠
+ *   sellar         -> guarda el hecho como bloque: hash del resultado, huella de las tablas que usa y hash del bloque anterior
+ *   verificarCadena-> recalcula todo: si alguien cambió un dato, un bloque o el orden, dice desde qué bloque se rompe
+ * Es una cadena de hashes (como git), no una blockchain: no hay red ni minería. Detecta cambios, no los impide.
+ */
+class {
+
+  property name="catalogo";
+
+  function init( required any catalogo ) {
+    variables.catalogo = arguments.catalogo
+    variables.bloques  = []
+    return this
+  }
+
+  // ------------------------------------------------------------ Cifra de la afirmación vs resultado del SQL
+
+  struct function contrastar( required struct hecho, struct resultado ) {
+    var r = arguments.resultado ?: variables.catalogo.consultar( hecho.sql ?: "" )
+    if ( len( r.error ?: "" ) ) return { estado: "error", nota: r.error }
+    var enSql = numeros( hecho.sql ?: "" ).map( n => n.valor )
+    // las cifras que ya están en el SQL (año, LIMIT 5, WHERE id = 3) no se contrastan
+    var cifras = numeros( hecho.afirmacion ?: "" ).filter( n => !enSql.some( s => s == n.valor ) )
+    if ( !cifras.len() ) return { estado: "sin_cifra", nota: "La afirmación no trae números que contrastar" }
+    var valores = []
+    for ( var fila in ( r.resultado ?: [] ) ) {
+      for ( var k in fila ) { if ( !isNull( fila[ k ] ) && isNumeric( fila[ k ] ) ) valores.append( val( fila[ k ] ) ) }
+    }
+    var revisadas = cifras.map( c => {
+      var ok = valores.some( v => coincide( c, v ) )
+      return { cifra: c.texto, coincide: ok, mas_cercano: valores.len() ? cercano( c.valor, valores ) : "" }
+    } )
+    var malas = revisadas.filter( x => !x.coincide )
+    return {
+      estado: malas.len() ? "no_coincide" : "coincide",
+      nota: malas.len() ? "La afirmación dice #malas.map( x => x.cifra ).toList( ', ' )# pero el SQL devuelve #malas.map( x => x.mas_cercano ).toList( ', ' )#" : "Las #revisadas.len()# cifras coinciden con el SQL",
+      cifras: revisadas
+    }
+  }
+
+  // ------------------------------------------------------------ Bloques sellados
+
+  /**
+   * Sella un hecho ya verificado. Devuelve el bloque (número, hash y hash anterior).
+   * @resultado el resultado ya obtenido (obligatorio para hechos de la base remota, origen "db")
+   */
+  struct function sellar( required struct hecho, struct resultado ) {
+    var remoto = ( hecho.origen ?: "csv" ) == "db"
+    var r = arguments.resultado ?: variables.catalogo.consultar( hecho.sql ?: "" )
+    var previo = variables.bloques.len() ? variables.bloques.last().hash : repeatString( "0", 64 )
+    var bloque = {
+      n: variables.bloques.len() + 1,
+      fecha: dateTimeFormat( now(), "yyyy-MM-dd HH:mm:ss" ),
+      afirmacion: hecho.afirmacion ?: "",
+      sql: hecho.sql ?: "",
+      origen: remoto ? "db" : "csv",
+      estado: hecho.consenso ?: ( ( hecho.verificado ?: false ) ? "verificado" : "no_verificado" ),
+      hash_resultado: hashResultado( r ),
+      huella_datos: remoto ? {} : huella( hecho.sql ?: "" ),
+      hash_anterior: previo
+    }
+    bloque.hash = hashBloque( bloque )
+    variables.bloques.append( bloque )
+    return bloque
+  }
+
+  /** Recalcula la cadena completa. Cualquier cambio en datos, SQL, afirmación u orden rompe desde ese bloque */
+  struct function verificarCadena() {
+    var previo = repeatString( "0", 64 )
+    var detalle = []
+    var rotoDesde = 0
+    for ( var b in variables.bloques ) {
+      var problemas = []
+      if ( b.hash_anterior != previo ) problemas.append( "el enlace con el bloque anterior no coincide" )
+      if ( hashBloque( b ) != b.hash ) problemas.append( "el bloque fue editado" )
+      // los hechos de la base remota (MCP) se revisan solo por su hash: re-consultarla es trabajo del ConectorMCP
+      if ( b.origen != "db" && hashResultado( variables.catalogo.consultar( b.sql ) ) != b.hash_resultado ) problemas.append( "el SQL ya no da el mismo resultado" )
+      var h = huella( b.sql )
+      for ( var t in b.huella_datos ) {
+        if ( ( h[ t ] ?: "" ) != b.huella_datos[ t ] ) problemas.append( "cambiaron los datos de la tabla #t#" )
+      }
+      if ( problemas.len() && !rotoDesde ) rotoDesde = b.n
+      detalle.append( { n: b.n, afirmacion: b.afirmacion, ok: !problemas.len(), problemas: problemas } )
+      previo = b.hash
+    }
+    return {
+      integra: !rotoDesde,
+      bloques: variables.bloques.len(),
+      roto_desde: rotoDesde,
+      resumen: variables.bloques.len() & " bloques · " & resumenEstados() & ( rotoDesde ? " · ⚠ cadena rota desde el bloque " & rotoDesde : " · cadena íntegra" ),
+      detalle: detalle
+    }
+  }
+
+  array function getBloques() { return variables.bloques }
+
+  void function reiniciar() { variables.bloques = [] }
+
+  // ------------------------------------------------------------ utilidades
+
+  private string function hashBloque( required struct b ) {
+    var huellas = b.huella_datos.keyArray().sort( "textnocase" ).map( t => t & "=" & b.huella_datos[ t ] ).toList( ";" )
+    return hash( [ b.n, b.fecha, b.afirmacion, b.sql, b.origen, b.estado, b.hash_resultado, huellas, b.hash_anterior ].toList( "|" ), "SHA-256" )
+  }
+
+  /** Hash del resultado con las columnas en orden fijo (el orden de las llaves de un struct puede variar) */
+  private string function hashResultado( required struct r ) {
+    if ( len( r.error ?: "" ) ) return hash( "error:" & r.error, "SHA-256" )
+    var filas = ( r.resultado ?: [] ).map( f => f.keyArray().sort( "textnocase" ).map( k => k & "=" & valorFijo( f[ k ] ?: "" ) ).toList( "|" ) )
+    return hash( filas.toList( char( 10 ) ), "SHA-256" )
+  }
+
+  /** Los SUM/AVG de decimales pueden variar en el último dígito según el orden de suma: se redondea a 6 decimales */
+  private string function valorFijo( any v ) {
+    if ( isNull( v ) ) return ""
+    var s = toString( v )
+    if ( !isNumeric( s ) ) return s
+    return createObject( "java", "java.math.BigDecimal" ).init( s ).setScale( 6, createObject( "java", "java.math.RoundingMode" ).HALF_UP ).stripTrailingZeros().toPlainString()
+  }
+
+  /** SHA-256 del contenido de cada tabla del catálogo que aparece en el SQL */
+  private struct function huella( required string sql ) {
+    var out = {}
+    var s = " " & sql.lCase().reReplace( "[^a-z0-9_]", " ", "all" ) & " "
+    for ( var t in variables.catalogo.listar() ) {
+      if ( s.find( " " & t.tabla.lCase() & " " ) ) out[ t.tabla ] = hash( jsonSerialize( variables.catalogo.tabla( t.tabla ) ), "SHA-256" )
+    }
+    return out
+  }
+
+  private string function resumenEstados() {
+    var c = {}
+    variables.bloques.each( b => c[ b.estado ] = ( c[ b.estado ] ?: 0 ) + 1 )
+    return c.keyArray().map( k => c[ k ] & " " & k ).toList( " · " )
+  }
+
+  /** Números de un texto: 12,500 · $1.234,56 · 35% · 0.82 -> [{texto, valor, decimales, pct}] */
+  private array function numeros( required string texto ) {
+    var out = []
+    for ( var m in reMatch( "-?\$?[0-9][0-9.,]*%?", texto ) ) {
+      var t = m.reReplace( "[.,]$", "" )
+      var pct = t.endsWith( "%" )
+      var n = t.reReplace( "[$%]", "", "all" )
+      if ( n.reFind( ",[0-9]{1,2}$" ) && n.find( "." ) ) n = n.replace( ".", "", "all" ).replace( ",", "." )
+      else if ( n.reFind( "^[0-9]{1,3}(,[0-9]{3})+(\.[0-9]+)?$" ) ) n = n.replace( ",", "", "all" )
+      else if ( n.reFind( "^[0-9]{1,3}(\.[0-9]{3})+$" ) ) n = n.replace( ".", "", "all" )
+      else if ( n.reFind( ",[0-9]+$" ) ) n = n.replace( ",", "." )
+      if ( !isNumeric( n ) ) continue;
+      var dec = n.find( "." ) ? len( n.listLast( "." ) ) : 0
+      out.append( { texto: t, valor: val( n ), decimales: dec, pct: pct } )
+    }
+    return out
+  }
+
+  /** ±1%, o igual al redondear como lo escribió la afirmación, o un % que en el SQL es fracción (35% = 0.35) */
+  private boolean function coincide( required struct c, required numeric v ) {
+    var candidatos = [ v ]
+    if ( c.pct ) candidatos.append( v * 100 )
+    return candidatos.some( x => abs( c.valor - x ) <= max( abs( x ) * 0.01, 0.5 * 10 ^ ( -c.decimales ) ) )
+  }
+
+  private string function cercano( required numeric x, required array valores ) {
+    var mejor = valores[ 1 ]
+    valores.each( v => { if ( abs( v - x ) < abs( mejor - x ) ) mejor = v } )
+    return toString( round( mejor * 100 ) / 100 )
+  }
+}

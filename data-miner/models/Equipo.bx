@@ -55,6 +55,9 @@ con su SQL; nunca inventes montos. Si no se puede expresar en dólares, pon impa
     var est = variables.estadistica
     var mlx = variables.ml
     var ing = variables.ingeniero
+    variables.normalizacion = new Normalizacion( arguments.catalogo, variables.informe )
+    variables.verificador   = new Verificador( arguments.catalogo )
+    var nor = variables.normalizacion
 
     // Reintenta con espera creciente si el proveedor responde 429 (límite por minuto del plan gratuito)
     // Solo reintenta el modelo, no las tools: reintentar un subagente repetía toda su conversación (ver ReintentoLLM.bx)
@@ -148,6 +151,12 @@ con su SQL; nunca inventes montos. Si no se puede expresar en dólares, pon impa
           aiTool( "consejos_recoleccion", "Recomendaciones para recolectar mejores datos, adaptadas a los problemas encontrados", ( tabla, objetivo ) => ing.consejos( tabla, objetivo ?: "" ) )
             .describeArg( "tabla", "Tabla" ).describeArg( "objetivo", "Columna a predecir en el futuro (opcional)" )
         ]
+    // Normalización: al final para no mover t_ingeniero[ 5 ] (detectar_fuga), que usa CientificoML
+    t_ingeniero.append( aiTool( "revisar_normalizacion", "Revisa si una tabla está normalizada: listas dentro de celdas, columnas repetidas (Producto_1..5, Meta_Q1..Q4), dependencias entre columnas (2FN/3FN), un mismo código con dos valores y nombres escritos de varias formas. Propone las tablas, la clave y el DDL", ( tabla ) => nor.analizar( tabla ) )
+      .describeArg( "tabla", "Tabla" ) )
+    t_ingeniero.append( aiTool( "normalizar_tabla", "Crea las tablas normalizadas (<tabla>_n_<entidad> y <tabla>_n_hechos) y devuelve el SELECT con JOIN que reconstruye la original", ( tabla ) => nor.normalizar( tabla ) )
+      .describeArg( "tabla", "Tabla" ) )
+    t_ingeniero.append( aiTool( "tablas_partidas", "Busca tablas que son la misma tabla partida en varias hojas o archivos (por mes, sucursal)", () => nor.tablasPartidas() ) )
     var t_db = []
     if ( len( arguments.mcpUrl ) ) {
       variables.db = new ConectorMCP( arguments.mcpUrl, cat )
@@ -197,14 +206,14 @@ con su SQL; nunca inventes montos. Si no se puede expresar en dólares, pon impa
 - Excel: una tabla por hoja, encabezados en una sola fila, sin celdas combinadas ni totales dentro de los datos.
 - ML: el objetivo y las variables deben capturarse en el momento correcto (evitar fuga de datos); suficientes casos por clase; incluir casos rechazados.
 - Privacidad: minimizar datos personales, consentimiento, anonimizar.
-Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para que los demás la usen. Ordena las recomendaciones por impacto.",
+Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para que los demás la usen. Ordena las recomendaciones por impacto. Si el Excel tiene varias hojas o piden diseño de base de datos, normalización o por qué no cuadran los totales, usa revisar_normalizacion y tablas_partidas; si piden la versión normalizada, normalizar_tabla y avisa los nombres de las tablas _n_.",
         instructions: "Eres ingeniero de datos senior. Usa las tools y explica en lenguaje simple. Principios que aplicas:
 - Calidad: completitud (vacíos), unicidad (IDs y duplicados), validez (rangos, tipos, valores imposibles), consistencia (categorías y formatos de fecha), oportunidad (fecha de captura).
 - Recolección: validar en el punto de captura (listas desplegables, rangos, obligatorios); un ID único generado por el sistema; fechas ISO 8601; unidades y moneda explícitas; diccionario de datos; guardar crudo y transformar en capas (raw -> limpia -> analítica); preferir una base de datos o formularios a Excel por correo; registrar quién y cuándo capturó.
 - Excel: una tabla por hoja, encabezados en una sola fila, sin celdas combinadas ni totales dentro de los datos.
 - ML: el objetivo y las variables deben capturarse en el momento correcto (evitar fuga de datos); suficientes casos por clase; incluir casos rechazados.
 - Privacidad: minimizar datos personales, consentimiento, anonimizar.
-Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para que los demás la usen. Ordena las recomendaciones por impacto.",
+Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para que los demás la usen. Ordena las recomendaciones por impacto. Si el Excel tiene varias hojas o piden diseño de base de datos, normalización o por qué no cuadran los totales, usa revisar_normalizacion y tablas_partidas; si piden la versión normalizada, normalizar_tabla y avisa los nombres de las tablas _n_.",
         model: modelo( "ingeniero_datos" ), tools: t_ingeniero ) )
       if ( t_db.len() ) {
         equipo.append( aiAgent( middleware: [ reintento, bitacora ], options: limites, name: "AnalistaDB",
@@ -223,7 +232,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
 - Excel: una tabla por hoja, encabezados en una sola fila, sin celdas combinadas ni totales dentro de los datos.
 - ML: el objetivo y las variables deben capturarse en el momento correcto (evitar fuga de datos); suficientes casos por clase; incluir casos rechazados.
 - Privacidad: minimizar datos personales, consentimiento, anonimizar.
-Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para que los demás la usen. Ordena las recomendaciones por impacto.",
+Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para que los demás la usen. Ordena las recomendaciones por impacto. Si el Excel tiene varias hojas o piden diseño de base de datos, normalización o por qué no cuadran los totales, usa revisar_normalizacion y tablas_partidas; si piden la versión normalizada, normalizar_tabla y avisa los nombres de las tablas _n_.",
         model: modelo( "datos" ), tools: unir( [ t_adquisicion, t_perfilador, t_ingeniero ] ) ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora ], options: limites, name: "Analista",
         description : "Responde preguntas con SQL (tablas cargadas y, si hay, la base remota vía MCP), estadística descriptiva, correlaciones, covarianza, métricas financieras, pronóstico de quiebre de stock y gráficas",
@@ -261,7 +270,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
       .transform( ( reporte ) => {
         reporte.hechos = ( reporte.hechos ?: [] ).map( h => verificar( h ) )
         // Las acciones del resumen ejecutivo también se verifican: su cifra base debe salir de un SQL que corre
-        reporte.acciones = ( reporte.acciones ?: [] ).filter( a => isStruct( a ) && len( a.accion ?: "" ) ).map( a => verificar( a ) )
+        reporte.acciones = ( reporte.acciones ?: [] ).filter( a => isStruct( a ) && len( a.accion ?: "" ) ).map( a => verificar( a, false ) )
         return reporte;
       } )
     return this
@@ -271,7 +280,9 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
   struct function mision( required string pedido, struct options = {} ) {
     var antes = variables.catalogo.getConsultas().len()
     variables.informe.limpiar()
+    variables.verificador.reiniciar()
     var reporte = variables.flujo.run( pedido, {}, options )
+    reporte.cadena = variables.verificador.verificarCadena()
     var total = variables.catalogo.getConsultas().len()
     reporte.evidencia = total > antes ? variables.catalogo.getConsultas().slice( antes + 1, total - antes ) : []
     reporte.tablas = variables.catalogo.listar()
@@ -286,13 +297,25 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
     return variables.informe.html( variables.ultimoReporte ?: {}, titulo )
   }
 
-  /** Re-ejecuta el SQL de un hecho para confirmar que corre y devuelve datos */
-  private struct function verificar( required struct hecho ) {
+  /**
+   * Re-ejecuta el SQL de un hecho. Con estricto, además compara las cifras de la afirmación con el resultado
+   * (Verificador.contrastar) y sella el hecho en la cadena de bloques. Las acciones del resumen ejecutivo
+   * no son estrictas: su impacto se calcula a partir de la cifra base, no la repite.
+   */
+  private struct function verificar( required struct hecho, boolean estricto = true ) {
     if ( !len( hecho.sql ?: "" ) ) return hecho.append( { verificado: false, nota: "Sin SQL" } )
     var r = ( ( hecho.origen ?: "csv" ) == "db" && !isNull( variables.db ) ) ? variables.db.consultar( hecho.sql ) : variables.catalogo.consultar( hecho.sql )
     var ok = !len( r.error ?: "" ) && ( ( r.filas ?: 1 ) > 0 )
-    return hecho.append( { verificado: ok, nota: ok ? "SQL re-ejecutado correctamente" : ( r.error ?: "Sin filas" ) } )
+    if ( !ok ) return hecho.append( { verificado: false, nota: r.error ?: "Sin filas" } )
+    if ( !arguments.estricto ) return hecho.append( { verificado: true, nota: "SQL re-ejecutado correctamente" } )
+    var c = variables.verificador.contrastar( hecho, r )
+    hecho.append( { verificado: c.estado != "no_coincide", cifras: c.estado, nota: c.estado == "no_coincide" ? "⚠ " & c.nota : "SQL re-ejecutado. " & c.nota } )
+    hecho.bloque = variables.verificador.sellar( hecho, r )
+    return hecho
   }
+
+  /** Para el endpoint que vuelve a comprobar la cadena de hechos sellados */
+  any function getVerificador() { return variables.verificador }
 
   /**
    * Convierte la respuesta del coordinador al esquema con structured output (1 llamada extra, sin tools).

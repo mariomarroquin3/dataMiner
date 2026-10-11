@@ -37,7 +37,8 @@ class {
   /** Informe HTML completo */
   string function html( required struct reporte, string titulo = "Informe de datos" ) {
     var esc = ( s ) => encodeForHTML( toString( s ?: "" ) )
-    var hechos = ( reporte.hechos ?: [] ).map( h => '<li class="#( h.verificado ?: false ) ? "ok" : "bad"#"><span class="tag">#( h.verificado ?: false ) ? "✓ Verificado" : "✗ No verificado"#</span>#esc( h.afirmacion )#<code>#esc( h.sql )#</code></li>' ).toList( "" )
+    var hechos = ( reporte.hechos ?: [] ).map( h => '<li class="#( h.verificado ?: false ) ? "ok" : "bad"#"><span class="tag">#( h.verificado ?: false ) ? "✓ Verificado" : "✗ No verificado"#</span>#esc( h.afirmacion )#<code>#esc( h.sql )#</code>#len( h.nota ?: "" ) ? "<small class=""nota"">#esc( h.nota )#</small>" : ""#</li>' ).toList( "" )
+    var cadena = len( reporte.cadena.resumen ?: "" ) ? '<p class="cadena">🔗 #esc( reporte.cadena.resumen )#</p>' : ""
     var nVer = ( reporte.hechos ?: [] ).filter( h => h.verificado ?: false ).len()
     var interp = ( reporte.interpretaciones ?: [] ).map( i => "<li>#esc( i )#</li>" ).toList( "" )
     var anon = ( reporte.anonimizacion ?: [] ).map( a => "<li><b>#esc( a.tabla )#.#esc( a.columna )#</b> · #esc( a.tipo )# → #esc( a.metodo )#</li>" ).toList( "" )
@@ -70,6 +71,8 @@ header p{margin:0;opacity:.85;font-size:.85rem}
 .kpi{background:##fff;border:1px solid ##e4e7f0;border-radius:14px;padding:14px 16px;box-shadow:0 4px 16px rgba(20,26,46,.06)}
 .kpi b{display:block;font-size:1.6rem;line-height:1.1}.kpi span{font-size:.75rem;color:##6b7390}
 .kpi.ok b{color:##0f9f6e}.kpi.it b{color:##b7791f}.kpi.usd b{color:##5b5bf0}
+small.nota{display:block;margin-top:6px;font-size:.78rem;color:##6b7390}
+.cadena{margin:0 0 12px;padding:8px 12px;border-radius:10px;background:##eef0f7;font-size:.85rem;color:##3d4560}
 .ejec{border-color:##d9d9fb;background:linear-gradient(180deg,##f7f7ff,##fff)}
 ul.a li{display:flex;gap:14px;align-items:flex-start;border:1px solid ##e4e7f0;border-radius:12px;padding:14px;margin:0 0 10px;background:##fff}
 ul.a li .n{flex:none;width:28px;height:28px;border-radius:50%;background:##5b5bf0;color:##fff;font-weight:700;display:grid;place-items:center;font-size:.85rem}
@@ -113,7 +116,7 @@ footer{text-align:center;color:##6b7390;font-size:.78rem;margin-top:24px}
 </div>
 #len( accionesHTML ) ? "<div class=""sec ejec""><h2>Resumen ejecutivo · qué hacer</h2><ul class=""a"">#accionesHTML#</ul></div>" : ""#
 <div class="sec"><h2>Resumen</h2><p class="resumen">#esc( reporte.respuesta ?: "" )#</p></div>
-<div class="sec"><h2>Hechos verificados</h2><ul class="h">#hechos#</ul></div>
+<div class="sec"><h2>Hechos verificados</h2>#cadena#<ul class="h">#hechos#</ul></div>
 #len( interp ) ? "<div class=""sec""><h2>Interpretaciones</h2><ul class=""i"">#interp#</ul></div>" : ""#
 #len( canvases ) ? "<h2 style=""margin:24px 0 12px"">Visualizaciones</h2><div class=""gs"">#canvases#</div>" : ""#
 <div class="sec" style="margin-top:16px"><h2>Datos usados</h2><table class="t">#tablas#</table></div>

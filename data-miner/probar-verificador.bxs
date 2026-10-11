@@ -1,0 +1,26 @@
+// Prueba de la verificación estricta y los bloques sellados (sin IA): boxlang probar-verificador.bxs
+import models.Catalogo
+import models.Verificador
+cat = new Catalogo( true, "sal-demo" )
+cat.registrarArchivo( expandPath( "./pruebas/fuentes/pedidos_mayoristas.xlsx" ), "pedidos", "subida" )
+real = cat.consultar( "SELECT SUM(Total_pedido) AS total, COUNT(*) AS n FROM pedidos" ).resultado[ 1 ]
+ver = new Verificador( cat )
+hechos = [
+  { afirmacion: "Hay #real.n# pedidos mayoristas por un total de $#numberFormat( real.total, ',.00' )#", sql: "SELECT SUM(Total_pedido) AS total, COUNT(*) AS n FROM pedidos", verificado: true },
+  { afirmacion: "Los pedidos suman $250,000", sql: "SELECT SUM(Total_pedido) AS total FROM pedidos", verificado: true },
+  { afirmacion: "El 35% de los pedidos está pendiente", sql: "SELECT AVG(CASE WHEN Estado = 'Pendiente' THEN 1.0 ELSE 0 END) AS p FROM pedidos", verificado: true },
+  { afirmacion: "Hay 3 clientes con giro restaurante", sql: "SELECT COUNT(DISTINCT Cliente) AS n FROM pedidos WHERE Giro = 'Restaurante'", verificado: true }
+]
+// Hoy los 4 salen ✓ porque su SQL corre y trae filas. Con contrastar():
+for ( h in hechos ) {
+  c = ver.contrastar( h )
+  println( "#c.estado == 'coincide' ? '✓' : '⚠'# #h.afirmacion# -> #c.nota#" )
+  h.consenso = c.estado == "coincide" ? "verificado" : "disputa"
+  ver.sellar( h )
+}
+println( ver.verificarCadena().resumen )
+// Demo: alguien cambia un monto a mano en los datos
+cat.tabla( "pedidos" ).setCell( "Total_pedido", 99999, 1 )
+v = ver.verificarCadena()
+println( v.resumen )
+for ( d in v.detalle ) println( "  bloque #d.n#: #d.ok ? 'ok' : d.problemas.toList( '; ' )#" )

@@ -1,0 +1,26 @@
+// Prueba del detector de normalización (sin IA): boxlang probar-normalizacion.bxs
+// Los Excel de prueba están en pruebas/fuentes/ (copiados de entregables/excel/)
+import models.Catalogo
+import models.Normalizacion
+cat = new Catalogo( true, "sal-demo" )
+for ( f in [ "ventas_sucursales_2026", "sucursales_empleados", "productos_inventario", "pedidos_mayoristas" ] ) {
+  cat.registrarArchivo( expandPath( "./pruebas/fuentes/" & f & ".xlsx" ), f, "subida" )
+}
+nor = new Normalizacion( cat )
+for ( t in cat.listar() ) {
+  ini = getTickCount()
+  r = nor.analizar( t.tabla, true )
+  println( "=== #t.tabla# (#t.filas# filas, #getTickCount() - ini# ms): #r.nivel_normalizacion# · clave #r.clave_detectada# · redundancia #r.redundancia_pct#% · duplicadas #r.filas_duplicadas#" )
+  for ( h in r.hallazgos ) println( "  [#h.forma#] #h.columna#: #h.problema# | #h.detalle#" )
+  for ( e in r.entidades_propuestas ) println( "  -> tabla #e.entidad# (clave #e.clave#): #e.columnas.toList( ', ' )#" )
+}
+// Normalizar la tabla de ventas y consultar con JOIN las tablas nuevas
+t = "ventas_sucursales_2026_ventas_jul_sep"
+println( nor.analizar( t, true ).ddl )
+n = nor.normalizar( t )
+for ( x in n.tablas_creadas ) println( "creada #x.tabla#: #x.filas# filas" )
+q = cat.consultar( n.sql_reconstruir )
+println( "reconstruida: " & ( q.error ?: q.filas ) & " filas (originales #n.filas_originales#, sin #n.filas_duplicadas_quitadas# duplicadas ni la fila de totales)" )
+z = cat.consultar( "SELECT m.Departamento, COUNT(*) AS lineas FROM #t#_n_hechos h, #t#_n_factura f, #t#_n_vendedor v, #t#_n_sucursal s, #t#_n_municipio m WHERE h.No_Factura = f.No_Factura AND f.Vendedor = v.Vendedor AND v.Cod_Sucursal = s.Cod_Sucursal AND s.Municipio = m.Municipio GROUP BY m.Departamento ORDER BY lineas DESC" )
+println( "líneas por departamento (JOIN de 5 tablas): " & jsonSerialize( z.resultado ?: z.error ) )
+println( jsonSerialize( nor.tablasPartidas().pares.map( p => p.tablas.toList( " ~ " ) & " (" & p.columnas_en_comun_pct & "%)" ) ) )

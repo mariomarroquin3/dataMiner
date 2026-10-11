@@ -1,0 +1,682 @@
+/**
+ * Normalización de tablas desconocidas (reglas fijas, sin IA):
+ *   analizar       -> qué tan normalizada está una tabla:
+ *                       1FN: celdas con listas, atributos compuestos, columnas repetidas (Producto_1..5, Meta_Q1..Q4)
+ *                       2FN/3FN: dependencias funcionales entre columnas que no son la clave (SKU -> Producto, Precio)
+ *                       anomalías de actualización (un mismo código con dos valores) y nombres escritos de varias formas
+ *                     más la clave detectada, las entidades propuestas, el % de celdas redundantes y el DDL
+ *   normalizar     -> crea en el catálogo las tablas normalizadas (<tabla>_n_<entidad> y <tabla>_n_hechos)
+ *   tablasPartidas -> tablas con casi las mismas columnas (la misma tabla partida por mes, sucursal u hoja)
+ */
+class {
+
+  property name="catalogo";
+  property name="informe";
+
+  // Patrones (en variables, para que las closures los vean)
+  variables.re = {
+    SEP    : "\s*(,|;|\||/|\n)\s*",
+    MONTO  : "^[-+]?(US)?[$€£₡]?\s*-?[0-9][0-9.,]*\s*%?$",
+    FECHA  : "^[0-9]{1,4}[-/][0-9]{1,2}[-/][0-9]{1,4}$",
+    ID     : "(^id$|^id_|_id$|^cod|^sku|^dui|^nit|^nrc|^no_|^num|factura$|^pedido$)",
+    SUFIJO : "^(.+?)(?:_?([0-9]+)|_([qtsm][0-9]|ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre))$",
+    MES    : "^(ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*$",
+    NULO   : "^(n/?d|n/?a|s/?n|-+|null|none|sin dato|ninguno)$",
+    PSEUDO : "^[A-Za-z]+_[0-9a-f]{6,}$"
+  }
+  variables.meses = { jan: 1, ene: 1, feb: 2, mar: 3, apr: 4, abr: 4, may: 5, jun: 6, jul: 7, aug: 8, ago: 8, sep: 9, set: 9, oct: 10, nov: 11, dec: 12, dic: 12 }
+
+  function init( required any catalogo, any informe ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe ?: javaCast( "null", "" )
+    return this
+  }
+
+  // ------------------------------------------------------------ Análisis
+
+  /** @silencioso true = no registra evidencia ni gráfica (uso interno) */
+  struct function analizar( required string tabla, boolean silencioso = false ) {
+    var a = estructura( tabla )
+    var hallazgos = []
+    if ( a.totales ) hallazgos.append( h( "Estructura", "media", "(tabla)", "Fila de totales dentro de los datos", "#a.totales# fila(s) tipo 'TOTAL' mezcladas con los registros",
+      "Los totales se calculan con una consulta; si quedan en la tabla se suman dos veces. Bórralos del origen" ) )
+    hallazgos.append( revisar1FN( a ), true )
+    hallazgos.append( revisarClavesRepetidas( a ), true )
+
+    // Dependencias funcionales -> entidades
+    var ent = entidades( a )
+    var claveTabla = ent.clave
+    for ( var e in ent.lista ) {
+      if ( !e.tiene ) continue;
+      var esClave = claveTabla.len() == 1 && arrayFindNoCase( e.miembros, claveTabla[ 1 ] )
+      if ( esClave ) continue;
+      var parcial = claveTabla.len() > 1 && e.miembros.some( m => arrayFindNoCase( claveTabla, m ) )
+      hallazgos.append( h( parcial ? "2FN" : "3FN", "alta", e.miembros.toList( ", " ),
+        parcial ? "Dependencia parcial de la clave" : "Dependencia transitiva",
+        "#e.miembros.toList( ' = ' )##e.dependientes.len() ? ' determina ' & e.dependientes.toList( ', ' ) : ' (son el mismo dato)'#. Se repite en #e.repetidas# filas (#e.celdas_redundantes# celdas copiadas)",
+        "Saca estas columnas a una tabla '#e.entidad#' con clave #e.clave# y deja solo #e.clave# en la tabla original" ) )
+      for ( var v in e.variantes ) {
+        hallazgos.append( h( "Variantes", "media", v.columna, "Un mismo #e.clave# escrito de varias formas en #v.columna#", v.ejemplos.toList( " · " ),
+          "Guarda el nombre una sola vez en la tabla '#e.entidad#'; en la captura elige de una lista, no lo escribas" ) )
+      }
+      for ( var x in e.anomalias ) {
+        hallazgos.append( h( "Anomalía", "alta", x.columna, "Anomalía de actualización: #e.clave# con dos valores de #x.columna#", x.ejemplos.toList( " · " ),
+          "O es un error de captura, o el dato cambió con el tiempo (cambio de precio, de gerente). Si cambió, guárdalo con fecha de vigencia o copia el valor en cada venta" ) )
+      }
+    }
+
+    var tiene = ( f ) => hallazgos.some( x => x.forma == f )
+    var nivel = tiene( "1FN" ) ? "No cumple 1FN" : tiene( "2FN" ) ? "1FN" : tiene( "3FN" ) ? "2FN" : "3FN (probable)"
+    var celdas = ent.lista.reduce( ( s, e ) => s + e.celdas_redundantes, 0 )
+    var total = max( 1, a.n * a.cols.len() )
+    var orden = { "Estructura": 0, "1FN": 1, "2FN": 2, "3FN": 3, "Anomalía": 4, "Clave": 4, "Variantes": 5 }
+    hallazgos.sort( ( x, y ) => orden[ x.forma ] - orden[ y.forma ] )
+    var res = {
+      tabla: tabla, filas: a.n, columnas: a.cols.len(), filas_duplicadas: a.duplicadas,
+      nivel_normalizacion: nivel,
+      clave_detectada: claveTabla.len() ? claveTabla.toList( " + " ) : "ninguna (agrega un ID generado por el sistema)",
+      redundancia_pct: redondear( celdas / total * 100, 1 ),
+      celdas_redundantes: celdas,
+      hallazgos: hallazgos,
+      entidades_propuestas: ent.lista.filter( e => e.tiene ).map( e => {
+        return { entidad: e.entidad, clave: e.clave, columnas: e.miembros.filter( m => m != e.clave ).append( e.dependientes, true ), referencia_a: e.fks, filas_unicas: e.distintos }
+      } ),
+      columnas_en_hechos: ent.hechos,
+      columnas_sin_valor: ent.sinValor,
+      ddl: ddl( tabla, a, ent )
+    }
+    if ( silencioso ) return res
+    var conRedundancia = res.entidades_propuestas.len() ? ent.lista.filter( e => e.celdas_redundantes > 0 ) : []
+    if ( !isNull( variables.informe ) && conRedundancia.len() ) {
+      variables.informe.agregarGrafico( { tipo: "bar", titulo: "Normalización · celdas repetidas por entidad · #tabla# (#res.redundancia_pct#% de la tabla)",
+        labels: conRedundancia.map( e => e.entidad ), series: [ { nombre: "celdas repetidas", datos: conRedundancia.map( e => e.celdas_redundantes ) } ] } )
+    }
+    return registrar( "normalizacion(#tabla#)", res, a.n )
+  }
+
+  /** Crea las tablas normalizadas en el catálogo y devuelve sus nombres + una consulta que reconstruye la original */
+  struct function normalizar( required string tabla ) {
+    var a = estructura( tabla )
+    var ent = entidades( a )
+    var creadas = []
+    var base = tabla & "_n_"
+    for ( var e in ent.lista.filter( x => x.tiene ) ) {
+      var cols = [ e.clave ]
+      cols.append( e.miembros.filter( m => m != e.clave ), true )
+      cols.append( e.dependientes, true )
+      var porClave = {}
+      var orden = []
+      for ( var i = 1; i <= a.n; i++ ) {
+        var k = a.V[ e.clave ][ i ]
+        if ( !len( k ) ) continue;
+        if ( !porClave.keyExists( k ) ) { porClave[ k ] = []; orden.append( k ) }
+        porClave[ k ].append( i )
+      }
+      var filas = orden.map( k => cols.map( c => canonico( a, c, porClave[ k ] ) ) )
+      creadas.append( { tabla: variables.catalogo.registrarFilas( base & nombreEntidad( e.clave ), cols, filas ), filas: filas.len(), clave: e.clave } )
+    }
+    // tabla de hechos: clave + FKs de las entidades de primer nivel + columnas propias. Los códigos se guardan en su forma canónica
+    var hechos = ent.hechos
+    var vistas = {}
+    var filasH = []
+    for ( var i = 1; i <= a.n; i++ ) {
+      if ( a.excluida[ i ] ) continue;
+      filasH.append( hechos.map( c => ent.esFK.keyExists( c ) ? canonico( a, c, [ i ], true ) : bonito( a.crudos[ c ][ i ] ) ) )
+    }
+    var th = variables.catalogo.registrarFilas( base & "hechos", hechos, filasH )
+    creadas.append( { tabla: th, filas: filasH.len(), clave: ent.clave.toList( " + " ) } )
+    var joins = ent.lista.filter( e => e.tiene && arrayFindNoCase( hechos, e.clave ) )
+      .map( e => "LEFT JOIN #base##nombreEntidad( e.clave )# #nombreEntidad( e.clave )# ON h.#e.clave# = #nombreEntidad( e.clave )#.#e.clave#" )
+    return registrar( "normalizar(#tabla#)", {
+      tabla: tabla, tablas_creadas: creadas, filas_originales: a.n, filas_duplicadas_quitadas: a.duplicadas,
+      sql_reconstruir: "SELECT * FROM #th# h " & joins.toList( " " ),
+      nota: "La tabla original no se toca. Los nombres escritos de varias formas quedan en su forma más frecuente; los valores en conflicto (anomalías) también."
+    }, filasH.len() )
+  }
+
+  /** Tablas del catálogo que parecen la misma tabla partida (por mes, sucursal, hoja o archivo) */
+  struct function tablasPartidas() {
+    var tabs = variables.catalogo.listar().filter( t => !t.tabla.reFind( "_n_|_limpia$" ) )
+    var firmas = {}
+    // firmas sin repetir (Producto_1..5 cuenta una vez)
+    tabs.each( t => {
+      var fs = []
+      t.columnas.listToArray().map( c => firma( c ) ).each( f => { if ( f.len() && !fs.some( g => g.toList() == f.toList() ) ) fs.append( f ) } )
+      firmas[ t.tabla ] = fs
+    } )
+    var pares = []
+    for ( var i = 1; i <= tabs.len(); i++ ) {
+      for ( var j = i + 1; j <= tabs.len(); j++ ) {
+        var x = firmas[ tabs[ i ].tabla ]; var y = firmas[ tabs[ j ].tabla ]
+        var chico = x.len() <= y.len() ? x : y; var grande = x.len() <= y.len() ? y : x
+        var comunes = chico.filter( fx => grande.some( fy => fx.some( p => fy.findNoCase( p ) ) ) ).len()
+        var solape = chico.len() ? comunes / chico.len() : 0
+        var jaccard = comunes / max( 1, chico.len() + grande.len() - comunes )
+        if ( solape >= 0.8 && jaccard >= 0.4 && chico.len() >= 3 ) {
+          pares.append( { tablas: [ tabs[ i ].tabla, tabs[ j ].tabla ], columnas_en_comun_pct: redondear( solape * 100, 0 ),
+            recomendacion: "Parecen la misma tabla partida. Únelas en una sola con una columna que diga de dónde viene cada fila (mes, sucursal) y los mismos nombres de columna" } )
+        }
+      }
+    }
+    return registrar( "tablas_partidas", { pares: pares, revisadas: tabs.len() }, pares.len() )
+  }
+
+  // ------------------------------------------------------------ 1FN
+
+  private array function revisar1FN( required struct a ) {
+    var out = []
+    for ( var c in a.cols ) {
+      var inf = a.info[ c ]
+      if ( inf.numerica || inf.llenos < 3 ) continue;
+      var vals = a.crudos[ c ].filter( v => len( trim( v ) ) && !trim( v ).reFind( variables.re.MONTO ) && !trim( v ).reFind( variables.re.FECHA ) && !trim( v ).lCase().reFind( variables.re.NULO ) )
+      if ( !vals.len() || vals.map( v => len( v ) ).sum() / vals.len() > 80 ) continue;
+      var partes = vals.map( v => trim( v ).reReplace( variables.re.SEP, char( 31 ), "all" ).listToArray( char( 31 ) ) )
+      var multi = partes.filter( p => p.len() >= 2 )
+      if ( multi.len() < 3 || multi.len() < vals.len() * 0.25 ) continue;
+      var cuenta = multi.first().len()
+      var fija = partes.filter( p => p.len() == cuenta ).len() >= partes.len() * 0.9
+      var mismaForma = multi.every( p => p.map( x => forma( x ) ).toList( char( 31 ) ).listRemoveDuplicates( char( 31 ) ).listLen( char( 31 ) ) == 1 )
+      if ( !a.keyExists( "listas" ) ) a.listas = {}
+      a.listas[ c ] = true
+      var ej = multi.slice( 1, min( 2, multi.len() ) ).map( p => "'" & p.toList( " | " ) & "'" ).toList( " · " )
+      if ( fija && !mismaForma ) {
+        out.append( h( "1FN", "media", c, "Atributo compuesto: varios datos en una celda", "#multi.len()# de #vals.len()# valores tienen #cuenta# partes, ej: #ej#",
+          "Sepáralo en #cuenta# columnas (por ejemplo dirección, municipio y departamento) para poder filtrar y agrupar por cada parte" ) )
+      } else {
+        out.append( h( "1FN", "alta", c, "Celda con una lista de valores", "#multi.len()# de #vals.len()# celdas guardan varios valores, ej: #ej#",
+          "Crea una tabla aparte con una fila por valor (#c# + la clave de esta tabla). Con listas no se puede contar ni hacer JOIN" ) )
+      }
+    }
+    // Columnas repetidas: Producto_1..Producto_5, Meta_Q1..Q4, Stock_SS01..Stock_US01, Julio/Agosto/Septiembre
+    var grupos = {}
+    var usados = {}
+    var agrupar = ( base, sufijo, c ) => {
+      var k = base.lCase()
+      if ( !grupos.keyExists( k ) ) grupos[ k ] = { base: base, sufijos: [], columnas: [] }
+      grupos[ k ].sufijos.append( sufijo.lCase() ); grupos[ k ].columnas.append( c )
+    }
+    // a) mismo prefijo, columnas numéricas (Stock_SS01, Stock_SA01...)
+    var porPrefijo = {}
+    for ( var c in a.cols ) {
+      if ( !a.info[ c ].casiNumerica || !c.find( "_" ) || c.lCase().reFind( "_total$" ) ) continue;
+      var pre = c.listFirst( "_" ).lCase()
+      if ( !porPrefijo.keyExists( pre ) ) porPrefijo[ pre ] = []
+      porPrefijo[ pre ].append( c )
+    }
+    for ( var pre in porPrefijo ) {
+      if ( porPrefijo[ pre ].len() < 3 ) continue;
+      for ( var c in porPrefijo[ pre ] ) { agrupar( c.listFirst( "_" ), c.listRest( "_" ), c ); usados[ c ] = true }
+    }
+    // b) mismo nombre con número, trimestre o mes al final (Producto_1, Cant_1, Meta_Q1, Meta_Jul)
+    for ( var c in a.cols ) {
+      if ( usados.keyExists( c ) ) continue;
+      var m = reFindNoCase( variables.re.SUFIJO, c, 1, true )
+      if ( m.pos[ 1 ] && len( m.match[ 2 ] ) ) { agrupar( m.match[ 2 ], len( m.match[ 3 ] ) ? m.match[ 3 ] : m.match[ 4 ], c ); usados[ c ] = true; continue; }
+      if ( c.lCase().reFind( variables.re.MES ) ) { agrupar( "(mes)", c, c ); usados[ c ] = true }
+    }
+    // Grupos con los mismos sufijos (Producto_k, Cant_k, Precio_k) son un solo grupo de "líneas"
+    var porSufijos = {}
+    var enGrupo = {}
+    for ( var k in grupos ) {
+      var g = grupos[ k ]
+      if ( g.columnas.len() < 2 || ( g.columnas.len() == 2 && !g.sufijos.every( s => isNumeric( s ) ) ) ) continue;
+      var firmaS = g.sufijos.toList()
+      if ( !porSufijos.keyExists( firmaS ) ) porSufijos[ firmaS ] = []
+      porSufijos[ firmaS ].append( g )
+    }
+    for ( var s in porSufijos ) {
+      var gs = porSufijos[ s ]
+      var bases = gs.map( g => g.base ).toList( "/" )
+      var cols = []
+      gs.each( g => cols.append( g.columnas, true ) )
+      cols.each( c => enGrupo[ c ] = true )
+      var vacias = 0; var celdas = 0
+      for ( var c in cols ) { celdas += a.n; vacias += a.n - a.info[ c ].llenos }
+      out.append( h( "1FN", "alta", cols.slice( 1, min( 6, cols.len() ) ).toList( ", " ) & ( cols.len() > 6 ? "..." : "" ),
+        "Grupo repetido de columnas", "#bases# × #gs[ 1 ].sufijos.len()# (#gs[ 1 ].sufijos.toList( ', ' )#); #redondear( vacias / max( 1, celdas ) * 100, 0 )#% de esas celdas están vacías",
+        "Pasa a formato largo: una fila por #gs[ 1 ].base == '(mes)' ? 'mes' : 'elemento'# con columnas #bases == '(mes)' ? 'mes, valor' : 'número, ' & bases.replace( '/', ', ', 'all' )#. Así agregar un #gs[ 1 ].base == '(mes)' ? 'mes' : 'elemento'# más no obliga a crear columnas" ) )
+    }
+    a.enGrupo = enGrupo
+    return out
+  }
+
+  /** Códigos que deberían ser únicos (casi todos distintos) pero aparecen repetidos con datos distintos */
+  private array function revisarClavesRepetidas( required struct a ) {
+    var out = []
+    for ( var c in a.cols ) {
+      var inf = a.info[ c ]
+      if ( !c.lCase().reFind( variables.re.ID ) || inf.distintos == inf.llenos || inf.distintos < inf.llenos * 0.9 ) continue;
+      var filas = {}
+      for ( var i = 1; i <= a.n; i++ ) {
+        var k = a.V[ c ][ i ]
+        if ( !len( k ) || a.excluida[ i ] ) continue;
+        if ( !filas.keyExists( k ) ) filas[ k ] = []
+        filas[ k ].append( i )
+      }
+      var ejemplos = []
+      for ( var k in filas ) {
+        if ( filas[ k ].len() < 2 ) continue;
+        var distintas = a.cols.filter( o => o != c && filas[ k ].map( i => a.V[ o ][ i ] ).toList( char( 31 ) ).listRemoveDuplicates( char( 31 ) ).listLen( char( 31 ) ) > 1 )
+        if ( distintas.len() ) ejemplos.append( "#a.crudos[ c ][ filas[ k ][ 1 ] ]#: #filas[ k ].len()# filas, cambian #distintas.slice( 1, min( 4, distintas.len() ) ).toList( ', ' )#" )
+      }
+      if ( ejemplos.len() ) out.append( h( "Clave", "alta", c, "Código repetido con datos distintos", ejemplos.slice( 1, min( 3, ejemplos.len() ) ).toList( " · " ),
+        "#c# debería identificar una sola fila. Decide cuál es la vigente, borra la otra y haz #c# clave única en el sistema" ) )
+    }
+    return out
+  }
+
+  // ------------------------------------------------------------ Dependencias funcionales
+
+  /** Dependencias A -> B aproximadas, agrupadas en entidades (mínimas, sin transitivas) */
+  private struct function entidades( required struct a ) {
+    var enGrupo = a.enGrupo ?: {}
+    var usables = a.cols.filter( c => !enGrupo.keyExists( c ) )
+    var dets = a.n - a.duplicadas - a.totales < 20 ? [] : usables.filter( c => {
+      var i = a.info[ c ]
+      return i.llenos >= a.n * 0.3 && i.distintos >= 2 && i.distintos <= i.llenos * 0.5 && ( !i.casiNumerica || c.lCase().reFind( variables.re.ID ) )
+    } )
+    var D = {}; var C = {}
+    for ( var x in dets ) {
+      D[ x ] = {}; C[ x ] = {}
+      var grupos = agruparFilas( a, x )
+      for ( var y in usables ) {
+        if ( y == x || a.info[ y ].distintos < 2 ) continue;
+        var r = dependencia( a, grupos, x, y )
+        if ( r.ok ) D[ x ][ y ] = r
+        else if ( r.casi ?: false ) C[ x ][ y ] = r
+      }
+    }
+    // Clases de equivalencia: A -> B y B -> A son la misma entidad (SKU = Producto)
+    var claseDe = {}
+    var clases = []
+    for ( var x in dets ) {
+      if ( claseDe.keyExists( x ) ) continue;
+      var miembros = [ x ]
+      for ( var y in dets ) {
+        if ( y != x && !claseDe.keyExists( y ) && D[ x ].keyExists( y ) && D[ y ].keyExists( x ) ) miembros.append( y )
+      }
+      clases.append( { miembros: miembros } )
+      miembros.each( m => claseDe[ m ] = clases.len() )
+    }
+    for ( var k = 1; k <= clases.len(); k++ ) {
+      var cl = clases[ k ]
+      cl.clave = elegirClave( a, cl.miembros )
+      var deps = {}
+      cl.miembros.each( m => D[ m ].keyArray().each( y => { if ( !arrayFindNoCase( cl.miembros, y ) ) deps[ y ] = true } ) )
+      cl.deps = deps
+      cl.variantes = []
+    }
+    // Nombres escritos de varias formas: X determina la clave de Y, Y no determina X, pero dentro de cada Y los valores
+    // de X se parecen (S.S. Centro / San Salvador Centro -> SS01). X pasa a ser un atributo de Y
+    for ( var k = 1; k <= clases.len(); k++ ) {
+      var cl = clases[ k ]
+      if ( cl.miembros.some( m => m.lCase().reFind( variables.re.ID ) ) ) continue;
+      var mejor = 0; var mejorSim = {}
+      for ( var j = 1; j <= clases.len(); j++ ) {
+        var y = clases[ j ]
+        if ( j == k || y.keyExists( "absorbida" ) || !cl.deps.keyExists( y.clave ) ) continue;
+        if ( mejor && a.info[ y.clave ].distintos <= a.info[ clases[ mejor ].clave ].distintos ) continue;
+        var sim = variantesDe( a, y.clave, cl.clave )
+        if ( sim.parecidas ) { mejor = j; mejorSim = sim }
+      }
+      if ( !mejor ) continue;
+      var dest = clases[ mejor ]
+      cl.miembros.each( m => { dest.deps[ m ] = true; claseDe[ m ] = mejor } )
+      dest.variantes.append( { columna: cl.clave, ejemplos: mejorSim.ejemplos } )
+      cl.absorbida = mejor
+      cl.deps = {}
+    }
+    // Quitar transitivas: si X -> Y (otra clase) e Y -> Z, Z sale de X y queda la clave de Y como referencia
+    for ( var k = 1; k <= clases.len(); k++ ) {
+      var cl = clases[ k ]
+      if ( cl.keyExists( "absorbida" ) ) continue;
+      var refs = {}
+      cl.deps.keyArray().each( y => { if ( claseDe.keyExists( y ) && claseDe[ y ] != k ) refs[ claseDe[ y ] ] = true } )
+      var quitar = {}
+      for ( var r in refs ) {
+        clases[ r ].deps.keyArray().each( z => { if ( !( claseDe.keyExists( z ) && claseDe[ z ] == val( r ) ) && !arrayFindNoCase( clases[ r ].miembros, z ) ) quitar[ z ] = true } )
+        clases[ r ].miembros.each( m => { if ( m != clases[ r ].clave ) quitar[ m ] = true } )
+      }
+      quitar.keyArray().each( z => cl.deps.delete( z ) )
+      cl.deps.keyArray().each( y => { if ( claseDe.keyExists( y ) && claseDe[ y ] != k && refs.keyExists( claseDe[ y ] ) && y != clases[ claseDe[ y ] ].clave ) cl.deps.delete( y ) } )
+      for ( var r in refs ) { if ( !quitar.keyExists( clases[ r ].clave ) ) cl.deps[ clases[ r ].clave ] = true }
+    }
+    var duenos = {}
+    for ( var k = 1; k <= clases.len(); k++ ) {
+      for ( var y in clases[ k ].deps ) {
+        if ( !duenos.keyExists( y ) ) duenos[ y ] = []
+        duenos[ y ].append( k )
+      }
+    }
+    for ( var y in duenos ) {
+      var ks = duenos[ y ]
+      if ( ks.len() < 2 ) continue;
+      ks.sort( ( p, q ) => a.info[ clases[ q ].clave ].distintos - a.info[ clases[ p ].clave ].distintos )
+      for ( var j = 2; j <= ks.len(); j++ ) {
+        var mayor = clases[ ks[ 1 ] ]; var menor = clases[ ks[ j ] ]
+        var relacion = menor.miembros.some( m => mayor.deps.keyExists( m ) ) || mayor.miembros.some( m => menor.deps.keyExists( m ) )
+        if ( !relacion ) menor.deps.delete( y )
+      }
+    }
+    // Atributos casi dependientes (con algunos valores en conflicto): van a la entidad que mejor los explica
+    var ubicadas = {}
+    clases.filter( c => !c.keyExists( "absorbida" ) && ( structCount( c.deps ) || c.miembros.len() > 1 ) ).each( c => { c.miembros.each( m => ubicadas[ m ] = true ); c.deps.keyArray().each( d => ubicadas[ d ] = true ) } )
+    for ( var y in usables ) {
+      if ( ubicadas.keyExists( y ) ) continue;
+      var mejor = 0; var f = 0
+      for ( var k = 1; k <= clases.len(); k++ ) {
+        var cl = clases[ k ]
+        if ( cl.keyExists( "absorbida" ) || !C.keyExists( cl.clave ) || !C[ cl.clave ].keyExists( y ) ) continue;
+        if ( C[ cl.clave ][ y ].fuerza > f ) { f = C[ cl.clave ][ y ].fuerza; mejor = k }
+      }
+      if ( mejor ) { clases[ mejor ].deps[ y ] = true; D[ clases[ mejor ].clave ][ y ] = C[ clases[ mejor ].clave ][ y ] }
+    }
+    // Clave de la tabla (sobre filas sin duplicar): una columna única o un par
+    var clave = claveTabla( a, clases.filter( c => !c.keyExists( "absorbida" ) && ( structCount( c.deps ) || c.miembros.len() > 1 ) ).map( c => c.clave ) )
+    // Columnas que quedan en la tabla de hechos
+    var enEntidades = {}
+    var esFK = {}
+    var lista = []
+    for ( var cl in clases ) {
+      if ( cl.keyExists( "absorbida" ) ) continue;
+      var deps = a.cols.filter( c => cl.deps.keyExists( c ) )
+      var anom = []
+      for ( var m in cl.miembros ) {
+        if ( m != cl.clave && D[ cl.clave ].keyExists( m ) && D[ cl.clave ][ m ].fuerza < 1 ) anom.append( { columna: m, ejemplos: D[ cl.clave ][ m ].excepciones } )
+      }
+      for ( var dep in deps ) {
+        var src = cl.miembros.filter( m => D.keyExists( m ) && D[ m ].keyExists( dep ) )
+        if ( src.len() && D[ src[ 1 ] ][ dep ].fuerza < 1 && !cl.variantes.some( v => v.columna == dep ) && !esClaveDeClase( clases, dep ) ) {
+          anom.append( { columna: dep, ejemplos: D[ src[ 1 ] ][ dep ].excepciones } )
+        }
+      }
+      var e = {
+        entidad: nombreEntidad( cl.clave ), clave: cl.clave, miembros: cl.miembros, dependientes: deps,
+        fks: deps.filter( c => esClaveDeClase( clases, c ) ), variantes: cl.variantes, anomalias: anom,
+        distintos: a.info[ cl.clave ].distintos,
+        repetidas: a.info[ cl.clave ].llenos - a.info[ cl.clave ].distintos
+      }
+      e.tiene = deps.len() + cl.miembros.len() > 1
+      e.celdas_redundantes = e.tiene ? e.repetidas * ( deps.len() + cl.miembros.len() - 1 ) : 0
+      lista.append( e )
+      if ( e.tiene ) {
+        deps.each( c => enEntidades[ c ] = true )
+        cl.miembros.filter( m => m != cl.clave ).each( m => enEntidades[ m ] = true )
+      }
+    }
+    var hechos = []
+    clave.each( c => hechos.append( c ) )
+    for ( var e in lista ) {
+      if ( !e.tiene || enEntidades.keyExists( e.clave ) ) continue;
+      if ( !arrayFindNoCase( hechos, e.clave ) ) hechos.append( e.clave )
+      esFK[ e.clave ] = true
+    }
+    clave.each( c => { if ( lista.some( e => e.clave == c && e.tiene ) ) esFK[ c ] = true } )
+    var sinValor = a.cols.filter( c => a.info[ c ].distintos < 2 )
+    a.cols.each( c => { if ( !enEntidades.keyExists( c ) && !arrayFindNoCase( hechos, c ) && !arrayFindNoCase( sinValor, c ) && !lista.some( e => e.tiene && arrayFindNoCase( e.miembros, c ) ) ) hechos.append( c ) } )
+    return { lista: lista, clave: clave, hechos: hechos, esFK: esFK, sinValor: sinValor }
+  }
+
+  private boolean function esClaveDeClase( required array clases, required string c ) {
+    return clases.some( x => !x.keyExists( "absorbida" ) && x.clave == c && ( structCount( x.deps ) || x.miembros.len() > 1 ) )
+  }
+
+  /** valor normalizado -> filas */
+  private struct function agruparFilas( required struct a, required string x ) {
+    var g = {}
+    for ( var i = 1; i <= a.n; i++ ) {
+      var k = a.V[ x ][ i ]
+      if ( !len( k ) ) continue;
+      if ( !g.keyExists( k ) ) g[ k ] = []
+      g[ k ].append( i )
+    }
+    return g
+  }
+
+  /** ¿x determina y? Fuerza = filas que coinciden con el valor más común de y dentro de cada grupo de x */
+  private struct function dependencia( required struct a, required struct grupos, required string x, required string y ) {
+    var tot = 0; var buenos = 0; var gruposRep = 0; var filasRep = 0
+    var global = {}
+    var conflictos = []
+    for ( var k in grupos ) {
+      var cuenta = {}; var s = 0
+      for ( var i in grupos[ k ] ) {
+        var v = a.V[ y ][ i ]
+        if ( !len( v ) ) continue;
+        cuenta[ v ] = ( cuenta[ v ] ?: 0 ) + 1
+        global[ v ] = ( global[ v ] ?: 0 ) + 1
+        s++
+      }
+      if ( !s ) continue;
+      var mx = 0; var moda = ""
+      for ( var v in cuenta ) { if ( cuenta[ v ] > mx ) { mx = cuenta[ v ]; moda = v } }
+      tot += s; buenos += mx
+      if ( s >= 2 ) { gruposRep++; filasRep += s }
+      if ( structCount( cuenta ) > 1 ) conflictos.append( { k: k, moda: moda, mx: mx, cuenta: cuenta, filas: grupos[ k ] } )
+    }
+    if ( tot < 20 || gruposRep < 3 || filasRep < tot * 0.5 ) return { ok: false }
+    var gmax = 0
+    for ( var v in global ) gmax = max( gmax, global[ v ] )
+    var base = gmax / tot
+    if ( base >= 0.98 ) return { ok: false }
+    var fuerza = buenos / tot
+    var mejora = ( fuerza - base ) / ( 1 - base )
+    if ( fuerza < 0.9 || mejora < 0.75 ) {
+      var casi = fuerza >= 0.75 && mejora >= 0.6 && conflictos.len() <= structCount( grupos ) * 0.4
+      if ( !casi ) return { ok: false }
+    }
+    conflictos.sort( ( p, q ) => ( q.cuenta.reduce( ( s, kk, vv ) => s + vv, 0 ) - q.mx ) - ( p.cuenta.reduce( ( s, kk, vv ) => s + vv, 0 ) - p.mx ) )
+    var ejemplos = conflictos.slice( 1, min( 3, conflictos.len() ) ).map( c => {
+      var partes = c.cuenta.keyArray().sort( ( p, q ) => c.cuenta[ q ] - c.cuenta[ p ] ).map( v => "'#crudo( a, y, c.filas, v )#' (#c.cuenta[ v ]#)" )
+      return "#a.crudos[ x ][ c.filas[ 1 ] ]# → " & partes.slice( 1, min( 3, partes.len() ) ).toList( " vs " )
+    } )
+    return { ok: fuerza >= 0.9 && mejora >= 0.75, casi: true, fuerza: redondear( fuerza, 3 ), excepciones: ejemplos, conflictos: conflictos.len() }
+  }
+
+  /** ¿Los distintos valores de y dentro de cada x comparten una palabra? (S.S. Centro / San Salvador Centro) */
+  private struct function variantesDe( required struct a, required string clave, required string col ) {
+    var g = agruparFilas( a, clave )
+    var conVarias = 0; var parecidas = 0; var ejemplos = []
+    for ( var k in g ) {
+      var vals = {}
+      for ( var i in g[ k ] ) { var v = trim( a.crudos[ col ][ i ] ); if ( len( v ) ) vals[ v ] = ( vals[ v ] ?: 0 ) + 1 }
+      var ks = vals.keyArray()
+      // los structs no distinguen mayúsculas: cuenta variantes con un arreglo
+      var distintas = []
+      for ( var i in g[ k ] ) { var v = trim( a.crudos[ col ][ i ] ); if ( len( v ) && !distintas.some( d => d.compare( v ) == 0 ) ) distintas.append( v ) }
+      if ( distintas.len() < 2 ) continue;
+      conVarias++
+      var base = palabras( distintas[ 1 ] )
+      if ( distintas.every( d => palabras( d ).some( p => arrayFindNoCase( base, p ) ) ) ) {
+        parecidas++
+        if ( ejemplos.len() < 3 ) ejemplos.append( "#a.crudos[ clave ][ g[ k ][ 1 ] ]#: " & distintas.slice( 1, min( 4, distintas.len() ) ).map( d => "'#d#'" ).toList( " / " ) )
+      }
+    }
+    return { parecidas: conVarias > 0 && parecidas == conVarias, ejemplos: ejemplos }
+  }
+
+  private array function palabras( required string s ) {
+    if ( trim( s ).reFind( variables.re.PSEUDO ) ) return []
+    return sinTildes( s.lCase() ).reReplace( "[^a-z0-9 ]", " ", "all" ).listToArray( " " ).filter( p => len( p ) >= 3 )
+  }
+
+  private string function elegirClave( required struct a, required array miembros ) {
+    var maxLlenos = miembros.map( m => a.info[ m ].llenos ).max()
+    var ids = miembros.filter( m => m.lCase().reFind( variables.re.ID ) && a.info[ m ].llenos >= maxLlenos * 0.95 )
+    if ( ids.len() ) return ids[ 1 ]
+    var orden = duplicate( miembros )
+    orden.sort( ( p, q ) => ( a.info[ q ].llenos - a.info[ p ].llenos ) != 0 ? a.info[ q ].llenos - a.info[ p ].llenos : a.info[ p ].distintos - a.info[ q ].distintos )
+    return orden[ 1 ]
+  }
+
+  private array function claveTabla( required struct a, required array candidatas ) {
+    var unicas = a.n - a.duplicadas - a.totales
+    var unica = ( cs ) => {
+      var vistos = {}
+      for ( var i = 1; i <= a.n; i++ ) {
+        if ( a.excluida[ i ] ) continue;
+        var k = cs.map( c => a.V[ c ][ i ] ).toList( char( 31 ) )
+        if ( cs.some( c => !len( a.V[ c ][ i ] ) ) || vistos.keyExists( k ) ) return false
+        vistos[ k ] = true
+      }
+      return true
+    }
+    var ids = a.cols.filter( c => c.lCase().reFind( variables.re.ID ) )
+    for ( var c in ids ) { if ( a.info[ c ].distintos == unicas && unica( [ c ] ) ) return [ c ] }
+    for ( var c in a.cols ) { if ( a.info[ c ].distintos == unicas && !a.info[ c ].casiNumerica && unica( [ c ] ) ) return [ c ] }
+    var cand = candidatas.filter( c => a.info[ c ].llenos >= unicas * 0.9 && !a.info[ c ].casiNumerica && !( a.listas ?: {} ).keyExists( c ) )
+    for ( var c in ids ) { if ( !arrayFindNoCase( cand, c ) && a.info[ c ].llenos >= unicas * 0.9 ) cand.append( c ) }
+    cand.sort( ( p, q ) => ( q.lCase().reFind( variables.re.ID ) ? 1 : 0 ) - ( p.lCase().reFind( variables.re.ID ) ? 1 : 0 ) )
+    for ( var i = 1; i <= cand.len(); i++ ) {
+      for ( var j = i + 1; j <= cand.len(); j++ ) {
+        if ( unica( [ cand[ i ], cand[ j ] ] ) ) return [ cand[ i ], cand[ j ] ]
+      }
+    }
+    return []
+  }
+
+  // ------------------------------------------------------------ DDL
+
+  private string function ddl( required string tabla, required struct a, required struct ent ) {
+    var nl = char( 10 )
+    var bloques = []
+    var tipo = ( c ) => a.info[ c ].numerica ? "NUMERIC(14,4)" : ( c.lCase().reFind( variables.re.ID ) || c.lCase().reFind( "tel|dui|nit|nrc" ) ? "VARCHAR(20)" : "VARCHAR(120)" )
+    for ( var e in ent.lista.filter( x => x.tiene ) ) {
+      var defs = [ "  #e.clave.lCase()# #tipo( e.clave )# PRIMARY KEY" ]
+      e.miembros.filter( m => m != e.clave ).each( m => defs.append( "  #m.lCase()# #tipo( m )#  /* sinónimo de #e.clave# */" ) )
+      e.dependientes.each( d => defs.append( "  #d.lCase()# #tipo( d )#" & ( arrayFindNoCase( e.fks, d ) ? " REFERENCES #nombreEntidad( d )#(#d.lCase()#)" : "" ) ) )
+      bloques.append( "CREATE TABLE #nombreEntidad( e.clave )# (#nl##defs.toList( ',' & nl )##nl#);" )
+    }
+    var defs = ent.hechos.map( c => "  #c.lCase()# #tipo( c )#" & ( ent.esFK.keyExists( c ) ? " REFERENCES #nombreEntidad( c )#(#c.lCase()#)" : "" ) )
+    if ( ent.clave.len() ) defs.append( "  PRIMARY KEY (#ent.clave.map( c => c.lCase() ).toList( ', ' )#)" )
+    bloques.append( "CREATE TABLE #tabla#_hechos (#nl##defs.toList( ',' & nl )##nl#);" )
+    // las tablas referenciadas van primero
+    return bloques.toList( nl & nl )
+  }
+
+  // ------------------------------------------------------------ utilidades
+
+  /** Lee la tabla una vez: valores crudos y normalizados por columna, duplicados y estadísticas */
+  private struct function estructura( required string tabla ) {
+    var q = variables.catalogo.tabla( tabla )
+    var a = { tabla: tabla, n: q.recordCount, cols: q.columnList.listToArray(), crudos: {}, V: {}, info: {}, esDuplicada: [], excluida: [], duplicadas: 0, totales: 0 }
+    var meta = getMetadata( q ).columnMetadata
+    for ( var c in a.cols ) {
+      a.crudos[ c ] = q.columnData( c ).map( v => isNull( v ) ? "" : toString( v ) )
+      a.V[ c ] = a.crudos[ c ].map( v => clave( v ) )
+      var vistos = {}; var llenos = 0; var nums = 0
+      for ( var v in a.V[ c ] ) {
+        if ( !len( v ) ) continue;
+        llenos++; vistos[ v ] = true
+        if ( isNumeric( v ) ) nums++
+      }
+      a.info[ c ] = { llenos: llenos, distintos: structCount( vistos ), numerica: meta[ c ].type == "numeric", casiNumerica: llenos > 0 && nums >= llenos * 0.7 }
+    }
+    var firmas = {}
+    for ( var i = 1; i <= a.n; i++ ) {
+      var fila = a.cols.map( c => a.V[ c ][ i ] )
+      var k = hash( fila.toList( char( 31 ) ) )
+      var esTotal = fila.some( v => v.reFind( "^(total|totales|gran total|suma)\b" ) ) && fila.filter( v => len( v ) ).len() <= 4
+      a.esDuplicada.append( firmas.keyExists( k ) )
+      a.excluida.append( firmas.keyExists( k ) || esTotal )
+      if ( esTotal ) a.totales++
+      else if ( firmas.keyExists( k ) ) a.duplicadas++
+      else firmas[ k ] = true
+    }
+    // las estadísticas de columnas no cuentan la fila de totales
+    if ( a.totales ) {
+      for ( var c in a.cols ) {
+        var vistos = {}; var llenos = 0
+        for ( var i = 1; i <= a.n; i++ ) { var v = a.V[ c ][ i ]; if ( len( v ) && !( a.excluida[ i ] && !a.esDuplicada[ i ] ) ) { llenos++; vistos[ v ] = true } }
+        a.info[ c ].llenos = llenos; a.info[ c ].distintos = structCount( vistos )
+      }
+    }
+    return a
+  }
+
+  /** Forma comparable de un valor: sin espacios extra, minúsculas, sin tildes; montos como número ($4.50 = 4,5 = 4.5) */
+  private string function clave( required string v ) {
+    var s = trim( v )
+    if ( !len( s ) || s.lCase().reFind( variables.re.NULO ) ) return ""
+    // 15/09/2026, 15-Sep-26 -> 2026-09-15 (las fechas de Excel ya llegan como aaaa-mm-dd)
+    var m = reFind( "^([0-3]?[0-9])/([01]?[0-9])/([0-9]{4})$", s, 1, true )
+    if ( m.pos[ 1 ] ) return m.match[ 4 ] & "-" & numberFormat( m.match[ 3 ], "00" ) & "-" & numberFormat( m.match[ 2 ], "00" )
+    m = reFind( "^([0-3]?[0-9])-([A-Za-z]{3})-([0-9]{2})$", s, 1, true )
+    if ( m.pos[ 1 ] && variables.meses.keyExists( m.match[ 3 ] ) ) return "20" & m.match[ 4 ] & "-" & numberFormat( variables.meses[ m.match[ 3 ] ], "00" ) & "-" & numberFormat( m.match[ 2 ], "00" )
+    if ( s.reFind( variables.re.MONTO ) ) {
+      var n = s.reReplace( "[^0-9.,\-]", "", "all" )
+      if ( n.reFind( ",[0-9]{1,2}$" ) && n.find( "." ) ) n = n.replace( ".", "", "all" ).replace( ",", "." )
+      else if ( n.reFind( ",[0-9]{1,2}$" ) ) n = n.replace( ",", "." )
+      else n = n.replace( ",", "", "all" )
+      if ( isNumeric( n ) ) return createObject( "java", "java.math.BigDecimal" ).init( n ).setScale( 6, createObject( "java", "java.math.RoundingMode" ).HALF_UP ).stripTrailingZeros().toPlainString()
+    }
+    return sinTildes( s.lCase() ).reReplace( "\s+", " ", "all" )
+  }
+
+  /** Valor original más frecuente de la columna c en esas filas (para que los JOIN usen una sola forma) */
+  private string function canonico( required struct a, required string c, required array filas, boolean global = false ) {
+    if ( global ) {
+      var v = a.V[ c ][ filas[ 1 ] ]
+      if ( !len( v ) ) return ""
+      if ( !a.keyExists( "canon" ) ) a.canon = {}
+      if ( !a.canon.keyExists( c ) ) {
+        var porValor = {}
+        for ( var i = 1; i <= a.n; i++ ) { var k = a.V[ c ][ i ]; if ( len( k ) ) { if ( !porValor.keyExists( k ) ) porValor[ k ] = []; porValor[ k ].append( i ) } }
+        a.canon[ c ] = {}
+        for ( var k in porValor ) a.canon[ c ][ k ] = canonico( a, c, porValor[ k ] )
+      }
+      return a.canon[ c ][ v ]
+    }
+    var cuenta = {}; var crudosVistos = []
+    for ( var i in filas ) {
+      var r = trim( a.crudos[ c ][ i ] )
+      if ( !len( r ) ) continue;
+      var pos = 0
+      for ( var j = 1; j <= crudosVistos.len(); j++ ) { if ( crudosVistos[ j ].v.compare( r ) == 0 ) { pos = j; break; } }
+      if ( pos ) crudosVistos[ pos ].n++; else crudosVistos.append( { v: r, n: 1 } )
+    }
+    if ( !crudosVistos.len() ) return ""
+    crudosVistos.sort( ( p, q ) => q.n - p.n )
+    return bonito( crudosVistos[ 1 ].v )
+  }
+
+  private string function crudo( required struct a, required string c, required array filas, required string normal ) {
+    for ( var i in filas ) { if ( a.V[ c ][ i ] == normal ) return bonito( a.crudos[ c ][ i ] ) }
+    return normal
+  }
+
+  /** 1.350000000000000088817841970012523233890533447265625 -> 1.35 (así llegan algunos decimales de Excel) */
+  private string function bonito( required string v ) {
+    var s = trim( v )
+    return ( isNumeric( s ) && s.reFind( "\.[0-9]{7,}" ) ) ? clave( s ) : s
+  }
+
+  /** "9a a a #9" para "4a Calle Poniente #215": distingue partes de distinto tipo */
+  private string function forma( required string s ) {
+    return sinTildes( trim( s ) ).reReplace( "[0-9]+", "9", "all" ).reReplace( "[A-Za-z]+", "a", "all" ).reReplace( "\s+", " ", "all" )
+  }
+
+  /** Prefijos de 4 letras de las palabras de un nombre de columna (Fecha_venta ~ Fecha, Cant ~ Cantidad) */
+  private array function firma( required string col ) {
+    return col.lCase().reReplace( "[^a-z0-9]", " ", "all" ).listToArray( " " ).filter( p => len( p ) >= 3 && !listFind( "no,de,del,la,el,tel,cod", p ) ).map( p => left( p, 4 ) )
+  }
+
+  private string function nombreEntidad( required string col ) {
+    return col.lCase().reReplace( "^(cod|codigo|no|num|id)_", "" ).reReplace( "_(cod|id)$", "" )
+  }
+
+  private string function sinTildes( required string s ) {
+    return createObject( "java", "java.text.Normalizer" ).normalize( s, createObject( "java", "java.text.Normalizer$Form" ).NFD ).reReplace( "[" & char( 768 ) & "-" & char( 879 ) & "]", "", "all" )
+  }
+
+  private struct function h( forma, sev, col, problema, detalle, recomendacion ) {
+    return { forma: forma, severidad: sev, columna: col, problema: problema, detalle: detalle, recomendacion: recomendacion }
+  }
+
+  private numeric function redondear( required numeric x, numeric d = 2 ) { var f = 10 ^ d; return round( x * f ) / f }
+
+  private struct function registrar( required string etiqueta, required struct res, any filas = "" ) {
+    variables.catalogo.registrarEvidencia( { sql: etiqueta, filas: filas, resultado: [ res ] } )
+    return res
+  }
+}

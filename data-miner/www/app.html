@@ -120,6 +120,8 @@
   .alta{background:var(--badbg);color:var(--bad)} .media{background:var(--warnbg);color:var(--warn)} .baja{background:var(--bg2);color:var(--mut)}
   .anon{margin:8px 0 2px;padding:8px 10px;border-radius:10px;background:var(--privbg);color:var(--priv);font-size:.8rem}
   .anon code{font-size:.78rem;font-weight:600}
+  .norm{margin:10px 0 2px;padding:8px 10px;border-radius:10px;background:var(--accbg);color:var(--acctx);font-size:.8rem}
+  .norm ul{margin:6px 0 0}.norm li{color:var(--txt2)}
 
   /* Resultados */
   #out{display:flex;flex-direction:column;gap:16px;margin-top:22px}
@@ -329,8 +331,10 @@ function calidad(r) {
       <div class="qn"><b>${esc(c.tabla)}</b><span class="mut">${num(c.filas)} filas · calidad ${esc(c.nivel)}${det ? ' · ' + esc(det) : ''}</span></div></div>
       ${(c.anonimizacion || []).length ? `<div class="anon">🔒 Anonimizado antes de que lo vea la IA: ${c.anonimizacion.map(a => `<code>${esc(a.columna)}</code> (${esc(a.tipo)} → ${esc(a.metodo)})`).join(', ')}</div>` : (r.anonimiza ? '<div class="anon">🔒 Sin datos personales detectados</div>' : '')}
       <ul>${c.problemas.slice(0, 6).map(p => `<li><span class="sev ${p.severidad}">${p.severidad.toUpperCase()}</span><b>${esc(p.columna)}</b>: ${esc(p.problema)} — ${esc(p.detalle)}<i>💡 ${esc(p.recomendacion)}</i></li>`).join('')}</ul>
-      ${c.problemas.length > 6 ? `<span class="mut">+${c.problemas.length - 6} más</span>` : ''}</div>`;
-  }).join('');
+      ${c.problemas.length > 6 ? `<span class="mut">+${c.problemas.length - 6} más</span>` : ''}
+      ${c.normalizacion ? `<div class="norm"><b>🧩 Normalización: ${esc(c.normalizacion.nivel)}</b>${c.normalizacion.clave ? ` · clave ${esc(c.normalizacion.clave)}` : ''} · redundancia ${esc(c.normalizacion.redundancia_pct)}%
+        ${(c.normalizacion.hallazgos || []).length ? `<ul>${c.normalizacion.hallazgos.slice(0, 4).map(h => `<li><span class="sev media">${esc(h.forma)}</span><b>${esc(h.columna)}</b>: ${esc(h.problema)}</li>`).join('')}</ul>` : ''}</div>` : ''}</div>`;
+  }).join('') + (r.partidas || []).map(p => `<div class="q msg">🧩 Parecen la misma tabla partida: <b>${esc((p.tablas || []).join(' + '))}</b> (${esc(p.columnas_en_comun_pct)}% de columnas en común)</div>`).join('');
   tablas({ tablas: r.catalogo, mcp: lastMcp });
   if ((r.tablas || []).length) $('#q').value = `Revisa la calidad de ${r.tablas.join(', ')}, límpialas si hace falta, analízalas y dime cómo recolectar mejor estos datos`;
 }

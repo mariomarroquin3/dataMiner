@@ -23,10 +23,15 @@
     }
     // Diagnóstico inmediato (determinista, no necesita IA)
     ing = new models.IngenieroDatos( session.catalogo )
+    nor = new models.Normalizacion( session.catalogo )
     resultado.calidad = resultado.tablas.map( t => {
       var d = ing.diagnosticar( t )
-      return { tabla: t, filas: d.filas, origen: d.origen, puntaje: d.puntaje_calidad, nivel: d.nivel, problemas: d.problemas, anonimizacion: d.origen.anonimizacion ?: [] }
+      var nz = nor.analizar( t, true )
+      return { tabla: t, filas: d.filas, origen: d.origen, puntaje: d.puntaje_calidad, nivel: d.nivel, problemas: d.problemas, anonimizacion: d.origen.anonimizacion ?: [],
+        normalizacion: { nivel: nz.nivel_normalizacion, clave: nz.clave_detectada, redundancia_pct: nz.redundancia_pct, hallazgos: nz.hallazgos } }
     } )
+    // Hojas o archivos que son la misma tabla partida (por mes, sucursal...)
+    resultado.partidas = nor.tablasPartidas().pares
     resultado.catalogo = session.catalogo.listar()
     resultado.anonimiza = session.catalogo.anonimiza()
     writeOutput( jsonSerialize( resultado ) )
