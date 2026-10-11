@@ -70,11 +70,24 @@ echo  Salida completa de cada prueba en salidas\mock-*.log
 echo  Informe HTML de la demo: salidas\informe-demo-prueba.html
 echo ============================================================
 
-if /i "%~1"=="web" (
+rem Web en modo demo: con "web" abre directo; si no, pregunta (30 s, por defecto No)
+set "ABRIR="
+if /i "%~1"=="web" set "ABRIR=1"
+if not defined ABRIR (
   echo.
-  echo Abriendo la web en modo demo: http://localhost:8080  ^(Ctrl+C para apagar^)
-  start "" "http://localhost:8080/app.html?reload=1"
+  choice /c SN /t 30 /d N /m "Abrir la web en modo demo"
+  if not errorlevel 2 set "ABRIR=1"
+)
+if defined ABRIR (
+  if defined PY start "Kaggle falso" /min !PY! pruebas\kaggle_falso.py
+  echo.
+  echo Web en modo demo: http://localhost:8080  ^(Ctrl+C para apagar^)
+  echo  - Landing: http://localhost:8080/   Agente: /app.html   Tablero: /tablero.html ^(necesita MySQL^)
+  echo  - Prueba Drive: en el agente escribe "Descarga https://drive.google.com/drive/folders/... y dime que tablas trae"
+  echo    ^(Drive no es una API con key: solo necesita internet y la carpeta compartida con el enlace^)
+  start "" /b powershell -NoProfile -Command "Start-Sleep 8; Start-Process 'http://localhost:8080/app.html?reload=1'"
   call boxlang-miniserver
+  taskkill /fi "WINDOWTITLE eq Kaggle falso*" /f >nul 2>&1
 )
 echo.
 pause
