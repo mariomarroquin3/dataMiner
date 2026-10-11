@@ -125,12 +125,24 @@ class {
   /** Compara varios modelos con el mismo objetivo y devuelve el ranking */
   struct function comparar( required string tabla, required string objetivo, any tipos = "", any features = "" ) {
     var lista = isArray( tipos ) ? tipos : listToArray( tipos )
-    var resultados = lista.map( t => entrenar( tabla, objetivo, t, features ) ).filter( r => !r.keyExists( "error" ) )
-    if ( !resultados.len() ) return { error: "Ningún modelo pudo entrenarse" }
+    // Si un modelo falla, se reporta y la comparación sigue con los demás
+    var fallidos = []
+    var resultados = []
+    for ( var t in lista ) {
+      var r = {}
+      try {
+        r = entrenar( tabla, objetivo, t, features )
+      } catch ( any e ) {
+        r = { error: e.message }
+      }
+      if ( r.keyExists( "error" ) ) fallidos.append( { modelo: t, error: r.error } )
+      else resultados.append( r )
+    }
+    if ( !resultados.len() ) return { error: "Ningún modelo pudo entrenarse", fallidos: fallidos }
     var clave = resultados[ 1 ].tarea == "regresion" ? "r2" : "accuracy"
     resultados.sort( ( a, b ) => b.metricas[ clave ] - a.metricas[ clave ] > 0 ? 1 : -1 )
     variables.informe.agregarGrafico( { tipo: "bar", titulo: "Comparación de modelos (#clave#) · #objetivo#", labels: resultados.map( r => r.modelo ), series: [ { nombre: clave, datos: resultados.map( r => r.metricas[ clave ] ) } ] } )
-    return { metrica: clave, ranking: resultados.map( r => { return { modelo: r.modelo, metricas: r.metricas, importancia: ( r.importancia ?: [] ).slice( 1, min( 5, ( r.importancia ?: [] ).len() ) ) } } ) }
+    return { metrica: clave, fallidos: fallidos, ranking: resultados.map( r => { return { modelo: r.modelo, metricas: r.metricas, importancia: ( r.importancia ?: [] ).slice( 1, min( 5, ( r.importancia ?: [] ).len() ) ) } } ) }
   }
 
   /** Predice con un modelo entrenado. valores: struct columna -> valor */
@@ -151,7 +163,10 @@ class {
     var semilla = javaCast( "long", op.semilla )
     switch ( tipo ) {
       case "lineal": case "polinomial":
-        return createObject( "java", "org.tribuo.regression.slm.SLMTrainer" ).init( javaCast( "boolean", true ) )
+        // Mínimos cuadrados con una penalización casi nula (= regresión lineal clásica).
+        // No usamos SLMTrainer: en Tribuo 4.3 truena con "ImmutableFeatureMap.get(int) is null"
+        // cuando una variable codificada no aparece en el entrenamiento (pasó con el dataset de British Airways).
+        return createObject( "java", "org.tribuo.regression.slm.ElasticNetCDTrainer" ).init( javaCast( "double", 0.000001 ), javaCast( "double", 0.5 ), semilla )
       case "ridge":
         return createObject( "java", "org.tribuo.regression.slm.ElasticNetCDTrainer" ).init( javaCast( "double", op.alpha ), javaCast( "double", 0.01 ), semilla )
       case "lasso":
