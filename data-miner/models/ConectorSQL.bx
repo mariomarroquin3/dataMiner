@@ -1,0 +1,178 @@
+/**
+ * Conexión directa a MySQL (la misma base que abres en MySQL Workbench) por JDBC.
+ * - consultar: solo lectura (SELECT / SHOW / DESCRIBE), para que el agente no pueda borrar nada.
+ * - importar: trae una tabla o un SELECT al Catálogo, y desde ahí funcionan todas las tools (perfil, SQL, stock, ML...).
+ * - guardarTabla: escribe un resultado (p. ej. pronostico_stock) de vuelta en MySQL para verlo en Workbench o Power BI.
+ * El driver (lib/mysql-connector-j-*.jar) se carga desde la carpeta lib/, sin configurar nada en BoxLang.
+ *
+ * Configuración por variables de entorno (config.bat): MYSQL_HOST, MYSQL_PORT, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD
+ * o MYSQL_URL con la URL JDBC completa.
+ */
+class {
+
+  function init( struct opciones = {} ) {
+    var o = arguments.opciones
+    var e = ( k, d ) => o.keyExists( k ) ? o[ k ] : getSystemSetting( "MYSQL_" & uCase( k ), d )
+    variables.host     = e( "host", "localhost" )
+    variables.puerto   = e( "port", "3306" )
+    variables.base     = e( "db", "tienda_sv" )
+    variables.usuario  = e( "user", "root" )
+    variables.clave    = e( "password", "" )
+    variables.url      = e( "url", "" )
+    if ( !len( variables.url ) ) {
+      variables.url = "jdbc:mysql://#variables.host#:#variables.puerto#/#variables.base#?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8"
+    }
+    variables.lib = getCanonicalPath( getDirectoryFromPath( getCurrentTemplatePath() ) & "../lib/" )
+    return this
+  }
+
+  boolean function configurado() { return len( getSystemSetting( "MYSQL_DB", "" ) ) || len( getSystemSetting( "MYSQL_URL", "" ) ) }
+
+  string function descripcion() { return "MySQL #variables.usuario#@#variables.host#:#variables.puerto#/#variables.base#" }
+
+  /** Tablas de la base con su número de filas */
+  struct function tablas() {
+    return ejecutar( "SELECT table_name AS tabla, table_rows AS filas_aprox FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name" )
+  }
+
+  /** Todas las tablas con sus columnas en una sola llamada (ahorra tool calls al agente) */
+  struct function esquema() {
+    var r = ejecutar( "SELECT c.table_name, c.column_name, c.data_type, t.table_rows FROM information_schema.columns c JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name WHERE c.table_schema = DATABASE() ORDER BY c.table_name, c.ordinal_position" )
+    if ( len( r.error ?: "" ) ) return r
+    var tablas = [:]
+    for ( var f in r.filas ) {
+      if ( !tablas.keyExists( f[ 1 ] ) ) tablas[ f[ 1 ] ] = { filas_aprox: val( f[ 4 ] ), columnas: [] }
+      tablas[ f[ 1 ] ].columnas.append( f[ 2 ] & " " & f[ 3 ] )
+    }
+    return { base: descripcion(), tablas: tablas }
+  }
+
+  /** Columnas y tipos de una tabla */
+  struct function describir( required string tabla ) {
+    if ( !tabla.reFind( "^[A-Za-z0-9_]+$" ) ) return { error: "Nombre de tabla inválido" }
+    return ejecutar( "SELECT column_name AS columna, data_type AS tipo, is_nullable AS nulos, column_key AS clave FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '#tabla#' ORDER BY ordinal_position" )
+  }
+
+  /** SQL de solo lectura. Devuelve { columnas, filas (arreglo de structs), total } o { error } */
+  struct function consultar( required string sql, numeric maxFilas = 200 ) {
+    var s = trim( sql ).reReplace( ";\s*$", "" )
+    if ( !s.reFindNoCase( "^(select|show|describe|desc|explain|with)\b" ) || s.find( ";" ) ) {
+      return { error: "Solo se permiten consultas de lectura (SELECT/SHOW/DESCRIBE), una a la vez." }
+    }
+    var r = ejecutar( s, maxFilas )
+    if ( len( r.error ?: "" ) ) return r
+    return { columnas: r.columnas, total: r.filas.len(), filas: r.filas.map( f => aStruct( r.columnas, f ) ), sql: s }
+  }
+
+  /**
+   * Trae una tabla de MySQL (o el resultado de un SELECT) al Catálogo.
+   * @origen nombre de tabla o un SELECT
+   * @nombre nombre con que queda en el catálogo (por defecto mysql_<tabla>)
+   */
+  struct function importar( required any catalogo, required string origen, string nombre = "", numeric maxFilas = 200000 ) {
+    var esSelect = origen.trim().reFindNoCase( "^(select|with)\b" ) > 0
+    if ( !esSelect && !origen.reFind( "^[A-Za-z0-9_]+$" ) ) return { error: "Indica un nombre de tabla o un SELECT" }
+    if ( esSelect && origen.reReplace( ";\s*$", "" ).find( ";" ) ) return { error: "Un solo SELECT a la vez" }
+    var r = ejecutar( esSelect ? origen.reReplace( ";\s*$", "" ) : "SELECT * FROM `#origen#`", maxFilas )
+    if ( len( r.error ?: "" ) ) return r
+    var n = len( nombre ) ? nombre : "mysql_" & ( esSelect ? "consulta" : origen )
+    var tabla = catalogo.registrarFilas( n, r.columnas, r.filas, descripcion() )
+    return { tabla: tabla, filas: r.filas.len(), columnas: r.columnas }
+  }
+
+  /** Crea (o reemplaza) una tabla en MySQL con columnas + filas. Tipos: DOUBLE si toda la columna es numérica, si no VARCHAR/TEXT */
+  struct function guardarTabla( required string nombre, required array columnas, required array filas ) {
+    if ( !nombre.reFind( "^[A-Za-z0-9_]+$" ) ) return { error: "Nombre de tabla inválido" }
+    var tipos = columnas.map( ( c, i ) => {
+      var num = true; var largo = 1
+      for ( var f in filas ) {
+        var v = toString( f[ i ] ?: "" )
+        largo = max( largo, len( v ) )
+        if ( len( v ) && !isNumeric( v ) ) num = false
+      }
+      return num ? "DOUBLE" : ( largo > 250 ? "TEXT" : "VARCHAR(255)" )
+    } )
+    var con = conectar()
+    try {
+      con.setAutoCommit( false )
+      var st = con.createStatement()
+      st.executeUpdate( "DROP TABLE IF EXISTS `#nombre#`" )
+      st.executeUpdate( "CREATE TABLE `#nombre#` (" & columnas.map( ( c, i ) => "`#c#` #tipos[ i ]#" ).toList( ", " ) & ", actualizado DATETIME DEFAULT CURRENT_TIMESTAMP)" )
+      var ps = con.prepareStatement( "INSERT INTO `#nombre#` (" & columnas.map( c => "`#c#`" ).toList( ", " ) & ") VALUES (" & columnas.map( c => "?" ).toList( ", " ) & ")" )
+      for ( var f in filas ) {
+        for ( var i = 1; i <= columnas.len(); i++ ) {
+          var v = toString( f[ i ] ?: "" )
+          if ( !len( v ) ) ps.setNull( javaCast( "int", i ), javaCast( "int", tipos[ i ] == "DOUBLE" ? 8 : 12 ) )
+          else if ( tipos[ i ] == "DOUBLE" ) ps.setDouble( javaCast( "int", i ), javaCast( "double", v ) )
+          else ps.setString( javaCast( "int", i ), v )
+        }
+        ps.addBatch()
+      }
+      ps.executeBatch()
+      con.commit()
+      return { tabla: nombre, filas: filas.len() }
+    } catch ( any e ) {
+      try { con.rollback() } catch ( any ignorar ) {}
+      return { error: e.message }
+    } finally {
+      con.close()
+    }
+  }
+
+  /** Prueba la conexión: { ok, version } o { ok: false, error } */
+  struct function probar() {
+    var r = ejecutar( "SELECT VERSION() AS v, DATABASE() AS base" )
+    return len( r.error ?: "" ) ? { ok: false, error: r.error, url: variables.url.reReplace( "\?.*", "" ) } : { ok: true, version: r.filas[ 1 ][ 1 ], base: r.filas[ 1 ][ 2 ] }
+  }
+
+  // ============================================================== JDBC
+
+  /** { columnas: [..], filas: [[..], ..] } con todo como texto (fechas aaaa-mm-dd) o { error } */
+  private struct function ejecutar( required string sql, numeric maxFilas = 200000 ) {
+    try {
+      var con = conectar()
+    } catch ( any e ) {
+      return { error: "No pude conectar a #descripcion()#: #e.message#. Revisa MYSQL_* en config.local.bat y que el servicio MySQL esté encendido." }
+    }
+    try {
+      var st = con.createStatement()
+      st.setMaxRows( javaCast( "int", maxFilas ) )
+      var rs = st.executeQuery( sql )
+      // getMetaData() choca con la función getMetadata() de BoxLang: se llama por reflexión
+      var md = createObject( "java", "java.lang.Class" ).forName( "java.sql.ResultSet" ).getMethod( "getMetaData", [] ).invoke( rs, [] )
+      var n = md.getColumnCount()
+      var columnas = []
+      for ( var i = 1; i <= n; i++ ) columnas.append( md.getColumnLabel( javaCast( "int", i ) ) )
+      var filas = []
+      while ( rs.next() ) {
+        var fila = []
+        for ( var i = 1; i <= n; i++ ) fila.append( rs.getString( javaCast( "int", i ) ) ?: "" )
+        filas.append( fila )
+      }
+      return { columnas: columnas, filas: filas }
+    } catch ( any e ) {
+      return { error: e.message }
+    } finally {
+      con.close()
+    }
+  }
+
+  private any function conectar() {
+    var jars = directoryList( variables.lib, false, "path", "mysql-connector-j-*.jar" )
+    if ( !jars.len() ) throw( type: "ConectorSQL.SinDriver", message: "Falta lib/mysql-connector-j-*.jar" )
+    var driver = createObject( "java", "com.mysql.cj.jdbc.Driver", jars )
+    var p = createObject( "java", "java.util.Properties" )
+    p.setProperty( "user", variables.usuario )
+    p.setProperty( "password", variables.clave )
+    p.setProperty( "connectTimeout", "5000" )
+    var con = driver.connect( variables.url, p )
+    if ( isNull( con ) ) throw( type: "ConectorSQL.Url", message: "URL JDBC inválida: #variables.url#" )
+    return con
+  }
+
+  private struct function aStruct( required array cols, required array fila ) {
+    var s = [:]
+    cols.each( ( c, i ) => s[ c ] = fila[ i ] )
+    return s
+  }
+}

@@ -5,3 +5,18 @@ set "ANON_SALT=cambia-esta-frase-secreta"
 rem set "KAGGLE_USERNAME=tu_usuario"
 rem set "KAGGLE_KEY=tu_key"
 exit /b 0
+
+rem --- Agregar a config.local.bat (no se sube a git) -------------
+rem MySQL: la misma conexion que usas en Workbench
+set "MYSQL_HOST=localhost"
+set "MYSQL_PORT=3306"
+set "MYSQL_DB=tienda_sv"
+set "MYSQL_USER=root"
+set "MYSQL_PASSWORD=tu_clave_de_mysql"
+rem Slack: Incoming Webhook de tu canal (https://api.slack.com/apps > Create App > Incoming Webhooks)
+set "SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ"
+rem Opcionales: de donde salen ventas e inventario (tabla o SELECT) y nivel de servicio
+rem set "ALERTA_VENTAS=ventas_diarias"
+rem set "ALERTA_INVENTARIO=productos"
+rem set "ALERTA_NIVEL=0.90"
+rem set "ALERTA_INCLUIR_PRONTO=si"

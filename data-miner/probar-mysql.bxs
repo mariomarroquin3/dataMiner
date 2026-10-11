@@ -1,0 +1,15 @@
+// Prueba la conexión a MySQL sin IA: boxlang probar-mysql.bxs
+import models.Catalogo
+import models.ConectorSQL
+db = new ConectorSQL()
+p = db.probar()
+if ( !p.ok ) { println( "[ERROR] " & p.error ); createObject( "java", "java.lang.System" ).exit( 1 ) }
+println( "Conectado a #db.descripcion()# (#p.version#)" )
+e = db.esquema()
+for ( t in e.tablas ) println( "  #t# (~#e.tablas[ t ].filas_aprox# filas): #e.tablas[ t ].columnas.toList( ', ' )#" )
+cat = new Catalogo( false )
+i = db.importar( cat, "productos" )
+println( "Importada al catálogo: #i.tabla# (#i.filas# filas)" )
+q = cat.consultar( "SELECT sku, producto, stock_actual FROM #i.tabla# ORDER BY stock_actual LIMIT 3" )
+println( jsonSerialize( q.resultado ?: q ) )
+println( jsonSerialize( db.consultar( "DELETE FROM productos" ) ) )

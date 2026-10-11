@@ -5,6 +5,7 @@ data-miner/config.local.bat
 
 # Generados al correr
 data-miner/tmp_descargas/
+data-miner/salidas/
 data-miner/informe-*.html
 !data-miner/informe-demo.html
 __pycache__/

@@ -27,6 +27,9 @@ rem set "MCP_DB_URL=http://localhost:8766/mcp"
 rem Kaggle (opcional): https://www.kaggle.com/settings  ->  Create New Token
 rem set "KAGGLE_USERNAME=tu_usuario"
 rem set "KAGGLE_KEY=tu_key"
+rem MySQL (la misma conexion de Workbench) y alerta de Slack: van en config.local.bat
+rem set "MYSQL_DB=tienda_sv"  /  MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD
+rem set "SLACK_WEBHOOK_URL=https://hooks.slack.com/services/..."
 
 rem --- Secretos locales -------------------------------------
 rem Para no subir tu key a git: copia config.local.ejemplo.bat como config.local.bat
