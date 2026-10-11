@@ -115,6 +115,7 @@ footer{text-align:center;color:##6b7390;font-size:.78rem;margin-top:24px}
 <div class="kpi"><b>#( reporte.hechos ?: [] ).len() - nVer#</b><span>no verificados</span></div>
 </div>
 #len( accionesHTML ) ? "<div class=""sec ejec""><h2>Resumen ejecutivo · qué hacer</h2><ul class=""a"">#accionesHTML#</ul></div>" : ""#
+#len( reporte.correccion ?: "" ) ? "<div class=""sec""><h2>Cifras corregidas con el SQL</h2><p class=""mut"" style=""margin:0"">#esc( reporte.correccion )#</p></div>" : ""#
 #len( reporte.advertencia ?: "" ) ? "<div class=""sec"" style=""border-color:##d93a3a;background:##fdeceb;color:##a32020""><b>⚠ #esc( reporte.advertencia )#</b></div>" : ""#
 <div class="sec"><h2>Resumen</h2><p class="resumen">#esc( reporte.respuesta ?: "" )#</p></div>
 <div class="sec"><h2>Hechos verificados</h2>#cadena#<ul class="h">#hechos#</ul></div>

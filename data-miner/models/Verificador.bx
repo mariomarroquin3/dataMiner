@@ -137,10 +137,31 @@ class {
     return c.keyArray().map( k => c[ k ] & " " & k ).toList( " · " )
   }
 
+  /**
+   * Montos en dólares de un texto libre (el resumen) que no aparecen en ningún resultado SQL verificado.
+   * @valores todos los números que devolvieron los SQL de los hechos y acciones
+   */
+  array function cifrasSinRespaldo( required string texto, required array valores ) {
+    return numeros( texto ).filter( c => c.texto.find( "$" ) && !valores.some( v => coincide( c, v ) ) ).map( c => c.texto )
+  }
+
+  /** Todos los números de un resultado SQL ({ resultado: [ filas ] }) */
+  array function valoresDe( required struct r ) {
+    var out = []
+    for ( var fila in ( r.resultado ?: [] ) ) {
+      for ( var k in fila ) { if ( !isNull( fila[ k ] ) && isNumeric( fila[ k ] ) ) out.append( val( fila[ k ] ) ) }
+    }
+    return out
+  }
+
   /** Números de un texto: 12,500 · $1.234,56 · 35% · 0.82 -> [{texto, valor, decimales, pct}] */
   private array function numeros( required string texto ) {
     var out = []
-    for ( var m in reMatch( "-?\$?[0-9][0-9.,]*%?", texto ) ) {
+    // Sin letras pegadas: "Q3", "2.5L" o "400g" no son cifras que contrastar
+    var encontrados = []
+    var mm = createObject( "java", "java.util.regex.Pattern" ).compile( "(?<![A-Za-z_])-?\$?[0-9][0-9.,]*+%?(?![A-Za-z0-9])" ).matcher( texto )
+    while ( mm.find() ) encontrados.append( mm.group() )
+    for ( var m in encontrados ) {
       var t = m.reReplace( "[.,]$", "" )
       var pct = t.endsWith( "%" )
       var n = t.reReplace( "[$%]", "", "all" )

@@ -325,7 +325,7 @@ function render(d) {
       <span class="tag ${a.verificado ? 'ok' : 'no'}">${a.verificado ? '✓ CIFRA BASE VERIFICADA' : '✗ CIFRA BASE SIN VERIFICAR'}</span>${a.plazo ? ` <span class="tag">${esc(a.plazo)}</span>` : ''}</div>
       <div class="usd">${usd(a.impacto_usd)}<small>impacto estimado</small></div></div>`).join('')}</div>` : '';
   $('#out').innerHTML = `
-    <div class="card resp-card"><h3>💬 Respuesta · ${esc(d.provider)}${d.formato ? " · " + esc(d.formato) : ""}</h3><div class="resp">${esc(d.respuesta)}</div></div>${d.advertencia ? `<div class="card err">⚠️ ${esc(d.advertencia)}</div>` : ''}
+    <div class="card resp-card"><h3>💬 Respuesta · ${esc(d.provider)}${d.formato ? " · " + esc(d.formato) : ""}</h3><div class="resp">${esc(d.respuesta)}</div></div>${d.correccion ? `<div class="card"><h3>✏️ Cifras corregidas con el SQL</h3><div class="mut">${esc(d.correccion)}</div>${(d.correccion_detalle || []).map(p => `<div class="mut">• ${esc(p)}</div>`).join('')}</div>` : ''}${d.advertencia ? `<div class="card err">⚠️ ${esc(d.advertencia)}</div>` : ''}
     ${ejec}
     <div class="stats">
       <div class="stat ok"><b>${ver}</b><span>hechos verificados</span></div>
