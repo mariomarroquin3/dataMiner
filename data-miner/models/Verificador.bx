@@ -23,7 +23,10 @@ class {
     if ( len( r.error ?: "" ) ) return { estado: "error", nota: r.error }
     var enSql = numeros( hecho.sql ?: "" ).map( n => n.valor )
     // las cifras que ya están en el SQL (año, LIMIT 5, WHERE id = 3) no se contrastan
-    var cifras = numeros( hecho.afirmacion ?: "" ).filter( n => !enSql.some( s => s == n.valor ) )
+    // tampoco las que son parte de un nombre que trae el resultado ("Agua purificada 1 galón", "Sucursal 2")
+    var textos = []
+    for ( var fila in ( r.resultado ?: [] ) ) { for ( var k in fila ) { if ( !isNull( fila[ k ] ) && !isNumeric( fila[ k ] ) ) textos.append( toString( fila[ k ] ) ) } }
+    var cifras = numeros( hecho.afirmacion ?: "" ).filter( n => !enSql.some( s => s == n.valor ) && !textos.some( x => x.reFind( "[A-Za-z]" ) && x.reFind( "(^|\s)" & n.texto.reReplace( "([.$%+?*()\[\]^\\-])", "\\\1", "all" ) & "(\s|$)" ) ) )
     if ( !cifras.len() ) return { estado: "sin_cifra", nota: "La afirmación no trae números que contrastar" }
     var valores = []
     for ( var fila in ( r.resultado ?: [] ) ) {
@@ -157,9 +160,9 @@ class {
   /** Números de un texto: 12,500 · $1.234,56 · 35% · 0.82 -> [{texto, valor, decimales, pct}] */
   private array function numeros( required string texto ) {
     var out = []
-    // Sin letras pegadas: "Q3", "2.5L" o "400g" no son cifras que contrastar
+    // Sin letras ni códigos pegados: "Q3", "2.5L", "400g", "FRI-001" o "Persona_67fb3383" no son cifras que contrastar
     var encontrados = []
-    var mm = createObject( "java", "java.util.regex.Pattern" ).compile( "(?<![A-Za-z_])-?\$?[0-9][0-9.,]*+%?(?![A-Za-z0-9])" ).matcher( texto )
+    var mm = createObject( "java", "java.util.regex.Pattern" ).compile( "(?<![A-Za-z0-9_.,-])-?\$?[0-9][0-9.,]*+%?(?![A-Za-z0-9])" ).matcher( texto )
     while ( mm.find() ) encontrados.append( mm.group() )
     for ( var m in encontrados ) {
       var t = m.reReplace( "[.,]$", "" )

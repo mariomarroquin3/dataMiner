@@ -1,0 +1,282 @@
+/**
+ * Insights de negocio automáticos (sin IA, 0 llamadas al LLM).
+ *
+ * Los datos reales vienen sucios (montos como texto "$1,200", "N/D" en el stock, categorías escritas de
+ * varias formas, filas de TOTAL, duplicados) y el modelo se pierde escribiendo SQL sobre ellos. Aquí:
+ *   1. se detecta si la tabla es de ventas o de inventario por sus columnas;
+ *   2. se arma una tabla base limpia <tabla>_bi (números de verdad, categorías unificadas, sin TOTAL ni duplicados);
+ *   3. se corre un set fijo de consultas y cada resultado se devuelve como un HECHO con su SQL,
+ *      así sale verificado por el Verificador sin depender de que el modelo escriba bien el SQL.
+ * El equipo solo interpreta y prioriza sobre estos hechos.
+ */
+class {
+
+  function init( required any catalogo, any informe ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe ?: javaCast( "null", "" )
+    variables.meses = [ "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre" ]
+    return this
+  }
+
+  /** Detecta el tipo de tabla y devuelve { tipo, tabla_base, hechos: [ {afirmacion, sql, origen} ], datos } */
+  struct function generar( required string tabla ) {
+    var q = variables.catalogo.tabla( tabla )
+    var cols = q.columnList.listToArray()
+    var stockAncho = cols.filter( c => c.reFindNoCase( "^stock_.+" ) && !c.reFindNoCase( "total$" ) )
+    var monto = buscar( cols, "^(total|monto|importe|venta|ventas|valor_venta|total_venta|total_pedido|subtotal)$" )
+    if ( !len( monto ) ) monto = buscar( cols, "(total|monto|importe|ventas?)" , "(iva|descuento|meta|cumplimiento)" )
+    if ( stockAncho.len() || len( buscar( cols, "^(stock|existencias|inventario|stock_actual)$" ) ) ) return inventario( tabla, q, cols, stockAncho )
+    if ( len( monto ) ) return ventas( tabla, q, cols, monto )
+    return { tabla: tabla, tipo: "otro", hechos: [], nota: "No reconocí la tabla como de ventas ni de inventario: usa ejecutar_sql o estadística" }
+  }
+
+  // ---------------------------------------------------------------------------------- Ventas
+
+  private struct function ventas( required string tabla, required query q, required array cols, required string monto ) {
+    var rol = {
+      fecha    : buscar( cols, "^(fecha|fecha_venta|fecha_factura|date)$", "", "fecha" ),
+      sucursal : buscar( cols, "^(sucursal|tienda|local|agencia)$", "", "sucursal" ),
+      categoria: buscar( cols, "^(categoria|linea|familia|rubro)$", "", "categoria" ),
+      producto : buscar( cols, "^(producto|articulo|descripcion|item)$", "", "producto" ),
+      vendedor : buscar( cols, "^(vendedor|vendedora|asesor)$", "", "vendedor" ),
+      pago     : buscar( cols, "(forma_de_pago|forma_pago|metodo_pago|medio_pago|pago)" ),
+      cantidad : buscar( cols, "^(cantidad|cant|unidades|qty)$" ),
+      precio   : buscar( cols, "^(precio|precio_unitario|precio_venta|pu)$" ),
+      subtotal : buscar( cols, "^subtotal$" ),
+      iva      : buscar( cols, "^iva", "porc|pct|tasa" ),
+      descuento: buscar( cols, "^descuento" ),
+      codSucursal: buscar( cols, "^(cod_sucursal|codigo_sucursal|id_sucursal)$" )
+    }
+    // Tabla base limpia
+    var dims = [ "sucursal", "categoria", "producto", "vendedor", "pago" ].filter( r => len( rol[ r ] ) )
+    var columnas = [ "monto" ].append( dims, true )
+    if ( len( rol.cantidad ) ) columnas.append( "cantidad" )
+    if ( len( rol.fecha ) ) columnas.append( "mes" )
+    var canon = {}
+    dims.each( r => canon[ r ] = canonicas( q.columnData( rol[ r ] ) ) )
+    // Si hay código de sucursal, se agrupa por código (la misma sucursal viene escrita de varias formas)
+    var nombreSucursal = len( rol.codSucursal ) && len( rol.sucursal ) ? nombresPorCodigo( q, rol.codSucursal, rol.sucursal ) : {}
+    // y al revés: filas sin código pero con un nombre conocido ("S.S. Centro") reciben el código de ese nombre
+    var codPorNombre = {}
+    if ( nombreSucursal.count() ) {
+      for ( var j = 1; j <= q.recordCount; j++ ) {
+        var cj = trim( toString( q[ rol.codSucursal ][ j ] ?: "" ) ); var nj = clave( toString( q[ rol.sucursal ][ j ] ?: "" ) )
+        if ( len( cj ) && len( nj ) && !codPorNombre.keyExists( nj ) ) codPorNombre[ nj ] = cj
+      }
+    }
+    var filas = []; var vistas = {}; var descartadas = { total: 0, duplicadas: 0, sin_monto: 0, monto_reconstruido: 0 }
+    for ( var i = 1; i <= q.recordCount; i++ ) {
+      var crudo = cols.map( c => toString( q[ c ][ i ] ?: "" ) ).toList( char( 31 ) )
+      if ( crudo.reFindNoCase( "(^|#char( 31 )#)\s*total(es)?\b" ) ) { descartadas.total++; continue; }
+      if ( vistas.keyExists( hash( crudo ) ) ) { descartadas.duplicadas++; continue; }
+      vistas[ hash( crudo ) ] = true
+      var m = numero( q[ monto ][ i ] ?: "" )
+      if ( isNull( m ) ) {
+        // Total vacío (fórmula sin calcular): se reconstruye con subtotal + IVA - descuento, o cantidad × precio
+        m = reconstruir( q, i, rol )
+        if ( isNull( m ) ) { descartadas.sin_monto++; continue; }
+        descartadas.monto_reconstruido++
+      }
+      var fila = [ m ]
+      var fi = i
+      dims.each( r => {
+        if ( r == "sucursal" && nombreSucursal.count() ) {
+          var cod = trim( toString( q[ rol.codSucursal ][ fi ] ?: "" ) )
+          if ( !len( cod ) ) cod = codPorNombre[ clave( toString( q[ rol.sucursal ][ fi ] ?: "" ) ) ] ?: ""
+          fila.append( len( cod ) ? cod & " · " & ( nombreSucursal[ cod ] ?: "" ) : ( canon.sucursal[ clave( toString( q[ rol.sucursal ][ fi ] ?: "" ) ) ] ?: "(sin dato)" ) )
+        } else {
+          fila.append( canon[ r ][ clave( toString( q[ rol[ r ] ][ fi ] ?: "" ) ) ] ?: "(sin dato)" )
+        }
+      } )
+      if ( len( rol.cantidad ) ) fila.append( numero( q[ rol.cantidad ][ i ] ?: "" ) ?: 0 )
+      if ( len( rol.fecha ) ) fila.append( mes( toString( q[ rol.fecha ][ i ] ?: "" ) ) )
+      filas.append( fila )
+    }
+    var base = variables.catalogo.registrarFilas( tabla & "_bi", columnas, filas, "insights de #tabla#" )
+    var hechos = []; var datos = { tabla_base: base, columnas_usadas: rol, descartadas: descartadas }
+
+    var t = consulta( "SELECT SUM(monto) AS ventas, COUNT(*) AS lineas FROM #base#" )
+    if ( t.len() ) {
+      datos.total = t[ 1 ].ventas
+      hechos.append( hecho( "Ventas totales: #usd( t[ 1 ].ventas )# en #entero( t[ 1 ].lineas )# líneas de venta (sin duplicados ni filas de TOTAL)", "SELECT SUM(monto) AS ventas, COUNT(*) AS lineas FROM #base#" ) )
+    }
+    for ( var r in [ "sucursal", "categoria", "producto", "vendedor" ] ) {
+      if ( !dims.findNoCase( r ) ) continue;
+      var sql = "SELECT #r#, SUM(monto) AS ventas FROM #base# GROUP BY #r# ORDER BY ventas DESC"
+      var g = consulta( sql )
+      if ( g.len() < 2 ) continue;
+      datos[ r ] = g.map( x => { return { nombre: x[ r ], ventas: x.ventas, pct: datos.total ? round( x.ventas / datos.total * 1000 ) / 10 : 0 } } )
+      var ult = g.last()
+      hechos.append( hecho( "Ventas por #r#: mayor #g[ 1 ][ r ]# (#usd( g[ 1 ].ventas )#), menor #ult[ r ]# (#usd( ult.ventas )#)", sql ) )
+      if ( r != "producto" && r != "vendedor" ) grafico( "bar", "Ventas por #r# ($) · #tabla#", g.map( x => x[ r ] ), g.map( x => x.ventas ) )
+    }
+    if ( dims.findNoCase( "pago" ) ) {
+      var sql = "SELECT pago, COUNT(*) AS lineas, SUM(monto) AS ventas FROM #base# GROUP BY pago ORDER BY lineas DESC"
+      var g = consulta( sql )
+      if ( g.len() ) {
+        datos.pago = g
+        hechos.append( hecho( "Forma de pago más usada: #g[ 1 ].pago# (#entero( g[ 1 ].lineas )# líneas, #usd( g[ 1 ].ventas )#)", sql ) )
+      }
+    }
+    if ( len( rol.fecha ) ) {
+      var sql = "SELECT mes, SUM(monto) AS ventas FROM #base# WHERE mes <> '' GROUP BY mes ORDER BY mes"
+      var g = consulta( sql )
+      if ( g.len() >= 2 ) {
+        datos.meses = g
+        hechos.append( hecho( "Ventas por mes: " & g.map( x => nombreMes( x.mes ) & " " & usd( x.ventas ) ).toList( ", " ), sql ) )
+        // El último mes puede venir incompleto: se avisa en los datos para que el equipo no lo lea como caída
+        datos.variacion_ultimo_mes_pct = g[ g.len() - 1 ].ventas ? round( ( g.last().ventas / g[ g.len() - 1 ].ventas - 1 ) * 1000 ) / 10 : 0
+        grafico( "line", "Ventas por mes ($) · #tabla#", g.map( x => nombreMes( x.mes ) ), g.map( x => x.ventas ) )
+      }
+    }
+    return { tabla: tabla, tipo: "ventas", tabla_base: base, hechos: hechos, datos: datos,
+      instrucciones: "Estos hechos ya están calculados y verificables: cítalos tal cual en hechos (con su SQL) y construye las acciones y su impacto sobre estas cifras" }
+  }
+
+  // ---------------------------------------------------------------------------------- Inventario
+
+  private struct function inventario( required string tabla, required query q, required array cols, required array stockAncho ) {
+    var producto = buscar( cols, "^(producto|articulo|descripcion)$", "", "producto" )
+    var sku      = buscar( cols, "^(sku|codigo|cod_producto)$" )
+    var costo    = buscar( cols, "^(costo|costo_unitario|costo_promedio)$" )
+    var categoria = buscar( cols, "^(categoria|linea|familia)$" )
+    var largo = stockAncho.len() ? stockAncho : [ buscar( cols, "^(stock|existencias|inventario|stock_actual)$" ) ]
+    var sucursalCol = buscar( cols, "^(sucursal|tienda|bodega)$" )
+    var filas = []; var invalidos = 0
+    for ( var i = 1; i <= q.recordCount; i++ ) {
+      var nombre = toString( q[ len( producto ) ? producto : cols[ 1 ] ][ i ] ?: "" )
+      if ( !len( trim( nombre ) ) || nombre.reFindNoCase( "^\s*total" ) ) continue;
+      var c = len( costo ) ? numero( q[ costo ][ i ] ?: "" ) : javaCast( "null", "" )
+      for ( var s in largo ) {
+        var st = numero( q[ s ][ i ] ?: "" )
+        if ( isNull( st ) ) { invalidos++; continue; }
+        var suc = stockAncho.len() ? s.reReplaceNoCase( "^stock_", "" ) : ( len( sucursalCol ) ? toString( q[ sucursalCol ][ i ] ?: "" ) : "(única)" )
+        filas.append( [ len( sku ) ? toString( q[ sku ][ i ] ?: "" ) : nombre, nombre, len( categoria ) ? toString( q[ categoria ][ i ] ?: "" ) : "", suc, st, isNull( c ) ? 0 : c, isNull( c ) ? 0 : round( st * c * 100 ) / 100 ] )
+      }
+    }
+    var base = variables.catalogo.registrarFilas( tabla & "_bi", [ "sku", "producto", "categoria", "sucursal", "stock", "costo", "valor" ], filas, "insights de #tabla#" )
+    var hechos = []; var datos = { tabla_base: base, celdas_sin_numero: invalidos }
+    var sql = "SELECT COUNT(*) AS registros, SUM(stock) AS unidades, SUM(valor) AS valor FROM #base#"
+    var t = consulta( sql )
+    if ( t.len() ) hechos.append( hecho( "Inventario: #entero( t[ 1 ].unidades )# unidades valoradas en #usd( t[ 1 ].valor )# a costo (las celdas sin número, como N/D, no se cuentan)", sql ) )
+    sql = "SELECT sucursal, COUNT(*) AS agotados FROM #base# WHERE stock <= 0 GROUP BY sucursal ORDER BY agotados DESC"
+    var a = consulta( sql )
+    if ( a.len() ) {
+      datos.agotados = a
+      hechos.append( hecho( "Productos agotados por sucursal: " & a.map( x => "#x.sucursal# #entero( x.agotados )#" ).toList( ", " ), sql ) )
+    }
+    sql = "SELECT sucursal, SUM(valor) AS valor FROM #base# GROUP BY sucursal ORDER BY valor DESC"
+    var v = consulta( sql )
+    if ( v.len() >= 2 && len( costo ) ) {
+      datos.valor_sucursal = v
+      hechos.append( hecho( "Dinero en inventario: #v[ 1 ].sucursal# tiene #usd( v[ 1 ].valor )# y #v.last().sucursal# #usd( v.last().valor )#", sql ) )
+      grafico( "bar", "Valor del inventario por sucursal ($) · #tabla#", v.map( x => x.sucursal ), v.map( x => x.valor ) )
+    }
+    sql = "SELECT producto, SUM(stock) AS unidades FROM #base# GROUP BY producto ORDER BY unidades"
+    var p = consulta( sql )
+    if ( p.len() >= 2 ) {
+      datos.productos = p
+      hechos.append( hecho( "Producto con menos existencias: #p[ 1 ].producto# (#entero( p[ 1 ].unidades )# unidades); con más: #p.last().producto# (#entero( p.last().unidades )#)", sql ) )
+    }
+    return { tabla: tabla, tipo: "inventario", tabla_base: base, hechos: hechos, datos: datos,
+      instrucciones: "Estos hechos ya están calculados y verificables: cítalos tal cual en hechos (con su SQL). Para saber cuándo se agota cada producto cruza con ventas usando pronostico_stock" }
+  }
+
+  // ---------------------------------------------------------------------------------- Utilidades
+
+  private struct function hecho( required string afirmacion, required string sql ) {
+    return { afirmacion: afirmacion, sql: sql, origen: "csv", automatico: true }
+  }
+
+  private array function consulta( required string sql ) {
+    var r = variables.catalogo.consultar( sql )
+    return r.resultado ?: []
+  }
+
+  private void function grafico( required string tipo, required string titulo, required array labels, required array datos ) {
+    if ( isNull( variables.informe ) ) return;
+    variables.informe.agregarGrafico( { tipo: tipo, titulo: titulo, labels: labels.len() > 20 ? labels.slice( 1, 20 ) : labels, series: [ { nombre: "ventas", datos: datos.len() > 20 ? datos.slice( 1, 20 ) : datos } ] } )
+  }
+
+  /** Primera columna que coincide con el patrón (y no con el excluido); con "contiene", también por substring */
+  private string function buscar( required array cols, required string patron, string excluir = "", string contiene = "" ) {
+    for ( var c in cols ) { if ( c.reFindNoCase( patron ) && ( !len( excluir ) || !c.reFindNoCase( excluir ) ) ) return c }
+    // Las columnas repetidas (Producto_1..Producto_5) son posiciones, no la dimensión: no se usan
+    if ( len( contiene ) ) { for ( var c in cols ) { if ( c.findNoCase( contiene ) && !c.reFind( "_[0-9]+$" ) && ( !len( excluir ) || !c.reFindNoCase( excluir ) ) ) return c } }
+    return ""
+  }
+
+  private any function reconstruir( required query q, required numeric i, required struct rol ) {
+    var sub = len( rol.subtotal ) ? numero( q[ rol.subtotal ][ i ] ?: "" ) : javaCast( "null", "" )
+    if ( isNull( sub ) && len( rol.cantidad ) && len( rol.precio ) ) {
+      var c = numero( q[ rol.cantidad ][ i ] ?: "" ); var p = numero( q[ rol.precio ][ i ] ?: "" )
+      if ( !isNull( c ) && !isNull( p ) ) {
+        sub = c * p
+        var d = len( rol.descuento ) ? numero( q[ rol.descuento ][ i ] ?: "" ) : javaCast( "null", "" )
+        // descuento como fracción (0.1) o como monto
+        if ( !isNull( d ) ) sub = d < 1 && d > 0 ? sub * ( 1 - d ) : sub - d
+      }
+    }
+    if ( isNull( sub ) ) return javaCast( "null", "" )
+    var iva = len( rol.iva ) ? numero( q[ rol.iva ][ i ] ?: "" ) : javaCast( "null", "" )
+    return round( ( sub + ( isNull( iva ) ? 0 : iva ) ) * 100 ) / 100
+  }
+
+  /** Código de sucursal -> su nombre más frecuente */
+  private struct function nombresPorCodigo( required query q, required string colCod, required string colNombre ) {
+    var cuenta = {}; var out = {}
+    for ( var i = 1; i <= q.recordCount; i++ ) {
+      var c = trim( toString( q[ colCod ][ i ] ?: "" ) ); var n = trim( toString( q[ colNombre ][ i ] ?: "" ) )
+      if ( !len( c ) || !len( n ) ) continue;
+      var k = c & char( 31 ) & n
+      cuenta[ k ] = ( cuenta[ k ] ?: 0 ) + 1
+      if ( !out.keyExists( c ) || cuenta[ k ] > cuenta[ c & char( 31 ) & out[ c ] ] ) out[ c ] = n
+    }
+    return out
+  }
+
+  /** Clave para agrupar variantes: sin tildes, sin mayúsculas ni espacios de más */
+  private string function clave( required string s ) {
+    return createObject( "java", "java.text.Normalizer" ).normalize( lCase( trim( s ) ), createObject( "java", "java.text.Normalizer$Form" ).NFD ).reReplace( "[^a-z0-9 ]", "", "all" ).reReplace( "\s+", " ", "all" )
+  }
+
+  /** "Norte", "norte " y "NORTE" se juntan en la forma más frecuente */
+  private struct function canonicas( required array valores ) {
+    var cuenta = {}; var mejor = {}
+    for ( var v in valores ) {
+      var o = trim( toString( v ?: "" ) ); if ( !len( o ) ) continue;
+      var k = clave( o ); var kv = k & char( 31 ) & o
+      cuenta[ kv ] = ( cuenta[ kv ] ?: 0 ) + 1
+      if ( !mejor.keyExists( k ) || cuenta[ kv ] > cuenta[ k & char( 31 ) & mejor[ k ] ] ) mejor[ k ] = o
+    }
+    return mejor
+  }
+
+  /** $1,200.50 · 1.200,50 · "4,25" · N/D -> número o null */
+  private any function numero( required any v ) {
+    var s = trim( toString( v ) ).reReplace( "[$\s]", "", "all" )
+    if ( !len( s ) || !s.reFind( "[0-9]" ) ) return javaCast( "null", "" )
+    if ( s.reFind( ",[0-9]{1,2}$" ) && s.find( "." ) ) s = s.replace( ".", "", "all" ).replace( ",", "." )
+    else if ( s.reFind( "^-?[0-9]{1,3}(,[0-9]{3})+(\.[0-9]+)?$" ) ) s = s.replace( ",", "", "all" )
+    else if ( s.reFind( ",[0-9]+$" ) ) s = s.replace( ",", "." )
+    return isNumeric( s ) ? val( s ) : javaCast( "null", "" )
+  }
+
+  /** 2026-07-15 · 15/07/2026 · 15-07-2026 -> "2026-07" */
+  private string function mes( required string f ) {
+    var t = trim( f )
+    var m = t.reFind( "^([0-9]{4})-([0-9]{1,2})", 1, true )
+    if ( m.pos[ 1 ] ) return mid( t, m.pos[ 2 ], 4 ) & "-" & numberFormat( mid( t, m.pos[ 3 ], m.len[ 3 ] ), "00" )
+    m = t.reFind( "^([0-9]{1,2})[/-]([0-9]{1,2})[/-]([0-9]{4})", 1, true )
+    if ( m.pos[ 1 ] ) return mid( t, m.pos[ 4 ], 4 ) & "-" & numberFormat( mid( t, m.pos[ 3 ], m.len[ 3 ] ), "00" )
+    return ""
+  }
+
+  private string function nombreMes( required string m ) {
+    var n = val( listLast( m, "-" ) )
+    return ( n >= 1 && n <= 12 ) ? variables.meses[ n ] : m
+  }
+
+  private string function usd( required numeric n ) { return "$" & numberFormat( n, ",.00" ) }
+  private string function entero( required numeric n ) { return numberFormat( n, "," ) }
+}
