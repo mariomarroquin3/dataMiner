@@ -1,0 +1,302 @@
+/**
+ * Quiebre de stock con regresión por cuantiles (determinista, sin LLM ni librerías extra).
+ *
+ * El método actual (Operaciones.quiebreStock) usa stock de seguridad = z · σ · √días de entrega, que supone
+ * demanda normal y estable. Aquí se estima directo la demanda "mediana" (P50) y la de un día malo (P90, P95...)
+ * con una regresión por cuantiles por producto: tendencia + día de la semana + quincena / fin de mes.
+ *   - Demanda durante la entrega en el cuantil pedido = suma de P50 de los próximos días + cuantil empírico
+ *     de cuánto se desvió la demanda real en ventanas de esa misma duración (no supone ninguna distribución).
+ *   - Cobertura de prueba: se entrena sin las últimas 4 semanas y se mide en cuántos de esos días la demanda
+ *     quedó por debajo del P90 predicho. Si dice 89% para un P90, el modelo está bien calibrado.
+ * Guarda la tabla pronostico_stock_cuantiles para que los hechos se verifiquen con SQL.
+ */
+class {
+
+  property name="catalogo";
+  property name="informe";
+
+  function init( required any catalogo, any informe ) {
+    variables.catalogo = arguments.catalogo
+    variables.informe  = arguments.informe ?: javaCast( "null", "" )
+    variables.Z = { "0.8": 0.8416, "0.85": 1.0364, "0.9": 1.2816, "0.95": 1.6449, "0.975": 1.96, "0.99": 2.3263 }
+    return this
+  }
+
+  // ============================================================== Regresión por cuantiles
+
+  /**
+   * Minimiza la pérdida de cuantil (pinball) con mínimos cuadrados reponderados (IRLS).
+   * @X filas de variables (cada una empieza con 1 para el intercepto)
+   * @tau cuantil: 0.5 = mediana, 0.9 = P90
+   */
+  struct function regresionCuantil( required array X, required array y, required numeric tau, numeric iteraciones = 80 ) {
+    var n = y.len(); var p = X[ 1 ].len()
+    var escala = max( 0.01, y.reduce( ( a, v ) => a + abs( v ), 0 ) / max( 1, n ) )
+    var eps = escala * 0.001
+    var w = []; for ( var i = 1; i <= n; i++ ) w.append( 1 )
+    var mejor = []; var mejorPerdida = 999999999999; var beta = []
+    // índices no nulos de cada fila: las variables de día son 0/1, así XᵀWX se arma 5 veces más rápido
+    var nz = X.map( fila => { var ix = []; fila.each( ( v, k ) => { if ( v != 0 ) ix.append( k ) } ); return ix } )
+    for ( var it = 1; it <= iteraciones; it++ ) {
+      beta = minimosCuadradosPonderados( X, y, w, p, nz )
+      var perdida = 0
+      for ( var i = 1; i <= n; i++ ) {
+        var r = y[ i ] - punto( X[ i ], beta )
+        perdida += r >= 0 ? tau * r : ( tau - 1 ) * r
+        w[ i ] = ( r >= 0 ? tau : 1 - tau ) / max( abs( r ), eps )
+      }
+      if ( perdida < mejorPerdida * ( 1 - 0.0001 ) ) { mejorPerdida = perdida; mejor = beta }
+      else if ( it > 5 ) { if ( perdida < mejorPerdida ) { mejorPerdida = perdida; mejor = beta } break; }
+    }
+    return { beta: mejor, perdida: mejorPerdida / max( 1, n ), tau: tau }
+  }
+
+  // ============================================================== Pronóstico de stock
+
+  struct function pronosticoStock( required string tablaVentas, required string tablaInventario, numeric nivelServicio = 0.9,
+    numeric diasHistoria = 120, numeric diasEntrega = 7, numeric diasCobertura = 30, struct columnas = {} ) {
+    try {
+      var qv = variables.catalogo.tabla( tablaVentas )
+      var qi = variables.catalogo.tabla( tablaInventario )
+    } catch ( any e ) { return { error: e.message } }
+    var tau = min( 0.99, max( 0.6, nivelServicio ) )
+    var etiqueta = "p" & round( tau * 100 )
+    var cv = {
+      producto: columnas.producto ?: buscarColumna( qv, "^(sku|codigo|cod_producto|id_producto|producto_id|item|producto)$|sku|codigo" ),
+      fecha   : columnas.fecha ?: buscarColumna( qv, "fecha|date|dia" ),
+      cantidad: columnas.cantidad ?: buscarColumna( qv, "unidades|cantidad|qty|vendid" )
+    }
+    var ci = {
+      producto: columnas.productoInventario ?: ( columnas.producto ?: buscarColumna( qi, "^(sku|codigo|cod_producto|id_producto|producto_id|item)$|sku|codigo" ) ),
+      stock   : columnas.stock ?: buscarColumna( qi, "stock|existencia|inventario|disponible|en_mano" ),
+      entrega : columnas.entrega ?: buscarColumna( qi, "entrega|lead|reposicion|proveedor" ),
+      nombre  : buscarColumna( qi, "^(producto|descripcion|nombre|articulo)" )
+    }
+    if ( !len( ci.producto ) ) ci.producto = buscarColumna( qi, "producto|articulo|item" )
+    for ( var k in [ "producto", "fecha", "cantidad" ] ) { if ( !len( cv[ k ] ) ) return { error: "No encontré la columna de #k# en #tablaVentas#. Columnas: #qv.columnList#" }; }
+    for ( var k in [ "producto", "stock" ] ) { if ( !len( ci[ k ] ) ) return { error: "No encontré la columna de #k# en #tablaInventario#. Columnas: #qi.columnList#" }; }
+
+    // Serie diaria por producto (los días sin ventas cuentan como 0)
+    var LocalDate = createObject( "java", "java.time.LocalDate" )
+    var DIAS = createObject( "java", "java.time.temporal.ChronoUnit" ).DAYS
+    var fechas = []
+    for ( var i = 1; i <= qv.recordCount; i++ ) {
+      var f = toString( qv[ cv.fecha ][ i ] ?: "" ).left( 10 )
+      if ( f.reFind( "^\d{4}-\d{2}-\d{2}$" ) ) fechas.append( f )
+    }
+    if ( !fechas.len() ) return { error: "La columna #cv.fecha# no tiene fechas aaaa-mm-dd" }
+    fechas.sort( "text" )
+    var fRef = LocalDate.parse( fechas.last() )
+    var nDias = min( diasHistoria, DIAS.between( LocalDate.parse( fechas.first() ), fRef ) + 1 )
+    var fIni = fRef.minusDays( javaCast( "long", nDias - 1 ) )
+    var ventas = {}
+    for ( var i = 1; i <= qv.recordCount; i++ ) {
+      var f = toString( qv[ cv.fecha ][ i ] ?: "" ).left( 10 )
+      if ( !f.reFind( "^\d{4}-\d{2}-\d{2}$" ) ) continue;
+      var d = DIAS.between( fIni, LocalDate.parse( f ) )
+      if ( d < 0 ) continue;
+      var p = toString( qv[ cv.producto ][ i ] )
+      if ( !ventas.keyExists( p ) ) { ventas[ p ] = []; for ( var j = 1; j <= nDias; j++ ) ventas[ p ].append( 0 ) }
+      ventas[ p ][ d + 1 ] += val( qv[ cv.cantidad ][ i ] ?: 0 )
+    }
+    if ( nDias < 42 ) return { error: "Hacen falta al menos 6 semanas de ventas diarias; hay #nDias# días" }
+
+    // Variables de cada día: intercepto, tendencia, día de la semana (domingo = base) y quincena / fin de mes
+    var H = 180
+    var Xhist = []; var Xfut = []
+    for ( var d = 0; d < nDias + H; d++ ) {
+      var fecha = fIni.plusDays( javaCast( "long", d ) )
+      var fila = rasgos( fecha, d, nDias )
+      if ( d < nDias ) Xhist.append( fila ); else Xfut.append( fila )
+    }
+    var z = variables.Z[ toString( tau ) ] ?: 1.2816
+    var filas = []
+    var coberturas = []
+    for ( var i = 1; i <= qi.recordCount; i++ ) {
+      var p = toString( qi[ ci.producto ][ i ] )
+      var desc = len( ci.nombre ) ? toString( qi[ ci.nombre ][ i ] ) : p
+      var stock = val( qi[ ci.stock ][ i ] ?: 0 )
+      var lead = len( ci.entrega ) && isNumeric( qi[ ci.entrega ][ i ] ?: "" ) ? val( qi[ ci.entrega ][ i ] ) : diasEntrega
+      var y = ventas[ p ] ?: []
+      if ( !y.len() || y.sum() == 0 ) {
+        filas.append( [ p, desc, stock, lead, 0, 0, 0, 0, 0, 0, "", "", "", 0, "", 0, stock > 0 ? "sin ventas" : "agotado" ] )
+        continue;
+      }
+      // 1) Prueba honesta: entrenar sin las últimas 4 semanas y medir la cobertura del cuantil en ellas
+      var corte = nDias - 28
+      var mPrueba = regresionCuantil( Xhist.slice( 1, corte ), y.slice( 1, corte ), tau )
+      var dentro = 0
+      for ( var d = corte + 1; d <= nDias; d++ ) { if ( y[ d ] <= max( 0, punto( Xhist[ d ], mPrueba.beta ) ) ) dentro++ }
+      var cobertura = dentro / 28
+      coberturas.append( cobertura )
+      // 2) Modelos finales con toda la historia
+      var m50 = regresionCuantil( Xhist, y, 0.5 )
+      var mT  = regresionCuantil( Xhist, y, tau )
+      var p50 = Xfut.map( x => max( 0, punto( x, m50.beta ) ) )
+      var pT  = Xfut.map( ( x, k ) => max( p50[ k ], punto( x, mT.beta ) ) )   // los cuantiles no se cruzan
+      var ajuste = Xhist.map( x => max( 0, punto( x, m50.beta ) ) )
+      // 3) Demanda durante la entrega: mediana + cuantil de las desviaciones reales en ventanas de "lead" días
+      var L = max( 1, round( lead ) )
+      var d50L = sumaPrimeros( p50, L )
+      var extraL = max( 0, cuantilDesvios( y, ajuste, L, tau ) )
+      var dTL = d50L + extraL
+      // 4) Días hasta agotar: con la mediana y en un escenario malo (cuantil de las desviaciones acumuladas)
+      var dias50 = diasHasta( stock, p50, y, ajuste, 0.5 )
+      var diasMal = diasHasta( stock, p50, y, ajuste, tau )
+      // 5) Comparación con el método normal (z · σ · √días de entrega) sobre la misma historia
+      var reciente = y.slice( max( 1, nDias - 13 ), min( 14, nDias ) )
+      var nivel = reciente.sum() / reciente.len()
+      var media = y.sum() / nDias
+      var sd = sqr( y.reduce( ( a, v ) => a + ( v - media ) ^ 2, 0 ) / max( 1, nDias - 1 ) )
+      var reordenNormal = nivel * lead + z * sd * sqr( lead )
+      // crítico = el stock no cubre la demanda del cuantil durante la entrega; pronto = la cubre, pero se acaba en la semana siguiente
+      var estado = stock <= 0 ? "agotado" : stock < dTL ? "crítico" : diasMal <= lead + 7 ? "pronto" : "ok"
+      var pedir = estado != "ok" ? max( 0, ceiling( sumaPrimeros( p50, L + diasCobertura ) + extraL - stock ) ) : 0
+      // efecto del fin de semana en la mediana (sábado y domingo vs. promedio de lunes a viernes)
+      var finde = efectoFinDeSemana( Xfut.slice( 1, 14 ), p50.slice( 1, 14 ) )
+      filas.append( [ p, desc, stock, lead,
+        r2( sumaPrimeros( p50, 7 ) ), r2( sumaPrimeros( pT, 7 ) ),
+        r2( d50L ), r2( dTL ), r2( dTL ), r2( reordenNormal ),
+        dias50, diasMal, stock <= 0 ? fRef.toString() : fRef.plusDays( javaCast( "long", diasMal ) ).toString(),
+        pedir, round( cobertura * 100 ), finde, estado ] )
+    }
+    var orden = { "agotado": 0, "crítico": 1, "pronto": 2, "ok": 3, "sin ventas": 4 }
+    filas.sort( ( a, b ) => orden[ a[ 17 ] ] != orden[ b[ 17 ] ] ? orden[ a[ 17 ] ] - orden[ b[ 17 ] ] : val( a[ 12 ] ) - val( b[ 12 ] ) )
+    var cols = [ "producto", "descripcion", "stock", "dias_entrega",
+      "demanda_7d_p50", "demanda_7d_#etiqueta#", "demanda_entrega_p50", "demanda_entrega_#etiqueta#",
+      "punto_reorden", "punto_reorden_normal", "dias_restantes_p50", "dias_restantes_#etiqueta#", "fecha_agotamiento_#etiqueta#",
+      "pedir_unidades", "cobertura_prueba_pct", "efecto_fin_semana_pct", "estado" ]
+    var tabla = variables.catalogo.registrarFilas( "pronostico_stock_cuantiles", cols, filas, "regresión por cuantiles de #tablaVentas# + #tablaInventario#" )
+
+    var conVentas = filas.filter( f => f[ 17 ] != "sin ventas" && f[ 17 ] != "agotado" )
+    var top = conVentas.slice( 1, min( 12, conVentas.len() ) )
+    if ( !isNull( variables.informe ) && top.len() ) {
+      variables.informe.agregarGrafico( { tipo: "bar", titulo: "Demanda durante la entrega: mediana vs #ucase( etiqueta )# y stock actual",
+        labels: top.map( f => f[ 1 ] ), series: [ { nombre: "stock", datos: top.map( f => f[ 3 ] ) }, { nombre: "demanda P50", datos: top.map( f => f[ 7 ] ) }, { nombre: "demanda #ucase( etiqueta )#", datos: top.map( f => f[ 8 ] ) } ] } )
+    }
+    var cobMedia = coberturas.len() ? round( coberturas.sum() / coberturas.len() * 100 ) : 0
+    var res = {
+      fecha_corte: fRef.toString(), dias_historia: nDias, cuantil: tau,
+      tabla_resultado: tabla,
+      resumen: { productos: filas.len(), agotados: filas.filter( f => f[ 17 ] == "agotado" ).len(), criticos: filas.filter( f => f[ 17 ] == "crítico" ).len(),
+                 pronto: filas.filter( f => f[ 17 ] == "pronto" ).len(), ok: filas.filter( f => f[ 17 ] == "ok" ).len(),
+                 cobertura_prueba_promedio_pct: cobMedia },
+      calibracion: "En las últimas 4 semanas (sin usarlas para entrenar) la demanda quedó por debajo del #ucase( etiqueta )# predicho el #cobMedia#% de los días (lo ideal es #round( tau * 100 )#%)",
+      urgentes: filas.filter( f => f[ 17 ] == "agotado" || f[ 17 ] == "crítico" ).map( f => aStruct( cols, f ) ),
+      sql_sugerido: "SELECT producto, descripcion, stock, demanda_entrega_p50, demanda_entrega_#etiqueta#, punto_reorden, punto_reorden_normal, dias_restantes_#etiqueta#, pedir_unidades FROM #tabla# WHERE estado IN ('agotado','crítico') ORDER BY dias_restantes_#etiqueta#",
+      metodo: "Regresión por cuantiles por producto (P50 y #ucase( etiqueta )#) con tendencia, día de la semana y quincena. Punto de reorden = demanda mediana durante la entrega + cuantil #round( tau * 100 )# de las desviaciones reales en ventanas de esa duración. punto_reorden_normal es el método z·σ·√días para comparar."
+    }
+    variables.catalogo.registrarEvidencia( { sql: "stock.cuantiles(#tablaVentas#, #tablaInventario#, #tau#)", filas: filas.len(), resultado: [ res.resumen ] } )
+    return res
+  }
+
+  // ============================================================== utilidades
+
+  /** [1, tendencia, lun..sáb (domingo = base), quincena o fin de mes] */
+  private array function rasgos( fecha, numeric d, numeric n ) {
+    var dow = fecha.getDayOfWeek().getValue()   // 1 = lunes ... 7 = domingo
+    var dia = fecha.getDayOfMonth()
+    var ultimo = fecha.lengthOfMonth()
+    var fila = [ 1, d / n ]
+    for ( var k = 1; k <= 6; k++ ) fila.append( dow == k ? 1 : 0 )
+    fila.append( ( dia >= 14 && dia <= 16 ) || dia >= ultimo - 1 || dia == 1 ? 1 : 0 )
+    return fila
+  }
+
+  /** Mínimos cuadrados ponderados con una pizca de ridge: (XᵀWX + λI) β = XᵀWy, por eliminación gaussiana */
+  // No se llama mcp(): ese nombre choca con la función global MCP() de bx-ai
+  private array function minimosCuadradosPonderados( required array X, required array y, required array w, required numeric p, required array nz ) {
+    var A = []; var b = []
+    for ( var r = 1; r <= p; r++ ) { var fila = []; for ( var c = 1; c <= p; c++ ) fila.append( r == c ? 0.000001 : 0 ); A.append( fila ); b.append( 0 ) }
+    for ( var i = 1; i <= y.len(); i++ ) {
+      var fx = X[ i ]; var wi = w[ i ]   // ojo: x y X serían la misma variable (BoxLang no distingue mayúsculas)
+      for ( var r in nz[ i ] ) {
+        var wx = wi * fx[ r ]
+        b[ r ] += wx * y[ i ]
+        for ( var c in nz[ i ] ) A[ r ][ c ] += wx * fx[ c ]
+      }
+    }
+    for ( var k = 1; k <= p; k++ ) {
+      var piv = k
+      for ( var r = k + 1; r <= p; r++ ) { if ( abs( A[ r ][ k ] ) > abs( A[ piv ][ k ] ) ) piv = r }
+      if ( piv != k ) { var t = A[ k ]; A[ k ] = A[ piv ]; A[ piv ] = t; var tb = b[ k ]; b[ k ] = b[ piv ]; b[ piv ] = tb }
+      if ( abs( A[ k ][ k ] ) < 0.000000000001 ) continue;
+      for ( var r = k + 1; r <= p; r++ ) {
+        var f = A[ r ][ k ] / A[ k ][ k ]
+        if ( f == 0 ) continue;
+        for ( var c = k; c <= p; c++ ) A[ r ][ c ] -= f * A[ k ][ c ]
+        b[ r ] -= f * b[ k ]
+      }
+    }
+    var beta = []; for ( var k = 1; k <= p; k++ ) beta.append( 0 )
+    for ( var k = p; k >= 1; k-- ) {
+      var s = b[ k ]
+      for ( var c = k + 1; c <= p; c++ ) s -= A[ k ][ c ] * beta[ c ]
+      beta[ k ] = abs( A[ k ][ k ] ) < 0.000000000001 ? 0 : s / A[ k ][ k ]
+    }
+    return beta
+  }
+
+  private numeric function punto( required array x, required array beta ) {
+    var s = 0
+    for ( var k = 1; k <= x.len(); k++ ) s += x[ k ] * beta[ k ]
+    return s
+  }
+
+  private numeric function sumaPrimeros( required array a, required numeric k ) {
+    var s = 0
+    for ( var i = 1; i <= min( k, a.len() ); i++ ) s += a[ i ]
+    return s
+  }
+
+  /** Cuantil tau de (demanda real − mediana ajustada) sumada en todas las ventanas de L días de la historia */
+  private numeric function cuantilDesvios( required array y, required array ajuste, required numeric L, required numeric tau ) {
+    var n = y.len()
+    if ( L > n / 2 ) return cuantilDesvios( y, ajuste, int( n / 2 ), tau ) * sqr( L / int( n / 2 ) )
+    var acum = [ 0 ]
+    for ( var j = 1; j <= n; j++ ) acum.append( acum[ j ] + y[ j ] - ajuste[ j ] )
+    var sumas = []
+    for ( var t = 1; t <= n - L + 1; t++ ) sumas.append( acum[ t + L ] - acum[ t ] )
+    sumas.sort( "numeric" )
+    var pos = ( sumas.len() - 1 ) * tau + 1
+    var lo = int( pos ); var hi = min( lo + 1, sumas.len() )
+    return sumas[ lo ] + ( sumas[ hi ] - sumas[ lo ] ) * ( pos - lo )
+  }
+
+  /** Primer día en que la demanda acumulada (mediana + desvío en el cuantil tau) alcanza el stock */
+  private numeric function diasHasta( required numeric stock, required array p50, required array y, required array ajuste, required numeric tau ) {
+    if ( stock <= 0 ) return 0
+    var acumulado = 0
+    for ( var k = 1; k <= p50.len(); k++ ) {
+      acumulado += p50[ k ]
+      var extra = tau == 0.5 ? 0 : max( 0, cuantilDesvios( y, ajuste, k, tau ) )
+      if ( acumulado + extra >= stock ) return k - 1
+    }
+    return p50.len()
+  }
+
+  private numeric function efectoFinDeSemana( required array X, required array p50 ) {
+    var fin = 0; var nf = 0; var sem = 0; var ns = 0
+    for ( var i = 1; i <= X.len(); i++ ) {
+      var esFin = X[ i ][ 8 ] == 1 || X[ i ].slice( 3, 6 ).sum() == 0   // sábado o domingo
+      if ( esFin ) { fin += p50[ i ]; nf++ } else { sem += p50[ i ]; ns++ }
+    }
+    if ( !nf || !ns || sem == 0 ) return 0
+    return round( ( ( fin / nf ) / ( sem / ns ) - 1 ) * 100 )
+  }
+
+  private string function buscarColumna( required query q, required string patron ) {
+    for ( var col in q.columnList.listToArray() ) { if ( sinTildes( col ).lCase().reFind( patron ) ) return col; }
+    return ""
+  }
+
+  private struct function aStruct( required array cols, required array fila ) {
+    var s = [:]; cols.each( ( c, i ) => s[ c ] = fila[ i ] ); return s
+  }
+
+  private numeric function r2( required numeric x ) { return round( x * 100 ) / 100 }
+
+  private string function sinTildes( required string s ) {
+    return createObject( "java", "java.text.Normalizer" ).normalize( s, createObject( "java", "java.text.Normalizer$Form" ).NFD ).reReplace( "[" & char( 768 ) & "-" & char( 879 ) & "]", "", "all" )
+  }
+}

@@ -1,0 +1,19 @@
+// Quiebre de stock con regresión por cuantiles vs. método normal (sin IA): boxlang probar-cuantiles.bxs
+import models.Catalogo
+import models.Informe
+import models.Operaciones
+import models.StockCuantiles
+cat = new Catalogo( true, "sal-demo" )
+println( cat.registrarArchivo( expandPath( "./pruebas/fuentes/operaciones_sv.xlsx" ), "operaciones_sv", "subida" ) )
+inf = new Informe()
+ini = getTickCount()
+sc = new StockCuantiles( cat, inf )
+r = sc.pronosticoStock( "operaciones_sv_ventas_diarias", "operaciones_sv_inventario", 0.9 )
+println( "#getTickCount() - ini# ms · #r.error ?: jsonSerialize( r.resumen )#" )
+println( r.calibracion ?: "" )
+q = cat.consultar( "SELECT producto, stock, dias_entrega, demanda_entrega_p50, demanda_entrega_p90, punto_reorden, punto_reorden_normal, dias_restantes_p50, dias_restantes_p90, pedir_unidades, cobertura_prueba_pct, efecto_fin_semana_pct, estado FROM pronostico_stock_cuantiles" )
+for ( f in q.resultado ) println( "  #f.producto# stock #f.stock# entrega #f.dias_entrega#d | demanda entrega P50 #f.demanda_entrega_p50# P90 #f.demanda_entrega_p90# | reorden #f.punto_reorden# (normal #f.punto_reorden_normal#) | días P50 #f.dias_restantes_p50# P90 #f.dias_restantes_p90# | pedir #f.pedir_unidades# | cobertura #f.cobertura_prueba_pct#% | finde +#f.efecto_fin_semana_pct#% | #f.estado#" )
+// el método actual, para comparar estados
+op = new Operaciones( cat, inf )
+o = op.quiebreStock( "operaciones_sv_ventas_diarias", "operaciones_sv_inventario", 56, 0.9 )
+println( "método normal: " & jsonSerialize( o.resumen ) )
