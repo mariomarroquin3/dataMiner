@@ -28,7 +28,7 @@ class {
       COL_TEL      : "(telefono|tel|celular|cel|movil|phone|whatsapp)(_|$|[0-9])",
       COL_DOC      : "(pasaporte|passport|licencia|carnet)",
       COL_TARJETA  : "(tarjeta|card|cuenta_banc|cuenta_bancaria|iban|num_cuenta)",
-      COL_NOMBRE   : "^(nombre|nombres|name|apellido|apellidos|cliente_nombre|nombre_cliente|nombre_completo|full_name|razon_social|contacto|empleado|titular)(_|$|[0-9])",
+      COL_NOMBRE   : "^(nombre|nombres|name|apellido|apellidos|cliente_nombre|nombre_cliente|nombre_completo|full_name|razon_social|contacto|empleado|empleados|titular|cliente|clientes|vendedor|vendedora|vendedores|gerente|gerentes|encargado|encargada|responsable|cajero|cajera|supervisor|supervisora|asesor|asesora)(_|$|[0-9])",
       COL_DIR      : "(direccion|domicilio|address|residencia|calle)",
       COL_NAC      : "(fecha_nac|nacimiento|f_nac|birth|fec_nac)",
       // por contenido
