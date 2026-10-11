@@ -1,6 +1,8 @@
 """Genera Excel "sucios" y desnormalizados de una distribuidora salvadoreña ficticia.
 
-Uso: python3 generar_excel_sucios.py [carpeta_salida]
+Uso: python3 generar_excel_sucios.py [carpeta_salida] [--corto]
+  --corto  solo genera ventas_sucursales_2026_corto.xlsx (~150 filas de ventas) con las mismas hojas,
+           columnas y tipos de suciedad, para pruebas rápidas con el agente
 Todos los nombres, DUI, NIT y teléfonos son inventados (semilla fija, siempre salen iguales).
 """
 import random, sys, os
@@ -9,7 +11,12 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
 random.seed(2026)
-SALIDA = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+CORTO = "--corto" in sys.argv
+SALIDA = ARGS[0] if ARGS else os.path.dirname(os.path.abspath(__file__))
+# En la versión corta hay menos filas, así que las imperfecciones se hacen más frecuentes para que no falte ninguna
+FACTURAS, OCTUBRE = (60, 25) if CORTO else (520, 90)
+P_DUP, P_NEG, P_SIN_COD, P_MAYUS = (0.05, 0.04, 0.05, 0.06) if CORTO else (0.02, 0.015, 0.02, 0.03)
 EMPRESA = "DISTRIBUIDORA CUSCATLÁN, S.A. DE C.V."
 
 # ------------------------------------------------------------------ catálogos "verdaderos"
@@ -135,7 +142,7 @@ def ventas():
     inicio = date(2026, 7, 1)
     n_fact = 10450
     lineas = []
-    for _ in range(520):
+    for _ in range(FACTURAS):
         n_fact += random.randint(1, 3)
         d = inicio + timedelta(days=random.randint(0, 91))
         suc = random.choices(SUCURSALES, weights=[14, 12, 10, 11, 9, 8, 6, 4, 4])[0]
@@ -161,13 +168,13 @@ def ventas():
         if prov == "Lácteos Chalate" and random.random() < 0.15:
             tprov = "7120-4455"  # teléfono viejo del proveedor que sigue apareciendo
         cant = random.choice([1, 1, 1, 2, 2, 3, 4, 6, 12, 24])
-        if random.random() < 0.015:
+        if random.random() < P_NEG:
             cant = -cant  # devolución registrada como venta negativa
         desc = random.choice([0, 0, 0, 0, 5, 10]) if contrib else 0
         valores = [
             f"F-{n_fact}" if random.random() > 0.03 else str(n_fact),
-            fecha_sucia(d), tipo_dte, cod if random.random() > 0.02 else "", random.choice(variantes), direc, muni, depto,
-            gerente, tsuc, vend, cli["nombre"] if random.random() > 0.03 else cli["nombre"].upper(),
+            fecha_sucia(d), tipo_dte, cod if random.random() > P_SIN_COD else "", random.choice(variantes), direc, muni, depto,
+            gerente, tsuc, vend, cli["nombre"] if random.random() > P_MAYUS else cli["nombre"].upper(),
             cli["nrc"] if contrib else (cli["dui"] if random.random() > 0.08 else ""), cli["tel"], cli["tipo"],
             sku, pnom, random.choice(cats), prov, tprov, precio_sucio(precio), cant, desc,
         ]
@@ -184,7 +191,7 @@ def ventas():
         ws.cell(row=fila, column=28, value=com)
         fila += 1
         # duplicados por doble exportación
-        if random.random() < 0.02:
+        if random.random() < P_DUP:
             for j in range(1, 29):
                 ws.cell(row=fila, column=j, value=ws.cell(row=fila - 1, column=j).value)
             for j, f in ((24, "=IFERROR(U{0}*V{0}*(1-W{0}/100),\"\")"), (25, "=IFERROR(ROUND(X{0}*0.13,2),\"\")"), (26, "=IFERROR(X{0}+Y{0},\"\")")):
@@ -200,7 +207,7 @@ def ventas():
     cols2 = ["Factura", "Fecha venta", "DTE", "Sucursal", "Gerente", "Vendedor", "Cliente", "SKU", "Producto", "Categoria", "Precio", "Cant", "Total"]
     encabezado(ws2, 1, cols2)
     f = 2
-    for _ in range(90):
+    for _ in range(OCTUBRE):
         suc = random.choice(SUCURSALES)
         prod = random.choice(PRODUCTOS)
         cli = random.choice(CLIENTES)
@@ -226,7 +233,7 @@ def ventas():
             ws3.cell(row=i, column=5 + k, value=random.choice([3000, 4000, 5000, 6000, 7500]))
         ws3.cell(row=i, column=8, value=f"=SUM(B{i}:D{i})/SUM(E{i}:G{i})")
         ws3.cell(row=i, column=8).number_format = "0.0%"
-    wb.save(os.path.join(SALIDA, "ventas_sucursales_2026.xlsx"))
+    wb.save(os.path.join(SALIDA, "ventas_sucursales_2026_corto.xlsx" if CORTO else "ventas_sucursales_2026.xlsx"))
     return n_ventas
 
 
@@ -360,6 +367,10 @@ def pedidos():
 
 
 if __name__ == "__main__":
+    if CORTO:
+        n = ventas()
+        print(f"OK: ventas_sucursales_2026_corto.xlsx en {SALIDA} ({n} filas en Ventas Jul-Sep)")
+        sys.exit(0)
     n = ventas()
     sucursales()
     productos()
