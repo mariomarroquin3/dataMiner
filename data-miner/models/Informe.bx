@@ -46,6 +46,14 @@ class {
       ? '<div class="g wide"><h3>#esc( g.titulo )#</h3><div class="hmw">#heatmapHTML( g )#</div></div>'
       : '<div class="g"><h3>#esc( g.titulo )#</h3><div class="cv"><canvas id="#g.id#"></canvas></div></div>' ).toList( "" )
     var datos = jsonSerialize( variables.graficos.filter( g => g.tipo != "heatmap" ) )
+    // Resumen ejecutivo: hasta 3 acciones con su impacto en dólares
+    var monto = ( v ) => isNumeric( v ?: "" ) ? val( v ) : 0
+    var todas = ( reporte.acciones ?: [] )
+    var acciones = todas.len() > 3 ? todas.slice( 1, 3 ) : todas
+    var impactoTotal = acciones.reduce( ( s, a ) => s + monto( a.impacto_usd ?: 0 ), 0 )
+    var accionesHTML = acciones.map( ( a, i ) => '<li class="#( a.verificado ?: false ) ? "ok" : "bad"#"><span class="n">#i#</span><div class="ac"><b>#esc( a.accion )#</b>' &
+      '<p>#esc( a.calculo ?: "" )#</p><span class="tag">#( a.verificado ?: false ) ? "✓ Cifra verificada" : "✗ Cifra sin verificar"#</span>' & ( len( a.plazo ?: "" ) ? '<span class="plazo">#esc( a.plazo )#</span>' : "" ) & '</div>' &
+      '<div class="usd">#monto( a.impacto_usd ?: 0 ) ? "$" & numberFormat( monto( a.impacto_usd ?: 0 ), "9,999" ) : "—"#<small>impacto estimado</small></div></li>' ).toList( "" )
     return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>#esc( titulo )#</title>
 #scriptChart()#
@@ -61,7 +69,14 @@ header p{margin:0;opacity:.85;font-size:.85rem}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:-44px 0 20px}
 .kpi{background:##fff;border:1px solid ##e4e7f0;border-radius:14px;padding:14px 16px;box-shadow:0 4px 16px rgba(20,26,46,.06)}
 .kpi b{display:block;font-size:1.6rem;line-height:1.1}.kpi span{font-size:.75rem;color:##6b7390}
-.kpi.ok b{color:##0f9f6e}.kpi.it b{color:##b7791f}
+.kpi.ok b{color:##0f9f6e}.kpi.it b{color:##b7791f}.kpi.usd b{color:##5b5bf0}
+.ejec{border-color:##d9d9fb;background:linear-gradient(180deg,##f7f7ff,##fff)}
+ul.a li{display:flex;gap:14px;align-items:flex-start;border:1px solid ##e4e7f0;border-radius:12px;padding:14px;margin:0 0 10px;background:##fff}
+ul.a li .n{flex:none;width:28px;height:28px;border-radius:50%;background:##5b5bf0;color:##fff;font-weight:700;display:grid;place-items:center;font-size:.85rem}
+ul.a li .ac{flex:1;min-width:0}ul.a li .ac b{font-size:1rem}ul.a li .ac p{margin:4px 0 8px;color:##3d4560;font-size:.88rem}
+ul.a li.bad .tag{background:##fdeceb;color:##d93a3a}
+.plazo{display:inline-block;font-size:.7rem;padding:2px 8px;border-radius:6px;background:##eef0f7;color:##3d4560}
+.usd{flex:none;text-align:right;font-size:1.35rem;font-weight:700;color:##5b5bf0;font-variant-numeric:tabular-nums}.usd small{display:block;font-size:.68rem;font-weight:400;color:##6b7390}
 .sec{background:##fff;border:1px solid ##e4e7f0;border-radius:14px;padding:18px 20px;margin:0 0 16px;box-shadow:0 1px 2px rgba(20,26,46,.04)}
 h2{margin:0 0 12px;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:##6b7390}
 .resumen{font-size:1.06rem;line-height:1.65;margin:0}
@@ -91,11 +106,12 @@ footer{text-align:center;color:##6b7390;font-size:.78rem;margin-top:24px}
 <header><div class="in"><small>⛏ Data Miner · BoxLang AI</small><h1>#esc( titulo )#</h1><p>Generado el #dateTimeFormat( now(), "yyyy-MM-dd HH:mm" )#</p></div></header>
 <div class="pg">
 <div class="kpis">
+<div class="kpi usd"><b>#impactoTotal ? "$" & numberFormat( impactoTotal, "9,999" ) : "—"#</b><span>impacto estimado de las acciones</span></div>
+<div class="kpi"><b>#acciones.len()#</b><span>acciones recomendadas</span></div>
 <div class="kpi ok"><b>#nVer#</b><span>hechos verificados</span></div>
 <div class="kpi"><b>#( reporte.hechos ?: [] ).len() - nVer#</b><span>no verificados</span></div>
-<div class="kpi it"><b>#( reporte.interpretaciones ?: [] ).len()#</b><span>interpretaciones</span></div>
-<div class="kpi"><b>#variables.graficos.len()#</b><span>visualizaciones</span></div>
 </div>
+#len( accionesHTML ) ? "<div class=""sec ejec""><h2>Resumen ejecutivo · qué hacer</h2><ul class=""a"">#accionesHTML#</ul></div>" : ""#
 <div class="sec"><h2>Resumen</h2><p class="resumen">#esc( reporte.respuesta ?: "" )#</p></div>
 <div class="sec"><h2>Hechos verificados</h2><ul class="h">#hechos#</ul></div>
 #len( interp ) ? "<div class=""sec""><h2>Interpretaciones</h2><ul class=""i"">#interp#</ul></div>" : ""#

@@ -30,7 +30,11 @@ Responde SOLO con JSON válido:
 {"respuesta": "resumen en español, 2-5 frases",
  "hechos": [{"afirmacion": "...", "sql": "consulta exacta que lo respalda", "origen": "csv o db"}],
  "interpretaciones": ["hipótesis o lectura de negocio"],
- "siguientes_preguntas": ["..."]}'
+ "acciones": [{"accion": "qué debe hacer el gerente, en imperativo", "impacto_usd": 1234.5, "calculo": "cómo se estimó el impacto, con las cifras usadas", "sql": "consulta que respalda la cifra base", "origen": "csv o db", "plazo": "esta semana, este mes o este trimestre"}],
+ "siguientes_preguntas": ["..."]}
+Resumen ejecutivo: cierra con 1 a 3 acciones concretas para el gerente, de mayor a menor impacto. El impacto en dólares
+(ventas recuperadas, costo evitado, cartera en riesgo, dinero inmovilizado) debe salir de cifras que entregaron las tools,
+con su SQL; nunca inventes montos. Si no se puede expresar en dólares, pon impacto_usd en 0 y explícalo en calculo.'
   }
 
   /**
@@ -53,13 +57,22 @@ Responde SOLO con JSON válido:
     var ing = variables.ingeniero
 
     // Reintenta con espera creciente si el proveedor responde 429 (límite por minuto del plan gratuito)
-    var reintento = new bxModules.bxai.models.middleware.core.RetryMiddleware( maxRetries: 4, initialDelay: 8000, backoffMultiplier: 2, maxDelay: 60000 )
+    // Solo reintenta el modelo, no las tools: reintentar un subagente repetía toda su conversación (ver ReintentoLLM.bx)
+    var reintento = new ReintentoLLM( maxRetries: 4, initialDelay: 8000, backoffMultiplier: 2, maxDelay: 60000 )
     // Deja en logs/ai.log cada tool que usa cada agente (sirve para ver si un agente se queda en bucle)
     var bitacora = new bxModules.bxai.models.middleware.core.LoggingMiddleware( prefix: "[DataMiner]" )
     // bx-ai corta a las 10 rondas de tools; los modelos Flash de Gemini piden una tool por ronda y una misión normal se pasa de 10
     var limites = { maxInteractions: 25 }
 
     var listar = aiTool( "listar_tablas", "Lista las tablas cargadas (nombre, filas, columnas, fuente)", () => cat.listar() )
+    // Conocimiento de negocio (conocimiento/*.md): indicadores, cómo calcular el impacto en $ y acciones típicas por área
+    var carpetaGuias = getDirectoryFromPath( getCurrentTemplatePath() ) & "../conocimiento/"
+    var guia = aiTool( "guia_negocio",
+      "Devuelve la guía de negocio de un área para interpretar los datos como consultor y estimar el impacto en dólares de las acciones. Áreas: ventas, inventario, cartera (créditos, cobros, mora), finanzas (márgenes, caja, gastos, precios)",
+      ( area ) => {
+        var archivo = carpetaGuias & reReplace( lCase( area ), "[^a-z]", "", "all" ) & ".md"
+        return fileExists( archivo ) ? fileRead( archivo ) : "No hay guía para '#area#'. Áreas: ventas, inventario, cartera, finanzas"
+      } ).describeArg( "area", "ventas, inventario, cartera o finanzas" )
     var graficar = aiTool( "graficar_sql", "Crea una gráfica para el informe a partir de un SELECT. tipo: bar, line, pie o scatter",
       ( tipo, sql, x, y, titulo ) => {
         var r = cat.consultar( sql )
@@ -215,7 +228,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
       equipo.append( aiAgent( middleware: [ reintento, bitacora ], options: limites, name: "Analista",
         description : "Responde preguntas con SQL (tablas cargadas y, si hay, la base remota vía MCP), estadística descriptiva, correlaciones, covarianza, métricas financieras, pronóstico de quiebre de stock y gráficas",
         instructions: "Eres analista de datos y estadístico. Solo SELECT; toda cifra debe salir de una tool, nunca calcules a mano ni inventes números. Para la base remota usa las tools db_*. Si preguntan cuándo se acaba el stock, qué reabastecer o cuánto pedir, usa pronostico_stock y cita su tabla pronostico_stock en el SQL de los hechos. Para relaciones entre variables usa correlacion (explica fuerza y signo; correlación no implica causalidad); para series de precios o caja usa metricas_financieras. Crea al menos una gráfica. Devuelve las cifras junto con la consulta usada.",
-        model: modelo( "analista" ), tools: unir( [ t_analistaCsv, t_estadistico, t_db ] ) ) )
+        model: modelo( "analista" ), tools: unir( [ t_analistaCsv, t_estadistico, t_db, [ guia ] ] ) ) )
       equipo.append( aiAgent( middleware: [ reintento, bitacora ], options: limites, name: "CientificoML",
         description : "Entrena y compara modelos de ML tabular (regresión lineal, ridge, lasso, polinomial, logística, árbol, Random Forest), predice con ellos y prioriza oportunidades de venta por ganancia esperada",
       instructions: "Eres científico de datos. Para predecir un número usa regresiones (lineal, ridge, lasso, polinomial) y random_forest; para una categoría usa logistica, arbol o random_forest. Prefiere comparar_modelos. Reporta métricas de test (R², RMSE, MAE o accuracy, F1, AUC) y compara contra la línea base. Explica las variables más importantes. Advierte si el modelo es débil. Si preguntan qué ventas, clientes u oportunidades priorizar, usa priorizar_ventas y cita su tabla prioridad_ventas en el SQL de los hechos.",
@@ -229,21 +242,28 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
       options     : limites,
       name        : "Coordinador",
       description : "Coordina el equipo de datos",
-      instructions: "Coordinas un equipo de análisis de datos desconocidos. Plan: " & plan & " Separa hechos (con su SQL) de interpretaciones. Privacidad: los datos personales ya llegan anonimizados (pseudónimos como DUI_1a2b3c4d o Persona_…, direcciones reducidas al departamento, edades en rangos). Úsalos como identificadores, nunca intentes reidentificar a nadie y no pidas los valores reales." & static.FORMATO,
+      instructions: "Coordinas un equipo de análisis de datos desconocidos. Plan: " & plan & " Separa hechos (con su SQL) de interpretaciones. Privacidad: los datos personales ya llegan anonimizados (pseudónimos como DUI_1a2b3c4d o Persona_…, direcciones reducidas al departamento, edades en rangos). Úsalos como identificadores, nunca intentes reidentificar a nadie y no pidas los valores reales." &
+        " Hablas con el gerente de una empresa: antes de proponer las acciones, consulta una vez guia_negocio del área que corresponda (ventas, inventario, cartera o finanzas) y estima el impacto como dice la guía, pidiendo al equipo las cifras que falten." & static.FORMATO,
       model       : modelo( "coordinador" ),
-      tools       : [ listar ],
+      tools       : [ listar, guia ],
       subAgents   : equipo,
       memory      : aiMemory( memory: "window", config: { maxMessages: 40 } )
     )
     // Structured output nativo de bx-ai: un modelo SIN tools que devuelve el reporte con un esquema fijo.
     // Va en un paso aparte porque con algunos proveedores la salida estructurada choca con el tool calling.
-    variables.esquema = { respuesta: "", hechos: [ { afirmacion: "", sql: "", origen: "" } ], interpretaciones: [ "" ], siguientes_preguntas: [ "" ] }
+    variables.esquema = { respuesta: "", hechos: [ { afirmacion: "", sql: "", origen: "" } ], interpretaciones: [ "" ],
+      acciones: [ { accion: "", impacto_usd: 0, calculo: "", sql: "", origen: "", plazo: "" } ], siguientes_preguntas: [ "" ] }
     variables.formateador = modelo( "formateador" ).structuredOutput( variables.esquema )
 
     // Pipeline de BoxLang AI: coordinador (con sus subagentes) → structured output → verificar cada hecho
     variables.flujo = variables.coordinador
       .transform( ( texto ) => estructurar( texto ) )
-      .transform( ( reporte ) => { reporte.hechos = ( reporte.hechos ?: [] ).map( h => verificar( h ) ); return reporte; } )
+      .transform( ( reporte ) => {
+        reporte.hechos = ( reporte.hechos ?: [] ).map( h => verificar( h ) )
+        // Las acciones del resumen ejecutivo también se verifican: su cifra base debe salir de un SQL que corre
+        reporte.acciones = ( reporte.acciones ?: [] ).filter( a => isStruct( a ) && len( a.accion ?: "" ) ).map( a => verificar( a ) )
+        return reporte;
+      } )
     return this
   }
 
@@ -281,7 +301,7 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
   private struct function estructurar( required any texto ) {
     try {
       var r = variables.formateador.run( "Convierte este reporte al esquema pedido. Copia cada SQL exactamente como está, " &
-        "no inventes hechos nuevos y deja en interpretaciones lo que no tenga SQL. Reporte:" & char( 10 ) & toString( texto ) )
+        "no inventes hechos ni acciones nuevas, copia los montos de impacto tal cual y deja en interpretaciones lo que no tenga SQL. Reporte:" & char( 10 ) & toString( texto ) )
       if ( isStruct( r ) && r.keyExists( "hechos" ) && isArray( r.hechos ) ) return r.append( { formato: "structured output" } )
     } catch ( any e ) {
       return parsear( texto ).append( { formato: "parseo de texto (structured output falló: #e.message#)" } )
@@ -292,6 +312,6 @@ Si te piden limpiar, usa limpiar_tabla y avisa el nombre de la tabla limpia para
   private struct function parsear( required any texto ) {
     var limpio = toString( texto ).reReplace( "(?s)^.*?```(?:json)?\s*", "" ).reReplace( "(?s)```.*$", "" ).trim()
     if ( isJSON( limpio ) && isStruct( jsonDeserialize( limpio ) ) ) return jsonDeserialize( limpio )
-    return { respuesta: toString( texto ), hechos: [], interpretaciones: [], siguientes_preguntas: [] }
+    return { respuesta: toString( texto ), hechos: [], interpretaciones: [], acciones: [], siguientes_preguntas: [] }
   }
 }

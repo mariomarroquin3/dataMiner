@@ -1,0 +1,13 @@
+/**
+ * RetryMiddleware que solo reintenta las llamadas al modelo.
+ * El de bx-ai también reintenta las tools, y con un subagente (delegate_to_*) eso repite toda su
+ * conversación desde cero: gasta cuota de Gemini y minutos sin ganar nada. Las tools propias
+ * (SQL, estadística, ML) son deterministas, así que reintentarlas tampoco ayuda.
+ */
+class extends="bxModules.bxai.models.middleware.core.RetryMiddleware" {
+
+  any function wrapToolCall( required struct context, required function handler ) {
+    return arguments.handler()
+  }
+
+}
